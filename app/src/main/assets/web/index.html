@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>DSH Mobile Dashboard</title>
+  <style>
+    :root {
+      --bg: #13141c;
+      --card: #1c1d28;
+      --sidebar: #161722;
+      --accent: #4f87ff;
+      --text: #f0f2f8;
+      --text-muted: #8c90a4;
+      --border: #282a3a;
+      --success: #34d399;
+      --danger: #f87171;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    /* Top Bar */
+    header {
+      background: var(--sidebar);
+      border-bottom: 1px solid var(--border);
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      z-index: 10;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .btn-icon {
+      background: none;
+      border: none;
+      color: var(--text);
+      font-size: 22px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+    }
+    .btn-icon:active {
+      background: var(--border);
+    }
+    .title-group {
+      display: flex;
+      flex-direction: column;
+    }
+    .app-title {
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .node-badge {
+      font-size: 11px;
+      color: var(--success);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .node-badge::before {
+      content: "";
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      background: var(--success);
+      border-radius: 50%;
+    }
+    /* Chat View */
+    #chat-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .message {
+      max-width: 88%;
+      padding: 12px 14px;
+      border-radius: 14px;
+      font-size: 14px;
+      line-height: 1.45;
+      word-wrap: break-word;
+    }
+    .msg-user {
+      align-self: flex-end;
+      background: var(--accent);
+      color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+    .msg-assistant {
+      align-self: flex-start;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+    }
+    .live-task-card {
+      align-self: flex-start;
+      background: #1e202f;
+      border: 1px solid #3b4261;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 13px;
+      width: 100%;
+      max-width: 95%;
+      margin: 4px 0;
+    }
+    .task-header {
+      font-weight: 600;
+      color: #7aa2f7;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .task-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 4px 0;
+      color: #c0caf5;
+    }
+    /* Bottom Bar */
+    footer {
+      background: var(--sidebar);
+      border-top: 1px solid var(--border);
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .input-box {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 20px;
+      font-size: 14px;
+      outline: none;
+    }
+    .input-box:focus {
+      border-color: var(--accent);
+    }
+    .btn-send {
+      background: var(--accent);
+      border: none;
+      color: white;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    /* Side Drawer / Modal */
+    .drawer-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.6);
+      display: none;
+      z-index: 20;
+    }
+    .drawer {
+      position: fixed;
+      top: 0;
+      left: -280px;
+      width: 280px;
+      height: 100%;
+      background: var(--sidebar);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      z-index: 30;
+      transition: left 0.25s ease;
+      padding: 20px 16px;
+    }
+    .drawer.open {
+      left: 0;
+    }
+    .drawer-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+    .drawer-menu {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .menu-item {
+      padding: 12px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    /* Modal Settings */
+    .modal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: var(--sidebar);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      width: 90%;
+      max-width: 380px;
+      padding: 20px;
+      display: none;
+      z-index: 40;
+    }
+    .modal.open {
+      display: block;
+    }
+    .form-group {
+      margin: 12px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .form-group label {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .form-control {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      padding: 10px;
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 14px;
+    }
+    .btn-block {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      background: var(--accent);
+      color: white;
+      font-weight: 600;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="drawer-overlay" id="overlay" onclick="closeDrawer()"></div>
+
+  <!-- Left Drawer Navigation -->
+  <div class="drawer" id="drawer">
+    <div class="drawer-title">🚀 DSH Android</div>
+    <div class="drawer-menu">
+      <div class="menu-item" onclick="openNodeModal()">
+        <span>🌐 Node Settings</span>
+        <span id="drawer-node-status">VPS</span>
+      </div>
+      <div class="menu-item" onclick="openModelModal()">
+        <span>🧠 Model Picker</span>
+        <span id="drawer-model-status">Auto</span>
+      </div>
+      <div class="menu-item" onclick="requestPermissions()">
+        <span>🛡️ Permissions</span>
+        <span>Manage</span>
+      </div>
+      <div class="menu-item" onclick="newSession()">
+        <span>➕ New Session</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header>
+    <div class="header-left">
+      <button class="btn-icon" onclick="openDrawer()">☰</button>
+      <div class="title-group">
+        <span class="app-title">DeepSeek Harness</span>
+        <span class="node-badge" id="node-badge">VPS Node Active</span>
+      </div>
+    </div>
+    <button class="btn-icon" onclick="openModelModal()">⚡</button>
+  </header>
+
+  <!-- Chat Space -->
+  <main id="chat-container">
+    <div class="message msg-assistant">
+      👋 Welcome to <b>DSH Mobile</b>. Choose your target node (Remote VPS or Local HP) from the menu and start coding autonomously.
+    </div>
+  </main>
+
+  <!-- Footer Input -->
+  <footer>
+    <input type="text" id="prompt-input" class="input-box" placeholder="Ask AI or run command..." onkeypress="handleKey(event)">
+    <button class="btn-send" onclick="sendPrompt()">➤</button>
+  </footer>
+
+  <!-- Node Config Modal -->
+  <div class="modal" id="node-modal">
+    <h3>🌐 Node Connection</h3>
+    <div class="form-group">
+      <label>Mode</label>
+      <select id="node-mode" class="form-control" onchange="toggleNodeInputs()">
+        <option value="remote">Remote VPS Node</option>
+        <option value="local">Local HP Engine (PRoot)</option>
+      </select>
+    </div>
+    <div id="remote-inputs">
+      <div class="form-group">
+        <label>Server URL / IP</label>
+        <input type="text" id="node-url" class="form-control" placeholder="https://vps.example.com">
+      </div>
+      <div class="form-group">
+        <label>API Key / Password</label>
+        <input type="password" id="node-token" class="form-control" placeholder="Bearer Token">
+      </div>
+    </div>
+    <button class="btn-block" onclick="saveNodeConfig()">Save & Connect</button>
+    <button class="btn-block" style="background:#282a3a; margin-top:6px;" onclick="closeModals()">Cancel</button>
+  </div>
+
+  <script>
+    function openDrawer() {
+      document.getElementById('drawer').classList.add('open');
+      document.getElementById('overlay').style.display = 'block';
+    }
+    function closeDrawer() {
+      document.getElementById('drawer').classList.remove('open');
+      document.getElementById('overlay').style.display = 'none';
+    }
+    function closeModals() {
+      document.querySelectorAll('.modal').forEach(m => m.classList.remove('open'));
+      closeDrawer();
+    }
+    function openNodeModal() {
+      closeDrawer();
+      document.getElementById('node-modal').classList.add('open');
+    }
+    function toggleNodeInputs() {
+      const mode = document.getElementById('node-mode').value;
+      document.getElementById('remote-inputs').style.display = mode === 'remote' ? 'block' : 'none';
+    }
+    function saveNodeConfig() {
+      const mode = document.getElementById('node-mode').value;
+      document.getElementById('node-badge').innerText = mode === 'remote' ? 'VPS Node Active' : 'Local HP Active';
+      document.getElementById('drawer-node-status').innerText = mode === 'remote' ? 'VPS' : 'Local';
+      closeModals();
+    }
+    function handleKey(e) {
+      if (e.key === 'Enter') sendPrompt();
+    }
+    function sendPrompt() {
+      const input = document.getElementById('prompt-input');
+      const text = input.value.trim();
+      if (!text) return;
+      
+      const chat = document.getElementById('chat-container');
+      chat.innerHTML += `<div class="message msg-user">${text}</div>`;
+      input.value = '';
+      
+      // Simulate live task execution
+      chat.innerHTML += `
+        <div class="live-task-card" id="task-progress">
+          <div class="task-header">⚡ Agent Live Execution</div>
+          <div class="task-item">✅ <b>Thinking...</b></div>
+          <div class="task-item">🔄 <b>Eksekusi Terminal</b> » <code>git status</code></div>
+        </div>
+      `;
+      chat.scrollTop = chat.scrollHeight;
+
+      setTimeout(() => {
+        const taskCard = document.getElementById('task-progress');
+        if (taskCard) taskCard.remove();
+        chat.innerHTML += `<div class="message msg-assistant">I have processed your request for: <code>${text}</code>. All tasks completed successfully.</div>`;
+        chat.scrollTop = chat.scrollHeight;
+      }, 2000);
+    }
+    function requestPermissions() {
+      if (window.AndroidBridge) {
+        window.AndroidBridge.requestAllPermissions();
+      } else {
+        alert('Storage & Device Permissions Requested!');
+      }
+    }
+    function newSession() {
+      document.getElementById('chat-container').innerHTML = `
+        <div class="message msg-assistant">✨ New session initialized. Ready for your instructions.</div>
+      `;
+      closeDrawer();
+    }
+  </script>
+</body>
+</html>
