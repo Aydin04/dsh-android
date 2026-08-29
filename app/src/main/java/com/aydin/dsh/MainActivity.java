@@ -1,23 +1,31 @@
 package com.aydin.dsh;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.Settings;
+import android.view.View;
 import android.webkit.JavascriptInterface;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
-import android.webkit.WebViewClient;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.webkit.WebViewAssetLoader;
+import androidx.webkit.WebViewClientCompat;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,6 +34,8 @@ public class MainActivity extends AppCompatActivity {
 
     private WebView webView;
     private static final int PERMISSION_REQ_CODE = 101;
+    private static final String PREFS_NAME = "DSH_PREFS";
+    private static final String KEY_NODE_URL = "NODE_URL";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,10 +56,30 @@ public class MainActivity extends AppCompatActivity {
         settings.setDatabaseEnabled(true);
         settings.setUseWideViewPort(true);
         settings.setLoadWithOverviewMode(true);
+        settings.setMediaPlaybackRequiresUserGesture(false);
+
+        final WebViewAssetLoader assetLoader = new WebViewAssetLoader.Builder()
+                .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
+                .build();
 
         webView.addJavascriptInterface(new WebAppInterface(), "AndroidBridge");
-        webView.setWebViewClient(new WebViewClient());
-        webView.loadUrl("file:///android_asset/web/index.html");
+
+        webView.setWebViewClient(new WebViewClientCompat() {
+            @Override
+            public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                return assetLoader.shouldInterceptRequest(request.getUrl());
+            }
+        });
+
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        String remoteUrl = prefs.getString(KEY_NODE_URL, "");
+
+        if (!remoteUrl.isEmpty()) {
+            webView.loadUrl(remoteUrl);
+        } else {
+            // Load bundled official DSH Web Dashboard
+            webView.loadUrl("https://appassets.androidplatform.net/assets/web/index.html");
+        }
     }
 
     private void checkAndRequestPermissions() {
@@ -87,11 +117,22 @@ public class MainActivity extends AppCompatActivity {
 
     public class WebAppInterface {
         @JavascriptInterface
-        public void requestAllPermissions() {
+        public void setRemoteNode(String url) {
+            SharedPreferences.Editor editor = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit();
+            editor.putString(KEY_NODE_URL, url);
+            editor.apply();
             runOnUiThread(() -> {
-                checkAndRequestPermissions();
-                Toast.makeText(MainActivity.this, "Checking & Requesting System Permissions...", Toast.LENGTH_SHORT).show();
+                if (url.isEmpty()) {
+                    webView.loadUrl("https://appassets.androidplatform.net/assets/web/index.html");
+                } else {
+                    webView.loadUrl(url);
+                }
             });
+        }
+
+        @JavascriptInterface
+        public void requestAllPermissions() {
+            runOnUiThread(() -> checkAndRequestPermissions());
         }
 
         @JavascriptInterface
