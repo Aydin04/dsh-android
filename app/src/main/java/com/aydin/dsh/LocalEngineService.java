@@ -16,7 +16,6 @@ import androidx.core.app.NotificationCompat;
 
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
-import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -60,22 +59,29 @@ public class LocalEngineService extends Service {
             File binDir = new File(filesDir, "bin");
             if (!binDir.exists()) binDir.mkdirs();
 
-            // 1. Resolve Native Executable Node.js Binary (from nativeLibraryDir)
-            String nativeLibDir = getApplicationInfo().nativeLibraryDir;
-            File nodeLib = new File(nativeLibDir, "libnode.so");
+            // 1. Extract Node.js binary to files/bin/node (Permitted under targetSdk 28)
             File nodeFile = new File(binDir, "node");
-
-            String nodeExecutablePath;
-            if (nodeLib.exists() && nodeLib.canExecute()) {
-                emitLog("[NATIVE] Found executable Node.js at nativeLibraryDir: " + nodeLib.getAbsolutePath());
-                nodeExecutablePath = nodeLib.getAbsolutePath();
-            } else if (nodeLib.exists()) {
-                emitLog("[NATIVE] Found libnode.so at nativeLibraryDir: " + nodeLib.getAbsolutePath());
-                nodeExecutablePath = nodeLib.getAbsolutePath();
-            } else {
-                emitLog("[WARN] libnode.so not in nativeLibraryDir (" + nativeLibDir + "), falling back to files/bin/node");
-                nodeExecutablePath = nodeFile.getAbsolutePath();
+            if (!nodeFile.exists() || nodeFile.length() == 0) {
+                emitLog("[EXTRACT] Extracting Node.js binary to " + nodeFile.getAbsolutePath() + "...");
+                try (InputStream in = getAssets().open("engine/node");
+                     OutputStream out = new FileOutputStream(nodeFile)) {
+                    byte[] buffer = new byte[32768];
+                    int read;
+                    while ((read = in.read(buffer)) != -1) {
+                        out.write(buffer, 0, read);
+                    }
+                }
             }
+
+            // Set executable permission directly
+            nodeFile.setReadable(true, false);
+            nodeFile.setExecutable(true, false);
+            try {
+                Runtime.getRuntime().exec("chmod 755 " + nodeFile.getAbsolutePath()).waitFor();
+            } catch (Exception ignored) {
+            }
+
+            emitLog("[EXTRACT] Node.js ready. Size: " + (nodeFile.length() / 1024 / 1024) + " MB, Executable: " + nodeFile.canExecute());
 
             // 2. Extract DSH Core via pure Java Tar
             File dshDir = new File(filesDir, "dsh");
@@ -116,13 +122,13 @@ public class LocalEngineService extends Service {
             }
 
             // 3. Test executing node --version
-            emitLog("[TEST] Testing Node execution: " + nodeExecutablePath + " -v");
+            emitLog("[TEST] Testing Node execution: " + nodeFile.getAbsolutePath() + " -v");
             try {
-                Process testProc = new ProcessBuilder(nodeExecutablePath, "-v").start();
+                Process testProc = new ProcessBuilder(nodeFile.getAbsolutePath(), "-v").start();
                 BufferedReader r = new BufferedReader(new InputStreamReader(testProc.getInputStream()));
                 String version = r.readLine();
                 testProc.waitFor();
-                emitLog("[TEST SUCCESS] Node.js verified on Android! Version: " + version);
+                emitLog("[TEST SUCCESS] Node.js verified! Version: " + version);
             } catch (Exception err) {
                 emitLog("[TEST ERROR] Node.js test failed: " + err.getMessage());
             }
@@ -130,7 +136,7 @@ public class LocalEngineService extends Service {
             // 4. Launch On-Device DSH Server
             emitLog("[SERVER] Launching dsh --profile web --port 3000 ...");
             ProcessBuilder pb = new ProcessBuilder(
-                    nodeExecutablePath,
+                    nodeFile.getAbsolutePath(),
                     dshBin.getAbsolutePath(),
                     "--profile", "web",
                     "--no-open",
@@ -139,7 +145,7 @@ public class LocalEngineService extends Service {
             pb.directory(filesDir);
             pb.environment().put("HOME", filesDir.getAbsolutePath());
             pb.environment().put("NODE_PATH", new File(dshDir, "node_modules").getAbsolutePath());
-            pb.environment().put("PATH", nativeLibDir + ":" + binDir.getAbsolutePath() + ":/system/bin:/system/xbin");
+            pb.environment().put("PATH", binDir.getAbsolutePath() + ":/system/bin:/system/xbin");
             pb.redirectErrorStream(true);
 
             nodeProcess = pb.start();
