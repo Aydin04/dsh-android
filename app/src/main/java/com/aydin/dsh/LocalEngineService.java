@@ -26,6 +26,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Arrays;
 
 public class LocalEngineService extends Service {
 
@@ -58,6 +59,16 @@ public class LocalEngineService extends Service {
             File filesDir = getFilesDir();
             File binDir = new File(filesDir, "bin");
             if (!binDir.exists()) binDir.mkdirs();
+
+            // List available assets for transparent debugging
+            try {
+                String[] rootAssets = getAssets().list("");
+                emitLog("[ASSETS] Root Assets: " + Arrays.toString(rootAssets));
+                String[] engineAssets = getAssets().list("engine");
+                emitLog("[ASSETS] Engine Assets: " + Arrays.toString(engineAssets));
+            } catch (Exception e) {
+                emitLog("[ASSETS ERROR] " + e.getMessage());
+            }
 
             // 1. Extract Node.js binary
             File nodeFile = new File(binDir, "node");

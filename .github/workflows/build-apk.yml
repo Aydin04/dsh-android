@@ -58,6 +58,10 @@ jobs:
       - name: Build Debug APK
         run: gradle assembleDebug --stacktrace
 
+      - name: Check APK contents
+        run: |
+          unzip -l app/build/outputs/apk/debug/app-debug.apk | grep assets/engine/
+
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -68,10 +72,10 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.2.0
-          name: "DSH Mobile v1.2.0 (Standalone On-Device Engine & Auto Boot)"
+          tag_name: v1.2.1
+          name: "DSH Mobile v1.2.1 (Standalone On-Device Engine & Auto Boot)"
           body: |
-            ## 🚀 DSH Mobile Standalone Release
+            ## 🚀 DSH Mobile Standalone Release v1.2.1
             - ⚡ **Auto Booting On-Device**: Menjalankan server DSH lokal di HP secara otomatis saat aplikasi dibuka
             - 📦 **Full DSH Engine + Node.js ARM64 Bundled**
             - 🌐 **100% Official DeepSeek Harness Dashboard**
