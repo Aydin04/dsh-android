@@ -29,36 +29,40 @@ jobs:
         with:
           node-version: 22
 
+      - name: Install patchelf
+        run: sudo apt-get update && sudo apt-get install -y patchelf
+
       - name: Download and Bundle Native Android Bionic Node.js, Shared Libs, and DSH Core
         run: |
           mkdir -p app/src/main/assets/engine
-          mkdir -p app/src/main/assets/engine/lib
           
-          echo "1. Fetching Native Android Bionic Node.js and all needed shared libs..."
+          echo "1. Fetching Native Android Bionic Node.js and all required shared libs..."
           mkdir -p /tmp/bionic_build && cd /tmp/bionic_build
           
-          # Download nodejs and all dependency debs from termux repo
-          for pkg in nodejs-lts zlib c-ares sqlite libicu libc++; do
-            case $pkg in
-              nodejs-lts) pkg_url="https://packages.termux.dev/apt/termux-main/pool/main/n/nodejs-lts/nodejs-lts_24.18.0-1_aarch64.deb" ;;
-              zlib)       pkg_url="https://packages.termux.dev/apt/termux-main/pool/main/z/zlib/zlib_1.3.2_aarch64.deb" ;;
-              c-ares)     pkg_url="https://packages.termux.dev/apt/termux-main/pool/main/c/c-ares/c-ares_1.34.8_aarch64.deb" ;;
-              sqlite)     pkg_url="https://packages.termux.dev/apt/termux-main/pool/main/libs/libsqlite/libsqlite_3.53.4_aarch64.deb" ;;
-              libicu)     pkg_url="https://packages.termux.dev/apt/termux-main/pool/main/libi/libicu/libicu_78.3_aarch64.deb" ;;
-              libc++)     pkg_url="https://packages.termux.dev/apt/termux-main/pool/main/libc/libc++/libc++_29_aarch64.deb" ;;
-            esac
-            curl -sL "$pkg_url" -o "$pkg.deb"
-            ar x "$pkg.deb"
+          # Download nodejs-lts and all dependencies
+          curl -sL "https://packages.termux.dev/apt/termux-main/pool/main/n/nodejs-lts/nodejs-lts_24.18.0-1_aarch64.deb" -o node.deb
+          curl -sL "https://packages.termux.dev/apt/termux-main/pool/main/z/zlib/zlib_1.3.2_aarch64.deb" -o zlib.deb
+          curl -sL "https://packages.termux.dev/apt/termux-main/pool/main/c/c-ares/c-ares_1.34.8_aarch64.deb" -o cares.deb
+          curl -sL "https://packages.termux.dev/apt/termux-main/pool/main/libs/libsqlite/libsqlite_3.53.4_aarch64.deb" -o sqlite.deb
+          curl -sL "https://packages.termux.dev/apt/termux-main/pool/main/libi/libicu/libicu_78.3_aarch64.deb" -o icu.deb
+          curl -sL "https://packages.termux.dev/apt/termux-main/pool/main/libc/libc++/libc++_29_aarch64.deb" -o libc++.deb
+          curl -sL "https://packages.termux.dev/apt/termux-main/pool/main/o/openssl/openssl_1:3.6.3_aarch64.deb" -o openssl.deb
+          
+          for f in *.deb; do
+            ar x "$f"
             tar -xf data.tar.*
           done
           
           cp data/data/com.termux/files/usr/bin/node $GITHUB_WORKSPACE/app/src/main/assets/engine/node
+          
+          # Set RPATH in node binary to look directly in app files/lib directory on Android
+          patchelf --set-rpath '/data/user/0/com.aydin.dsh/files/lib:/data/data/com.aydin.dsh/files/lib' $GITHUB_WORKSPACE/app/src/main/assets/engine/node
           chmod 755 $GITHUB_WORKSPACE/app/src/main/assets/engine/node
           
-          # Package all native shared libraries into engine-libs.tar
+          # Package all native shared libraries into engine-libs.tar (dereference symlinks to regular files)
           mkdir -p /tmp/libs_to_pack
-          find data/data/com.termux/files/usr/lib -name "*.so*" -exec cp -d {} /tmp/libs_to_pack/ \; 2>/dev/null || true
-          tar -cf $GITHUB_WORKSPACE/app/src/main/assets/engine/engine-libs.tar -C /tmp/libs_to_pack .
+          find data/data/com.termux/files/usr/lib -name "*.so*" -exec cp -L {} /tmp/libs_to_pack/ \;
+          tar -chf $GITHUB_WORKSPACE/app/src/main/assets/engine/engine-libs.tar -C /tmp/libs_to_pack .
           
           cd $GITHUB_WORKSPACE
           echo "2. Installing and Packaging Full DeepSeek Harness Core..."
@@ -76,21 +80,22 @@ jobs:
       - name: Build Debug APK
         run: gradle assembleDebug --stacktrace
 
-      - name: Check APK contents and Verify Bionic Linker
+      - name: Check APK contents and Verify RPATH
         run: |
           unzip -l app/build/outputs/apk/debug/app-debug.apk | grep assets/engine/
+          unzip -p app/build/outputs/apk/debug/app-debug.apk assets/engine/node > /tmp/check_node
+          readelf -d /tmp/check_node | grep -E "(RPATH|RUNPATH)"
 
       - name: Create Release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.2.6
-          name: "DSH Mobile v1.2.6 (Complete Android Bionic Node & Shared Libs Bundle)"
+          tag_name: v1.2.7
+          name: "DSH Mobile v1.2.7 (Patched RPATH & Full Dereferenced Native Libs)"
           body: |
-            ## 🚀 DSH Mobile Standalone Release v1.2.6
-            - ⚡ **Native Android Bionic Node.js + Complete Shared Libs (`libz.so.1`, `libcrypto.so.3`, `libcares.so`, `libicu.so`, `libc++_shared.so`)**
-            - 🔧 **Custom `LD_LIBRARY_PATH`**: Node runtime langsung menemukan semua native dependencies di Android.
-            - 📦 **32,766 Full DSH Module Files Bundled**
+            ## 🚀 DSH Mobile Standalone Release v1.2.7
+            - ⚡ **Patched RPATH (`/data/user/0/com.aydin.dsh/files/lib`)**: Node.js otomatis menemukan semua library native (`libz.so.1`, `libcrypto.so.3`, `libcares.so`, `libicu`, `libc++_shared.so`) tanpa bergantung pada Android linker global.
+            - 📦 **Dereferenced `.so` Files**: Menghilangkan broken symlinks saat ekstraksi di Android.
             - 🌐 **100% Official DeepSeek Harness Dashboard On-Device**
           files: app/build/outputs/apk/debug/*.apk
         env:
