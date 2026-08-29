@@ -29,7 +29,7 @@ jobs:
         with:
           node-version: 22
 
-      - name: Download & Bundle Full Engine (Node.js ARM64 + DSH Core)
+      - name: Download and Bundle Full Engine (Node.js ARM64 and DSH Core)
         run: |
           mkdir -p app/src/main/assets/engine
           
@@ -39,14 +39,16 @@ jobs:
           cp /tmp/node-v22.14.0-linux-arm64/bin/node app/src/main/assets/engine/node
           chmod +x app/src/main/assets/engine/node
           
-          echo "2. Installing & Packaging Full DeepSeek Harness Core..."
-          mkdir -p /tmp/dsh_pkg && cd /tmp/dsh_pkg
-          npm init -y
-          npm install --no-audit --no-fund @deepseek-ai/dsh
-          tar -czf $GITHUB_WORKSPACE/app/src/main/assets/engine/dsh-core.tar.gz -C /tmp/dsh_pkg/node_modules/@deepseek-ai dsh
+          echo "2. Installing and Packaging Full DeepSeek Harness Core..."
+          NODE_OPTIONS="--max-old-space-size=4096" npm install -g @deepseek-ai/dsh --omit=dev --no-audit --no-fund --prefix /tmp/global_dsh
           
-          cd $GITHUB_WORKSPACE
+          tar -czf app/src/main/assets/engine/dsh-core.tar.gz -C /tmp/global_dsh/lib/node_modules/@deepseek-ai dsh
+          
           ls -lh app/src/main/assets/engine/
+          if [ ! -f app/src/main/assets/engine/dsh-core.tar.gz ]; then
+            echo "ERROR: dsh-core.tar.gz was not created!"
+            exit 1
+          fi
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
