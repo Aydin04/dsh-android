@@ -60,12 +60,11 @@ public class LocalEngineService extends Service {
             File binDir = new File(filesDir, "bin");
             if (!binDir.exists()) binDir.mkdirs();
 
-            // List available assets for transparent debugging
+            // List available assets
+            String[] engineAssets = new String[0];
             try {
-                String[] rootAssets = getAssets().list("");
-                emitLog("[ASSETS] Root Assets: " + Arrays.toString(rootAssets));
-                String[] engineAssets = getAssets().list("engine");
-                emitLog("[ASSETS] Engine Assets: " + Arrays.toString(engineAssets));
+                engineAssets = getAssets().list("engine");
+                emitLog("[ASSETS] Engine Assets Found: " + Arrays.toString(engineAssets));
             } catch (Exception e) {
                 emitLog("[ASSETS ERROR] " + e.getMessage());
             }
@@ -76,7 +75,7 @@ public class LocalEngineService extends Service {
                 emitLog("[EXTRACT] Extracting Node.js v22 standalone ARM64 binary...");
                 try (InputStream in = getAssets().open("engine/node");
                      OutputStream out = new FileOutputStream(nodeFile)) {
-                    byte[] buffer = new byte[16384];
+                    byte[] buffer = new byte[32768];
                     int read;
                     while ((read = in.read(buffer)) != -1) {
                         out.write(buffer, 0, read);
@@ -89,37 +88,53 @@ public class LocalEngineService extends Service {
                 emitLog("[EXTRACT] Node.js binary cached.");
             }
 
-            // 2. Extract DSH Core via pure Java Tar
+            // 2. Extract DSH Core via pure Java Tar (support both .tar and .tar.gz)
             File dshDir = new File(filesDir, "dsh");
             File dshBin = new File(dshDir, "lib/bin.js");
 
             if (!dshBin.exists()) {
-                emitLog("[EXTRACT] Extracting DeepSeek Harness packages...");
-                try (InputStream rawIn = getAssets().open("engine/dsh-core.tar.gz");
-                     GzipCompressorInputStream gzIn = new GzipCompressorInputStream(rawIn);
-                     TarArchiveInputStream tarIn = new TarArchiveInputStream(gzIn)) {
+                String targetAsset = null;
+                boolean isGzip = false;
 
-                    TarArchiveEntry entry;
-                    int count = 0;
-                    while ((entry = tarIn.getNextTarEntry()) != null) {
-                        File outputFile = new File(filesDir, entry.getName());
-                        if (entry.isDirectory()) {
-                            if (!outputFile.exists()) outputFile.mkdirs();
-                        } else {
-                            File parent = outputFile.getParentFile();
-                            if (parent != null && !parent.exists()) parent.mkdirs();
+                if (Arrays.asList(engineAssets).contains("dsh-core.tar")) {
+                    targetAsset = "engine/dsh-core.tar";
+                    isGzip = false;
+                } else if (Arrays.asList(engineAssets).contains("dsh-core.tar.gz")) {
+                    targetAsset = "engine/dsh-core.tar.gz";
+                    isGzip = true;
+                } else {
+                    targetAsset = "engine/dsh-core.tar";
+                }
 
-                            try (OutputStream out = new FileOutputStream(outputFile)) {
-                                byte[] buf = new byte[16384];
-                                int len;
-                                while ((len = tarIn.read(buf)) != -1) {
-                                    out.write(buf, 0, len);
+                emitLog("[EXTRACT] Extracting DeepSeek Harness packages from " + targetAsset + "...");
+                try (InputStream rawIn = getAssets().open(targetAsset)) {
+                    InputStream inStream = isGzip ? new GzipCompressorInputStream(rawIn) : rawIn;
+                    try (TarArchiveInputStream tarIn = new TarArchiveInputStream(inStream)) {
+                        TarArchiveEntry entry;
+                        int count = 0;
+                        while ((entry = tarIn.getNextTarEntry()) != null) {
+                            File outputFile = new File(filesDir, entry.getName());
+                            if (entry.isDirectory()) {
+                                if (!outputFile.exists()) outputFile.mkdirs();
+                            } else {
+                                File parent = outputFile.getParentFile();
+                                if (parent != null && !parent.exists()) parent.mkdirs();
+
+                                try (OutputStream out = new FileOutputStream(outputFile)) {
+                                    byte[] buf = new byte[32768];
+                                    int len;
+                                    while ((len = tarIn.read(buf)) != -1) {
+                                        out.write(buf, 0, len);
+                                    }
                                 }
                             }
+                            count++;
+                            if (count % 500 == 0) {
+                                emitLog("[EXTRACT] Unpacked " + count + " files...");
+                            }
                         }
-                        count++;
+                        emitLog("[EXTRACT] Extracted total " + count + " DSH package files successfully.");
                     }
-                    emitLog("[EXTRACT] Extracted " + count + " DSH package files successfully.");
                 }
             } else {
                 emitLog("[EXTRACT] DSH packages cached at " + dshDir.getAbsolutePath());

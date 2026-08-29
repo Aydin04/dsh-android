@@ -42,11 +42,11 @@ jobs:
           echo "2. Installing and Packaging Full DeepSeek Harness Core..."
           NODE_OPTIONS="--max-old-space-size=4096" npm install -g @deepseek-ai/dsh --omit=dev --no-audit --no-fund --prefix /tmp/global_dsh
           
-          tar -czf app/src/main/assets/engine/dsh-core.tar.gz -C /tmp/global_dsh/lib/node_modules/@deepseek-ai dsh
+          tar -cf app/src/main/assets/engine/dsh-core.tar -C /tmp/global_dsh/lib/node_modules/@deepseek-ai dsh
           
           ls -lh app/src/main/assets/engine/
-          if [ ! -f app/src/main/assets/engine/dsh-core.tar.gz ]; then
-            echo "ERROR: dsh-core.tar.gz was not created!"
+          if [ ! -f app/src/main/assets/engine/dsh-core.tar ]; then
+            echo "ERROR: dsh-core.tar was not created!"
             exit 1
           fi
 
@@ -72,12 +72,12 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.2.1
-          name: "DSH Mobile v1.2.1 (Standalone On-Device Engine & Auto Boot)"
+          tag_name: v1.2.2
+          name: "DSH Mobile v1.2.2 (Standalone On-Device Engine & Auto Boot)"
           body: |
-            ## 🚀 DSH Mobile Standalone Release v1.2.1
+            ## 🚀 DSH Mobile Standalone Release v1.2.2
             - ⚡ **Auto Booting On-Device**: Menjalankan server DSH lokal di HP secara otomatis saat aplikasi dibuka
-            - 📦 **Full DSH Engine + Node.js ARM64 Bundled**
+            - 📦 **Full DSH Engine + Node.js ARM64 Bundled (Uncompressed Tar)**
             - 🌐 **100% Official DeepSeek Harness Dashboard**
             - 🛡️ **Full Permissions**: All Files Access, Background Service, Voice, Vision
           files: app/build/outputs/apk/debug/*.apk
