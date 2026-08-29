@@ -2,6 +2,7 @@ package com.aydin.dsh;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -10,22 +11,26 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.Settings;
+import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
+import android.webkit.ConsoleMessage;
 import android.webkit.JavascriptInterface;
+import android.webkit.WebChromeClient;
+import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
-import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
+import android.webkit.WebViewClient;
+import android.widget.EditText;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import androidx.webkit.WebViewAssetLoader;
-import androidx.webkit.WebViewClientCompat;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,7 +40,8 @@ public class MainActivity extends AppCompatActivity {
     private WebView webView;
     private static final int PERMISSION_REQ_CODE = 101;
     private static final String PREFS_NAME = "DSH_PREFS";
-    private static final String KEY_NODE_URL = "NODE_URL";
+    private static final String KEY_SERVER_URL = "SERVER_URL";
+    private static final String DEFAULT_SERVER = "http://127.0.0.1:3000";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,41 +51,96 @@ public class MainActivity extends AppCompatActivity {
         webView = findViewById(R.id.webView);
         setupWebView();
         checkAndRequestPermissions();
+
+        // Start background Node.js local engine
+        try {
+            Intent serviceIntent = new Intent(this, LocalEngineService.class);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(serviceIntent);
+            } else {
+                startService(serviceIntent);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        loadCurrentServer();
     }
 
     private void setupWebView() {
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
+        settings.setDatabaseEnabled(true);
         settings.setAllowFileAccess(true);
         settings.setAllowContentAccess(true);
-        settings.setDatabaseEnabled(true);
         settings.setUseWideViewPort(true);
         settings.setLoadWithOverviewMode(true);
+        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         settings.setMediaPlaybackRequiresUserGesture(false);
-
-        final WebViewAssetLoader assetLoader = new WebViewAssetLoader.Builder()
-                .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
-                .build();
 
         webView.addJavascriptInterface(new WebAppInterface(), "AndroidBridge");
 
-        webView.setWebViewClient(new WebViewClientCompat() {
+        webView.setWebViewClient(new WebViewClient() {
             @Override
-            public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
-                return assetLoader.shouldInterceptRequest(request.getUrl());
+            public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                super.onReceivedError(view, request, error);
+                if (request.isForMainFrame()) {
+                    showServerConfigDialog("Gagal terhubung ke server DSH (" + view.getUrl() + "). Pastikan dsh web sudah berjalan.");
+                }
             }
         });
 
-        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        String remoteUrl = prefs.getString(KEY_NODE_URL, "");
+        webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
+                return super.onConsoleMessage(consoleMessage);
+            }
+        });
+    }
 
-        if (!remoteUrl.isEmpty()) {
-            webView.loadUrl(remoteUrl);
+    private void loadCurrentServer() {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        String serverUrl = prefs.getString(KEY_SERVER_URL, "");
+
+        if (serverUrl.isEmpty()) {
+            showServerConfigDialog(null);
         } else {
-            // Load bundled official DSH Web Dashboard
-            webView.loadUrl("https://appassets.androidplatform.net/assets/web/index.html");
+            webView.loadUrl(serverUrl);
         }
+    }
+
+    private void showServerConfigDialog(String errorMessage) {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        String currentUrl = prefs.getString(KEY_SERVER_URL, "http://IP-VPS-ANDA:3000");
+
+        final EditText input = new EditText(this);
+        input.setText(currentUrl);
+        input.setHint("http://IP-VPS:PORT atau http://127.0.0.1:3000");
+        input.setSingleLine(true);
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this)
+                .setTitle("Hubungkan ke Server DSH")
+                .setMessage((errorMessage != null ? errorMessage + "\n\n" : "") +
+                        "Masukkan URL dsh web Anda (misal http://IP-VPS:3000):")
+                .setView(input)
+                .setCancelable(false)
+                .setPositiveButton("Hubungkan", (dialog, which) -> {
+                    String url = input.getText().toString().trim();
+                    if (!url.isEmpty()) {
+                        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+                            url = "http://" + url;
+                        }
+                        prefs.edit().putString(KEY_SERVER_URL, url).apply();
+                        webView.loadUrl(url);
+                    }
+                })
+                .setNegativeButton("Lokal (127.0.0.1:3000)", (dialog, which) -> {
+                    prefs.edit().putString(KEY_SERVER_URL, DEFAULT_SERVER).apply();
+                    webView.loadUrl(DEFAULT_SERVER);
+                });
+
+        builder.show();
     }
 
     private void checkAndRequestPermissions() {
@@ -117,17 +178,8 @@ public class MainActivity extends AppCompatActivity {
 
     public class WebAppInterface {
         @JavascriptInterface
-        public void setRemoteNode(String url) {
-            SharedPreferences.Editor editor = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit();
-            editor.putString(KEY_NODE_URL, url);
-            editor.apply();
-            runOnUiThread(() -> {
-                if (url.isEmpty()) {
-                    webView.loadUrl("https://appassets.androidplatform.net/assets/web/index.html");
-                } else {
-                    webView.loadUrl(url);
-                }
-            });
+        public void openSettings() {
+            runOnUiThread(() -> showServerConfigDialog(null));
         }
 
         @JavascriptInterface
@@ -146,7 +198,13 @@ public class MainActivity extends AppCompatActivity {
         if (webView.canGoBack()) {
             webView.goBack();
         } else {
-            super.onBackPressed();
+            new AlertDialog.Builder(this)
+                    .setTitle("DSH Mobile")
+                    .setMessage("Ganti alamat server atau keluar?")
+                    .setPositiveButton("Ganti Server", (d, w) -> showServerConfigDialog(null))
+                    .setNegativeButton("Keluar", (d, w) -> finish())
+                    .setNeutralButton("Batal", null)
+                    .show();
         }
     }
 }
