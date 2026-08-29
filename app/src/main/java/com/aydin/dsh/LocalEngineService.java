@@ -29,10 +29,21 @@ import java.net.URL;
 
 public class LocalEngineService extends Service {
 
+    public static final String ACTION_LOG = "com.aydin.dsh.ENGINE_LOG";
+    public static final String ACTION_READY = "com.aydin.dsh.ENGINE_READY";
+    public static final String EXTRA_MESSAGE = "EXTRA_MESSAGE";
+
     private static final String TAG = "DSH_LOCAL_ENGINE";
     private static final String CHANNEL_ID = "DSH_LOCAL_ENGINE";
     public static boolean isEngineReady = false;
     private Process nodeProcess;
+
+    private void emitLog(String msg) {
+        Log.i(TAG, msg);
+        Intent intent = new Intent(ACTION_LOG);
+        intent.putExtra(EXTRA_MESSAGE, msg);
+        sendBroadcast(intent);
+    }
 
     @Override
     public void onCreate() {
@@ -43,6 +54,7 @@ public class LocalEngineService extends Service {
 
     private void extractAndRunEngine() {
         try {
+            emitLog("[INIT] Starting Engine preparation on device...");
             File filesDir = getFilesDir();
             File binDir = new File(filesDir, "bin");
             if (!binDir.exists()) binDir.mkdirs();
@@ -50,7 +62,7 @@ public class LocalEngineService extends Service {
             // 1. Extract Node.js binary
             File nodeFile = new File(binDir, "node");
             if (!nodeFile.exists() || nodeFile.length() == 0) {
-                Log.d(TAG, "Extracting Node.js binary...");
+                emitLog("[EXTRACT] Extracting Node.js v22 standalone ARM64 binary...");
                 try (InputStream in = getAssets().open("engine/node");
                      OutputStream out = new FileOutputStream(nodeFile)) {
                     byte[] buffer = new byte[16384];
@@ -61,19 +73,23 @@ public class LocalEngineService extends Service {
                 }
                 nodeFile.setReadable(true, false);
                 nodeFile.setExecutable(true, false);
+                emitLog("[EXTRACT] Node.js extracted. Size: " + (nodeFile.length() / 1024 / 1024) + " MB");
+            } else {
+                emitLog("[EXTRACT] Node.js binary cached.");
             }
 
-            // 2. Extract DSH Core via pure Java TarArchiveInputStream (no system tar needed)
+            // 2. Extract DSH Core via pure Java Tar
             File dshDir = new File(filesDir, "dsh");
             File dshBin = new File(dshDir, "lib/bin.js");
 
             if (!dshBin.exists()) {
-                Log.d(TAG, "Extracting DSH package using pure Java Tar...");
+                emitLog("[EXTRACT] Extracting DeepSeek Harness packages...");
                 try (InputStream rawIn = getAssets().open("engine/dsh-core.tar.gz");
                      GzipCompressorInputStream gzIn = new GzipCompressorInputStream(rawIn);
                      TarArchiveInputStream tarIn = new TarArchiveInputStream(gzIn)) {
-                    
+
                     TarArchiveEntry entry;
+                    int count = 0;
                     while ((entry = tarIn.getNextTarEntry()) != null) {
                         File outputFile = new File(filesDir, entry.getName());
                         if (entry.isDirectory()) {
@@ -81,7 +97,7 @@ public class LocalEngineService extends Service {
                         } else {
                             File parent = outputFile.getParentFile();
                             if (parent != null && !parent.exists()) parent.mkdirs();
-                            
+
                             try (OutputStream out = new FileOutputStream(outputFile)) {
                                 byte[] buf = new byte[16384];
                                 int len;
@@ -90,13 +106,28 @@ public class LocalEngineService extends Service {
                                 }
                             }
                         }
+                        count++;
                     }
+                    emitLog("[EXTRACT] Extracted " + count + " DSH package files successfully.");
                 }
-                Log.d(TAG, "DSH extraction completed successfully.");
+            } else {
+                emitLog("[EXTRACT] DSH packages cached at " + dshDir.getAbsolutePath());
             }
 
-            // 3. Launch On-Device DSH Server
-            Log.d(TAG, "Starting DSH Node server on 127.0.0.1:3000...");
+            // 3. Test executing node --version
+            emitLog("[TEST] Testing Node execution permissions...");
+            try {
+                Process testProc = new ProcessBuilder(nodeFile.getAbsolutePath(), "-v").start();
+                BufferedReader r = new BufferedReader(new InputStreamReader(testProc.getInputStream()));
+                String version = r.readLine();
+                testProc.waitFor();
+                emitLog("[TEST] Node.js verified! Version: " + version);
+            } catch (Exception err) {
+                emitLog("[TEST ERROR] Node.js test execution failed: " + err.getMessage());
+            }
+
+            // 4. Launch On-Device DSH Server
+            emitLog("[SERVER] Launching dsh --profile web --port 3000 ...");
             ProcessBuilder pb = new ProcessBuilder(
                     nodeFile.getAbsolutePath(),
                     dshBin.getAbsolutePath(),
@@ -111,21 +142,22 @@ public class LocalEngineService extends Service {
             pb.redirectErrorStream(true);
 
             nodeProcess = pb.start();
+            emitLog("[SERVER] Process spawned PID active. Streaming stdout & stderr:");
 
-            // Stream logs
+            // Stream real-time node logs directly to UI
             new Thread(() -> {
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(nodeProcess.getInputStream()))) {
                     String line;
                     while ((line = reader.readLine()) != null) {
-                        Log.i(TAG, "[DSH Node] " + line);
+                        emitLog("[DSH Output] " + line);
                     }
                 } catch (Exception e) {
-                    Log.e(TAG, "Error reading DSH log", e);
+                    emitLog("[SERVER ERROR] Error reading log stream: " + e.getMessage());
                 }
             }).start();
 
-            // 4. Poll port 3000 readiness
-            for (int i = 0; i < 60; i++) {
+            // 5. Poll port 3000 readiness
+            for (int i = 1; i <= 60; i++) {
                 try {
                     URL url = new URL("http://127.0.0.1:3000/");
                     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -133,18 +165,21 @@ public class LocalEngineService extends Service {
                     conn.setReadTimeout(1000);
                     int code = conn.getResponseCode();
                     if (code == 200) {
-                        Log.d(TAG, "DSH Server is READY!");
+                        emitLog("[READY] HTTP 200 OK received! DeepSeek Harness dashboard ready.");
                         isEngineReady = true;
-                        sendBroadcast(new Intent("com.aydin.dsh.ENGINE_READY"));
+                        sendBroadcast(new Intent(ACTION_READY));
                         break;
                     }
                 } catch (Exception ignored) {
+                }
+                if (i % 5 == 0) {
+                    emitLog("[WAIT] Waiting for server on http://127.0.0.1:3000/ (" + i + "s)...");
                 }
                 Thread.sleep(1000);
             }
 
         } catch (Exception e) {
-            Log.e(TAG, "Failed in extractAndRunEngine", e);
+            emitLog("[FATAL EXCEPTION] " + e.toString());
         }
     }
 

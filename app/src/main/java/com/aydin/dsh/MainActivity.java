@@ -2,6 +2,8 @@ package com.aydin.dsh;
 
 import android.Manifest;
 import android.content.BroadcastReceiver;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -23,8 +25,10 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -44,6 +48,13 @@ public class MainActivity extends AppCompatActivity {
     private WebView webView;
     private LinearLayout loadingLayout;
     private TextView loadingText;
+    private TextView subText;
+    private TextView debugLogs;
+    private ScrollView logScrollView;
+    private Button btnCopyLog;
+    private Button btnRetry;
+    private Button btnConfig;
+
     private static final int PERMISSION_REQ_CODE = 101;
     private static final String PREFS_NAME = "DSH_PREFS";
     private static final String KEY_SERVER_URL = "SERVER_URL";
@@ -51,11 +62,19 @@ public class MainActivity extends AppCompatActivity {
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean isLoaded = false;
+    private final StringBuilder logAccumulator = new StringBuilder();
 
     private final BroadcastReceiver engineReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            connectToLocalDashboard();
+            String action = intent.getAction();
+            if (LocalEngineService.ACTION_LOG.equals(action)) {
+                String msg = intent.getStringExtra(LocalEngineService.EXTRA_MESSAGE);
+                appendLog(msg);
+            } else if (LocalEngineService.ACTION_READY.equals(action)) {
+                appendLog(">>> [EVENT] Engine reported READY. Connecting WebView...");
+                connectToLocalDashboard();
+            }
         }
     };
 
@@ -67,25 +86,62 @@ public class MainActivity extends AppCompatActivity {
         webView = findViewById(R.id.webView);
         loadingLayout = findViewById(R.id.loadingLayout);
         loadingText = findViewById(R.id.loadingText);
+        subText = findViewById(R.id.subText);
+        debugLogs = findViewById(R.id.debugLogs);
+        logScrollView = findViewById(R.id.logScrollView);
+        btnCopyLog = findViewById(R.id.btnCopyLog);
+        btnRetry = findViewById(R.id.btnRetry);
+        btnConfig = findViewById(R.id.btnConfig);
 
+        setupButtons();
         setupWebView();
         checkAndRequestPermissions();
 
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(LocalEngineService.ACTION_LOG);
+        filter.addAction(LocalEngineService.ACTION_READY);
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(engineReceiver, new IntentFilter("com.aydin.dsh.ENGINE_READY"), Context.RECEIVER_NOT_EXPORTED);
+            registerReceiver(engineReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
         } else {
-            registerReceiver(engineReceiver, new IntentFilter("com.aydin.dsh.ENGINE_READY"));
+            registerReceiver(engineReceiver, filter);
         }
 
-        // Start On-Device DSH Server
+        startEngineService();
+    }
+
+    private void setupButtons() {
+        btnCopyLog.setOnClickListener(v -> {
+            ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+            ClipData cd = ClipData.newPlainText("DSH Engine Logs", logAccumulator.toString());
+            cm.setPrimaryClip(cd);
+            Toast.makeText(this, "Logs copied to clipboard!", Toast.LENGTH_SHORT).show();
+        });
+
+        btnRetry.setOnClickListener(v -> {
+            appendLog("\n=== [RESTART] Restarting Engine Service ===");
+            stopService(new Intent(this, LocalEngineService.class));
+            startEngineService();
+        });
+
+        btnConfig.setOnClickListener(v -> showServerConfigDialog(null));
+    }
+
+    private void startEngineService() {
         Intent serviceIntent = new Intent(this, LocalEngineService.class);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundService(serviceIntent);
         } else {
             startService(serviceIntent);
         }
+    }
 
-        pollServerStatus();
+    private void appendLog(String message) {
+        handler.post(() -> {
+            logAccumulator.append(message).append("\n");
+            debugLogs.setText(logAccumulator.toString());
+            logScrollView.post(() -> logScrollView.fullScroll(View.FOCUS_DOWN));
+        });
     }
 
     private void setupWebView() {
@@ -116,58 +172,25 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
                 super.onReceivedError(view, request, error);
+                appendLog("[WebView Error] " + error.getDescription() + " on " + request.getUrl());
             }
         });
 
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
+                appendLog("[WebConsole] " + consoleMessage.message());
                 return super.onConsoleMessage(consoleMessage);
             }
         });
     }
 
-    private void pollServerStatus() {
-        new Thread(() -> {
-            SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-            String targetUrl = prefs.getString(KEY_SERVER_URL, LOCAL_URL);
-
-            for (int i = 0; i < 45; i++) {
-                if (isLoaded) return;
-                try {
-                    URL url = new URL(targetUrl);
-                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                    conn.setConnectTimeout(1000);
-                    conn.setReadTimeout(1000);
-                    if (conn.getResponseCode() == 200) {
-                        handler.post(() -> {
-                            if (!isLoaded) {
-                                webView.loadUrl(targetUrl);
-                            }
-                        });
-                        return;
-                    }
-                } catch (Exception ignored) {
-                }
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException ignored) {
-                }
-            }
-
-            handler.post(() -> {
-                if (!isLoaded) {
-                    loadingText.setText("Server starting taking longer than expected...");
-                    showServerConfigDialog("Belum dapat terhubung ke server lokal. Anda juga bisa menghubungkan ke Remote VPS:");
-                }
-            });
-        }).start();
-    }
-
     private void connectToLocalDashboard() {
-        if (!isLoaded) {
-            handler.post(() -> webView.loadUrl(LOCAL_URL));
-        }
+        handler.post(() -> {
+            if (!isLoaded) {
+                webView.loadUrl(LOCAL_URL);
+            }
+        });
     }
 
     private void showServerConfigDialog(String errorMessage) {
@@ -195,7 +218,7 @@ public class MainActivity extends AppCompatActivity {
                         webView.loadUrl(url);
                     }
                 })
-                .setNegativeButton("Reset ke Lokal HP", (dialog, which) -> {
+                .setNegativeButton("Lokal HP (127.0.0.1:3000)", (dialog, which) -> {
                     prefs.edit().putString(KEY_SERVER_URL, LOCAL_URL).apply();
                     webView.loadUrl(LOCAL_URL);
                 });
@@ -264,7 +287,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
-        if (webView.canGoBack()) {
+        if (webView.canGoBack() && webView.getVisibility() == View.VISIBLE) {
             webView.goBack();
         } else {
             new AlertDialog.Builder(this)

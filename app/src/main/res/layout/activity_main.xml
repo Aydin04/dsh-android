@@ -5,42 +5,117 @@
     android:layout_height="match_parent"
     android:background="#0d1117">
 
-    <!-- Loading Splash while DSH Engine boots -->
+    <!-- Loading & Live Debug Console Layout -->
     <LinearLayout
         android:id="@+id/loadingLayout"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:gravity="center"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
         android:orientation="vertical"
+        android:padding="16dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-        <ProgressBar
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:indeterminate="true"
-            android:indeterminateTint="#58a6ff" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingBottom="12dp">
+
+            <ProgressBar
+                android:id="@+id/progressBar"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:indeterminate="true"
+                android:indeterminateTint="#58a6ff" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/loadingText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Booting DeepSeek Harness Engine..."
+                    android:textColor="#f0f6fc"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/subText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Extracting & executing on-device..."
+                    android:textColor="#8b949e"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/btnConfig"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Node"
+                android:textSize="11sp" />
+        </LinearLayout>
 
         <TextView
-            android:id="@+id/loadingText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="Starting DeepSeek Harness on-device..."
-            android:textColor="#f0f6fc"
-            android:textSize="14sp"
+            android:layout_marginBottom="4dp"
+            android:text="📋 REAL-TIME ENGINE LOGS:"
+            android:textColor="#58a6ff"
+            android:textSize="11sp"
             android:textStyle="bold" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="Initializing Node runtime and web server"
-            android:textColor="#8b949e"
-            android:textSize="12sp" />
+        <!-- Scrollable live log console view -->
+        <ScrollView
+            android:id="@+id/logScrollView"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:background="#05070a"
+            android:padding="8dp">
 
+            <TextView
+                android:id="@+id/debugLogs"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="monospace"
+                android:text="[INIT] Initializing Android environment...\n"
+                android:textColor="#3fb950"
+                android:textSize="11sp" />
+        </ScrollView>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btnCopyLog"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="4dp"
+                android:layout_weight="1"
+                android:text="Copy Logs"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/btnRetry"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_weight="1"
+                android:text="Restart Engine"
+                android:textSize="12sp" />
+        </LinearLayout>
     </LinearLayout>
 
     <WebView
