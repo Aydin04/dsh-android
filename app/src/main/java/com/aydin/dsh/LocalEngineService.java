@@ -57,9 +57,11 @@ public class LocalEngineService extends Service {
             emitLog("[INIT] Starting Engine preparation on device...");
             File filesDir = getFilesDir();
             File binDir = new File(filesDir, "bin");
+            File libDir = new File(filesDir, "lib");
             if (!binDir.exists()) binDir.mkdirs();
+            if (!libDir.exists()) libDir.mkdirs();
 
-            // 1. Extract Node.js binary to files/bin/node (Permitted under targetSdk 28)
+            // 1. Extract Node.js binary
             File nodeFile = new File(binDir, "node");
             if (!nodeFile.exists() || nodeFile.length() == 0) {
                 emitLog("[EXTRACT] Extracting Node.js binary to " + nodeFile.getAbsolutePath() + "...");
@@ -73,7 +75,6 @@ public class LocalEngineService extends Service {
                 }
             }
 
-            // Set executable permission directly
             nodeFile.setReadable(true, false);
             nodeFile.setExecutable(true, false);
             try {
@@ -81,9 +82,38 @@ public class LocalEngineService extends Service {
             } catch (Exception ignored) {
             }
 
-            emitLog("[EXTRACT] Node.js ready. Size: " + (nodeFile.length() / 1024 / 1024) + " MB, Executable: " + nodeFile.canExecute());
+            // 2. Extract native shared libraries (libz, libcrypto, libcares, libicu, libc++)
+            File testLib = new File(libDir, "libz.so.1");
+            if (!testLib.exists()) {
+                emitLog("[EXTRACT] Extracting Node.js native shared libraries to " + libDir.getAbsolutePath() + "...");
+                try (InputStream rawIn = getAssets().open("engine/engine-libs.tar");
+                     TarArchiveInputStream tarIn = new TarArchiveInputStream(rawIn)) {
+                    TarArchiveEntry entry;
+                    int libCount = 0;
+                    while ((entry = tarIn.getNextTarEntry()) != null) {
+                        File outputFile = new File(libDir, entry.getName());
+                        if (entry.isDirectory()) {
+                            if (!outputFile.exists()) outputFile.mkdirs();
+                        } else {
+                            File parent = outputFile.getParentFile();
+                            if (parent != null && !parent.exists()) parent.mkdirs();
+                            try (OutputStream out = new FileOutputStream(outputFile)) {
+                                byte[] buf = new byte[32768];
+                                int len;
+                                while ((len = tarIn.read(buf)) != -1) {
+                                    out.write(buf, 0, len);
+                                }
+                            }
+                        }
+                        libCount++;
+                    }
+                    emitLog("[EXTRACT] Extracted " + libCount + " native shared libraries.");
+                } catch (Exception e) {
+                    emitLog("[EXTRACT LIBS ERROR] " + e.getMessage());
+                }
+            }
 
-            // 2. Extract DSH Core via pure Java Tar
+            // 3. Extract DSH Core packages
             File dshDir = new File(filesDir, "dsh");
             File dshBin = new File(dshDir, "lib/bin.js");
 
@@ -111,7 +141,7 @@ public class LocalEngineService extends Service {
                             }
                         }
                         count++;
-                        if (count % 1000 == 0) {
+                        if (count % 2000 == 0) {
                             emitLog("[EXTRACT] Unpacked " + count + " files...");
                         }
                     }
@@ -121,19 +151,23 @@ public class LocalEngineService extends Service {
                 emitLog("[EXTRACT] DSH packages cached at " + dshDir.getAbsolutePath());
             }
 
-            // 3. Test executing node --version
-            emitLog("[TEST] Testing Node execution: " + nodeFile.getAbsolutePath() + " -v");
+            // 4. Test executing node --version with LD_LIBRARY_PATH
+            emitLog("[TEST] Testing Node execution with LD_LIBRARY_PATH=" + libDir.getAbsolutePath());
             try {
-                Process testProc = new ProcessBuilder(nodeFile.getAbsolutePath(), "-v").start();
+                ProcessBuilder testPb = new ProcessBuilder(nodeFile.getAbsolutePath(), "-v");
+                testPb.environment().put("LD_LIBRARY_PATH", libDir.getAbsolutePath());
+                testPb.redirectErrorStream(true);
+                Process testProc = testPb.start();
+
                 BufferedReader r = new BufferedReader(new InputStreamReader(testProc.getInputStream()));
                 String version = r.readLine();
                 testProc.waitFor();
-                emitLog("[TEST SUCCESS] Node.js verified! Version: " + version);
+                emitLog("[TEST SUCCESS] Node.js verified! Output: " + version);
             } catch (Exception err) {
                 emitLog("[TEST ERROR] Node.js test failed: " + err.getMessage());
             }
 
-            // 4. Launch On-Device DSH Server
+            // 5. Launch On-Device DSH Server
             emitLog("[SERVER] Launching dsh --profile web --port 3000 ...");
             ProcessBuilder pb = new ProcessBuilder(
                     nodeFile.getAbsolutePath(),
@@ -144,6 +178,7 @@ public class LocalEngineService extends Service {
             );
             pb.directory(filesDir);
             pb.environment().put("HOME", filesDir.getAbsolutePath());
+            pb.environment().put("LD_LIBRARY_PATH", libDir.getAbsolutePath());
             pb.environment().put("NODE_PATH", new File(dshDir, "node_modules").getAbsolutePath());
             pb.environment().put("PATH", binDir.getAbsolutePath() + ":/system/bin:/system/xbin");
             pb.redirectErrorStream(true);
@@ -163,7 +198,7 @@ public class LocalEngineService extends Service {
                 }
             }).start();
 
-            // 5. Poll port 3000 readiness
+            // 6. Poll port 3000 readiness
             for (int i = 1; i <= 60; i++) {
                 try {
                     URL url = new URL("http://127.0.0.1:3000/");
