@@ -16,6 +16,7 @@ import androidx.core.app.NotificationCompat;
 
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
+import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -82,77 +83,101 @@ public class LocalEngineService extends Service {
             } catch (Exception ignored) {
             }
 
-            // 2. Extract native shared libraries (libz, libcrypto, libcares, libicu, libc++)
+            // 2. Extract compressed native shared libraries (engine-libs.tar.gz / engine-libs.tar)
             File testLib = new File(libDir, "libz.so.1");
             if (!testLib.exists()) {
                 emitLog("[EXTRACT] Extracting Node.js native shared libraries to " + libDir.getAbsolutePath() + "...");
-                try (InputStream rawIn = getAssets().open("engine/engine-libs.tar");
-                     TarArchiveInputStream tarIn = new TarArchiveInputStream(rawIn)) {
-                    TarArchiveEntry entry;
-                    int libCount = 0;
-                    while ((entry = tarIn.getNextTarEntry()) != null) {
-                        File outputFile = new File(libDir, entry.getName());
-                        if (entry.isDirectory()) {
-                            if (!outputFile.exists()) outputFile.mkdirs();
-                        } else {
-                            File parent = outputFile.getParentFile();
-                            if (parent != null && !parent.exists()) parent.mkdirs();
-                            try (OutputStream out = new FileOutputStream(outputFile)) {
-                                byte[] buf = new byte[32768];
-                                int len;
-                                while ((len = tarIn.read(buf)) != -1) {
-                                    out.write(buf, 0, len);
+                
+                String libAsset = "engine/engine-libs.tar.gz";
+                boolean isGzip = true;
+                try {
+                    String[] engineAssets = getAssets().list("engine");
+                    if (Arrays.asList(engineAssets).contains("engine-libs.tar")) {
+                        libAsset = "engine/engine-libs.tar";
+                        isGzip = false;
+                    }
+                } catch (Exception ignored) {}
+
+                try (InputStream rawIn = getAssets().open(libAsset)) {
+                    InputStream inStream = isGzip ? new GzipCompressorInputStream(rawIn) : rawIn;
+                    try (TarArchiveInputStream tarIn = new TarArchiveInputStream(inStream)) {
+                        TarArchiveEntry entry;
+                        int libCount = 0;
+                        while ((entry = tarIn.getNextTarEntry()) != null) {
+                            File outputFile = new File(libDir, entry.getName());
+                            if (entry.isDirectory()) {
+                                if (!outputFile.exists()) outputFile.mkdirs();
+                            } else {
+                                File parent = outputFile.getParentFile();
+                                if (parent != null && !parent.exists()) parent.mkdirs();
+                                try (OutputStream out = new FileOutputStream(outputFile)) {
+                                    byte[] buf = new byte[32768];
+                                    int len;
+                                    while ((len = tarIn.read(buf)) != -1) {
+                                        out.write(buf, 0, len);
+                                    }
                                 }
                             }
+                            libCount++;
                         }
-                        libCount++;
+                        emitLog("[EXTRACT] Extracted " + libCount + " native shared libraries.");
                     }
-                    emitLog("[EXTRACT] Extracted " + libCount + " native shared libraries.");
                 } catch (Exception e) {
                     emitLog("[EXTRACT LIBS ERROR] " + e.getMessage());
                 }
             }
 
-            // 3. Extract DSH Core packages
+            // 3. Extract compressed DSH Core packages (dsh-core.tar.gz / dsh-core.tar)
             File dshDir = new File(filesDir, "dsh");
             File dshBin = new File(dshDir, "lib/bin.js");
 
             if (!dshBin.exists()) {
-                emitLog("[EXTRACT] Extracting DeepSeek Harness packages from engine/dsh-core.tar...");
-                try (InputStream rawIn = getAssets().open("engine/dsh-core.tar");
-                     TarArchiveInputStream tarIn = new TarArchiveInputStream(rawIn)) {
+                String dshAsset = "engine/dsh-core.tar.gz";
+                boolean isGzip = true;
+                try {
+                    String[] engineAssets = getAssets().list("engine");
+                    if (Arrays.asList(engineAssets).contains("dsh-core.tar")) {
+                        dshAsset = "engine/dsh-core.tar";
+                        isGzip = false;
+                    }
+                } catch (Exception ignored) {}
 
-                    TarArchiveEntry entry;
-                    int count = 0;
-                    while ((entry = tarIn.getNextTarEntry()) != null) {
-                        File outputFile = new File(filesDir, entry.getName());
-                        if (entry.isDirectory()) {
-                            if (!outputFile.exists()) outputFile.mkdirs();
-                        } else {
-                            File parent = outputFile.getParentFile();
-                            if (parent != null && !parent.exists()) parent.mkdirs();
+                emitLog("[EXTRACT] Extracting DeepSeek Harness packages from " + dshAsset + "...");
+                try (InputStream rawIn = getAssets().open(dshAsset)) {
+                    InputStream inStream = isGzip ? new GzipCompressorInputStream(rawIn) : rawIn;
+                    try (TarArchiveInputStream tarIn = new TarArchiveInputStream(inStream)) {
+                        TarArchiveEntry entry;
+                        int count = 0;
+                        while ((entry = tarIn.getNextTarEntry()) != null) {
+                            File outputFile = new File(filesDir, entry.getName());
+                            if (entry.isDirectory()) {
+                                if (!outputFile.exists()) outputFile.mkdirs();
+                            } else {
+                                File parent = outputFile.getParentFile();
+                                if (parent != null && !parent.exists()) parent.mkdirs();
 
-                            try (OutputStream out = new FileOutputStream(outputFile)) {
-                                byte[] buf = new byte[32768];
-                                int len;
-                                while ((len = tarIn.read(buf)) != -1) {
-                                    out.write(buf, 0, len);
+                                try (OutputStream out = new FileOutputStream(outputFile)) {
+                                    byte[] buf = new byte[32768];
+                                    int len;
+                                    while ((len = tarIn.read(buf)) != -1) {
+                                        out.write(buf, 0, len);
+                                    }
                                 }
                             }
+                            count++;
+                            if (count % 2000 == 0) {
+                                emitLog("[EXTRACT] Unpacked " + count + " files...");
+                            }
                         }
-                        count++;
-                        if (count % 2000 == 0) {
-                            emitLog("[EXTRACT] Unpacked " + count + " files...");
-                        }
+                        emitLog("[EXTRACT] Extracted total " + count + " DSH package files successfully.");
                     }
-                    emitLog("[EXTRACT] Extracted total " + count + " DSH package files successfully.");
                 }
             } else {
                 emitLog("[EXTRACT] DSH packages cached at " + dshDir.getAbsolutePath());
             }
 
-            // 4. Test executing node --version with LD_LIBRARY_PATH
-            emitLog("[TEST] Testing Node execution with LD_LIBRARY_PATH=" + libDir.getAbsolutePath());
+            // 4. Test executing node --version with RPATH and LD_LIBRARY_PATH
+            emitLog("[TEST] Testing Node execution: " + nodeFile.getAbsolutePath() + " -v");
             try {
                 ProcessBuilder testPb = new ProcessBuilder(nodeFile.getAbsolutePath(), "-v");
                 testPb.environment().put("LD_LIBRARY_PATH", libDir.getAbsolutePath());
