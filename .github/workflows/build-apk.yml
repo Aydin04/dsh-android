@@ -1,4 +1,4 @@
-name: Build Android APK (Full Bundle)
+name: Build Android APK (Full On-Device DSH Bundle)
 
 on:
   push:
@@ -24,16 +24,28 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Download Engine Binaries (Node.js ARM64 & RootFS)
+      - name: Setup Node.js v22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Download & Bundle Full Engine (Node.js ARM64 + DSH Core)
         run: |
           mkdir -p app/src/main/assets/engine
-          echo "Fetching Node.js v22 ARM64..."
+          
+          echo "1. Fetching Node.js v22 ARM64 binary..."
           curl -sL https://nodejs.org/dist/v22.14.0/node-v22.14.0-linux-arm64.tar.xz -o /tmp/node-arm64.tar.xz
           tar -xf /tmp/node-arm64.tar.xz -C /tmp
           cp /tmp/node-v22.14.0-linux-arm64/bin/node app/src/main/assets/engine/node
           chmod +x app/src/main/assets/engine/node
-          echo "Fetching Alpine Linux aarch64 rootfs..."
-          curl -sL https://dl-cdn.alpinelinux.org/alpine/v3.20/releases/aarch64/alpine-minirootfs-3.20.0-aarch64.tar.gz -o app/src/main/assets/engine/rootfs.tar.gz
+          
+          echo "2. Installing & Packaging Full DeepSeek Harness Core..."
+          mkdir -p /tmp/dsh_pkg && cd /tmp/dsh_pkg
+          npm init -y
+          npm install --no-audit --no-fund @deepseek-ai/dsh
+          tar -czf $GITHUB_WORKSPACE/app/src/main/assets/engine/dsh-core.tar.gz -C /tmp/dsh_pkg/node_modules/@deepseek-ai dsh
+          
+          cd $GITHUB_WORKSPACE
           ls -lh app/src/main/assets/engine/
 
       - name: Setup Gradle
@@ -47,21 +59,21 @@ jobs:
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: dsh-android-full-bundle-apk
+          name: dsh-android-full-standalone-apk
           path: app/build/outputs/apk/debug/*.apk
 
       - name: Create Release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.1.0
-          name: "DSH Mobile v1.1.0 (Full Bundle On-Device Engine)"
+          tag_name: v1.2.0
+          name: "DSH Mobile v1.2.0 (Standalone On-Device Engine & Auto Boot)"
           body: |
-            ## 🚀 DSH Mobile Full Bundle Release
-            - 📦 **Embedded Node.js v22 ARM64 Runtime**
-            - 🐧 **Alpine Linux mini-rootfs (AArch64)** for on-device terminal execution
-            - 🌐 **Official DeepSeek Harness Web Dashboard**
-            - 🛡️ **Full Permissions**: All Files Access, Background Execution, Voice, Vision
+            ## 🚀 DSH Mobile Standalone Release
+            - ⚡ **Auto Booting On-Device**: Menjalankan server DSH lokal di HP secara otomatis saat aplikasi dibuka
+            - 📦 **Full DSH Engine + Node.js ARM64 Bundled**
+            - 🌐 **100% Official DeepSeek Harness Dashboard**
+            - 🛡️ **Full Permissions**: All Files Access, Background Service, Voice, Vision
           files: app/build/outputs/apk/debug/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,19 +1,19 @@
 package com.aydin.dsh;
 
 import android.Manifest;
+import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
-import android.view.LayoutInflater;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
 import android.webkit.ConsoleMessage;
 import android.webkit.JavascriptInterface;
@@ -24,6 +24,8 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -32,16 +34,30 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
     private WebView webView;
+    private LinearLayout loadingLayout;
+    private TextView loadingText;
     private static final int PERMISSION_REQ_CODE = 101;
     private static final String PREFS_NAME = "DSH_PREFS";
     private static final String KEY_SERVER_URL = "SERVER_URL";
-    private static final String DEFAULT_SERVER = "http://127.0.0.1:3000";
+    private static final String LOCAL_URL = "http://127.0.0.1:3000";
+
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private boolean isLoaded = false;
+
+    private final BroadcastReceiver engineReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            connectToLocalDashboard();
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,22 +65,27 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         webView = findViewById(R.id.webView);
+        loadingLayout = findViewById(R.id.loadingLayout);
+        loadingText = findViewById(R.id.loadingText);
+
         setupWebView();
         checkAndRequestPermissions();
 
-        // Start background Node.js local engine
-        try {
-            Intent serviceIntent = new Intent(this, LocalEngineService.class);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                startForegroundService(serviceIntent);
-            } else {
-                startService(serviceIntent);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(engineReceiver, new IntentFilter("com.aydin.dsh.ENGINE_READY"), Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            registerReceiver(engineReceiver, new IntentFilter("com.aydin.dsh.ENGINE_READY"));
         }
 
-        loadCurrentServer();
+        // Start On-Device DSH Server
+        Intent serviceIntent = new Intent(this, LocalEngineService.class);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(serviceIntent);
+        } else {
+            startService(serviceIntent);
+        }
+
+        pollServerStatus();
     }
 
     private void setupWebView() {
@@ -83,11 +104,18 @@ public class MainActivity extends AppCompatActivity {
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                if (!url.equals("about:blank")) {
+                    isLoaded = true;
+                    loadingLayout.setVisibility(View.GONE);
+                    webView.setVisibility(View.VISIBLE);
+                }
+            }
+
+            @Override
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
                 super.onReceivedError(view, request, error);
-                if (request.isForMainFrame()) {
-                    showServerConfigDialog("Gagal terhubung ke server DSH (" + view.getUrl() + "). Pastikan dsh web sudah berjalan.");
-                }
             }
         });
 
@@ -99,32 +127,64 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void loadCurrentServer() {
-        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        String serverUrl = prefs.getString(KEY_SERVER_URL, "");
+    private void pollServerStatus() {
+        new Thread(() -> {
+            SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+            String targetUrl = prefs.getString(KEY_SERVER_URL, LOCAL_URL);
 
-        if (serverUrl.isEmpty()) {
-            showServerConfigDialog(null);
-        } else {
-            webView.loadUrl(serverUrl);
+            for (int i = 0; i < 45; i++) {
+                if (isLoaded) return;
+                try {
+                    URL url = new URL(targetUrl);
+                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                    conn.setConnectTimeout(1000);
+                    conn.setReadTimeout(1000);
+                    if (conn.getResponseCode() == 200) {
+                        handler.post(() -> {
+                            if (!isLoaded) {
+                                webView.loadUrl(targetUrl);
+                            }
+                        });
+                        return;
+                    }
+                } catch (Exception ignored) {
+                }
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException ignored) {
+                }
+            }
+
+            handler.post(() -> {
+                if (!isLoaded) {
+                    loadingText.setText("Server starting taking longer than expected...");
+                    showServerConfigDialog("Belum dapat terhubung ke server lokal. Anda juga bisa menghubungkan ke Remote VPS:");
+                }
+            });
+        }).start();
+    }
+
+    private void connectToLocalDashboard() {
+        if (!isLoaded) {
+            handler.post(() -> webView.loadUrl(LOCAL_URL));
         }
     }
 
     private void showServerConfigDialog(String errorMessage) {
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        String currentUrl = prefs.getString(KEY_SERVER_URL, "http://IP-VPS-ANDA:3000");
+        String currentUrl = prefs.getString(KEY_SERVER_URL, LOCAL_URL);
 
         final EditText input = new EditText(this);
         input.setText(currentUrl);
-        input.setHint("http://IP-VPS:PORT atau http://127.0.0.1:3000");
+        input.setHint("http://127.0.0.1:3000 atau http://IP-VPS:3000");
         input.setSingleLine(true);
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this)
-                .setTitle("Hubungkan ke Server DSH")
+                .setTitle("Pengaturan Node DSH")
                 .setMessage((errorMessage != null ? errorMessage + "\n\n" : "") +
-                        "Masukkan URL dsh web Anda (misal http://IP-VPS:3000):")
+                        "Pilih mode server DeepSeek Harness:")
                 .setView(input)
-                .setCancelable(false)
+                .setCancelable(true)
                 .setPositiveButton("Hubungkan", (dialog, which) -> {
                     String url = input.getText().toString().trim();
                     if (!url.isEmpty()) {
@@ -135,9 +195,9 @@ public class MainActivity extends AppCompatActivity {
                         webView.loadUrl(url);
                     }
                 })
-                .setNegativeButton("Lokal (127.0.0.1:3000)", (dialog, which) -> {
-                    prefs.edit().putString(KEY_SERVER_URL, DEFAULT_SERVER).apply();
-                    webView.loadUrl(DEFAULT_SERVER);
+                .setNegativeButton("Reset ke Lokal HP", (dialog, which) -> {
+                    prefs.edit().putString(KEY_SERVER_URL, LOCAL_URL).apply();
+                    webView.loadUrl(LOCAL_URL);
                 });
 
         builder.show();
@@ -194,13 +254,22 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onDestroy() {
+        try {
+            unregisterReceiver(engineReceiver);
+        } catch (Exception ignored) {
+        }
+        super.onDestroy();
+    }
+
+    @Override
     public void onBackPressed() {
         if (webView.canGoBack()) {
             webView.goBack();
         } else {
             new AlertDialog.Builder(this)
                     .setTitle("DSH Mobile")
-                    .setMessage("Ganti alamat server atau keluar?")
+                    .setMessage("Ganti mode server atau keluar?")
                     .setPositiveButton("Ganti Server", (d, w) -> showServerConfigDialog(null))
                     .setNegativeButton("Keluar", (d, w) -> finish())
                     .setNeutralButton("Batal", null)

@@ -3,12 +3,51 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#16161E">
+    android:background="#0d1117">
+
+    <!-- Loading Splash while DSH Engine boots -->
+    <LinearLayout
+        android:id="@+id/loadingLayout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ProgressBar
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:indeterminate="true"
+            android:indeterminateTint="#58a6ff" />
+
+        <TextView
+            android:id="@+id/loadingText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Starting DeepSeek Harness on-device..."
+            android:textColor="#f0f6fc"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Initializing Node runtime & web server"
+            android:textColor="#8b949e"
+            android:textSize="12sp" />
+
+    </LinearLayout>
 
     <WebView
         android:id="@+id/webView"
         android:layout_width="0dp"
         android:layout_height="0dp"
+        android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
