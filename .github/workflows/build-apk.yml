@@ -34,8 +34,8 @@ jobs:
 
       - name: Download and Bundle Optimized Native Node.js, Minimal Shared Libs, and Compressed DSH Core
         run: |
-          rm -rf $GITHUB_WORKSPACE/app/src/main/assets/engine
-          mkdir -p $GITHUB_WORKSPACE/app/src/main/assets/engine
+          rm -rf app/src/main/assets/engine
+          mkdir -p app/src/main/assets/engine
           
           echo "1. Fetching Native Android Bionic Node.js and required shared libs..."
           mkdir -p /tmp/bionic_build && cd /tmp/bionic_build
@@ -101,12 +101,12 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.3.3
-          name: "DSH Mobile v1.3.3 (True Slim ~140MB APK & Patched RPATH Engine)"
+          tag_name: v1.3.4
+          name: "DSH Mobile v1.3.4 (Patched RPATH & Ready Engine)"
           body: |
-            ## 🚀 DSH Mobile Standalone Release v1.3.3
-            - 📉 **Ukuran Dipangkas Drastis (~140 MB vs 404 MB)**: Menghapus cache Gradle andal (`cache-disabled: true`) sehingga hanya menyertakan `.tar.gz` compressed.
+            ## 🚀 DSH Mobile Standalone Release v1.3.4
             - ⚡ **Patched RPATH (`/data/user/0/com.aydin.dsh/files/lib`)**: Node.js otomatis menemukan seluruh library native (`libz.so.1`, `libcrypto.so.3`, `libcares.so`, `libicu`, `libc++_shared.so`).
+            - 📦 **32,766 Full DSH Module Files Bundled**
             - 🌐 **100% Official DeepSeek Harness Dashboard On-Device**
           files: app/build/outputs/apk/debug/*.apk
         env:
