@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Android APK (Full Bundle)
 
 on:
   push:
@@ -24,6 +24,18 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      - name: Download Engine Binaries (Node.js ARM64 & RootFS)
+        run: |
+          mkdir -p app/src/main/assets/engine
+          echo "Fetching Node.js v22 ARM64..."
+          curl -sL https://nodejs.org/dist/v22.14.0/node-v22.14.0-linux-arm64.tar.xz -o /tmp/node-arm64.tar.xz
+          tar -xf /tmp/node-arm64.tar.xz -C /tmp
+          cp /tmp/node-v22.14.0-linux-arm64/bin/node app/src/main/assets/engine/node
+          chmod +x app/src/main/assets/engine/node
+          echo "Fetching Alpine Linux aarch64 rootfs..."
+          curl -sL https://dl-cdn.alpinelinux.org/alpine/v3.20/releases/aarch64/alpine-minirootfs-3.20.0-aarch64.tar.gz -o app/src/main/assets/engine/rootfs.tar.gz
+          ls -lh app/src/main/assets/engine/
+
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
@@ -35,21 +47,21 @@ jobs:
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: dsh-android-debug-apk
+          name: dsh-android-full-bundle-apk
           path: app/build/outputs/apk/debug/*.apk
 
       - name: Create Release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.0
-          name: "DSH Mobile v1.0.0"
+          tag_name: v1.1.0
+          name: "DSH Mobile v1.1.0 (Full Bundle On-Device Engine)"
           body: |
-            ## 🚀 DSH Mobile Companion (Release)
-            - 🌐 Remote VPS Node connection manager
-            - 📱 Local Engine execution & PRoot storage bridge
-            - 🛡️ Full system permissions (All Files Access, Voice, Camera, System Automation)
-            - ⚡ Clean Mobile UI with Hamburger Drawer Navigation
+            ## 🚀 DSH Mobile Full Bundle Release
+            - 📦 **Embedded Node.js v22 ARM64 Runtime**
+            - 🐧 **Alpine Linux mini-rootfs (AArch64)** for on-device terminal execution
+            - 🌐 **Official DeepSeek Harness Web Dashboard**
+            - 🛡️ **Full Permissions**: All Files Access, Background Execution, Voice, Vision
           files: app/build/outputs/apk/debug/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

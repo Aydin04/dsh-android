@@ -4,6 +4,7 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import android.os.IBinder;
@@ -11,14 +12,43 @@ import android.os.IBinder;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+
 public class LocalEngineService extends Service {
 
     private static final String CHANNEL_ID = "DSH_LOCAL_ENGINE";
+    private Process nodeProcess;
 
     @Override
     public void onCreate() {
         super.onCreate();
         createNotificationChannel();
+        new Thread(this::extractAndRunEngine).start();
+    }
+
+    private void extractAndRunEngine() {
+        try {
+            File binDir = new File(getFilesDir(), "bin");
+            if (!binDir.exists()) binDir.mkdirs();
+
+            File nodeFile = new File(binDir, "node");
+            if (!nodeFile.exists() || nodeFile.length() == 0) {
+                try (InputStream in = getAssets().open("engine/node");
+                     OutputStream out = new FileOutputStream(nodeFile)) {
+                    byte[] buffer = new byte[8192];
+                    int read;
+                    while ((read = in.read(buffer)) != -1) {
+                        out.write(buffer, 0, read);
+                    }
+                }
+                nodeFile.setExecutable(true);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -45,6 +75,14 @@ public class LocalEngineService extends Service {
                 manager.createNotificationChannel(channel);
             }
         }
+    }
+
+    @Override
+    public void onDestroy() {
+        if (nodeProcess != null) {
+            nodeProcess.destroy();
+        }
+        super.onDestroy();
     }
 
     @Nullable
