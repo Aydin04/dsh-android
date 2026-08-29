@@ -60,102 +60,77 @@ public class LocalEngineService extends Service {
             File binDir = new File(filesDir, "bin");
             if (!binDir.exists()) binDir.mkdirs();
 
-            // List available assets
-            String[] engineAssets = new String[0];
-            try {
-                engineAssets = getAssets().list("engine");
-                emitLog("[ASSETS] Engine Assets Found: " + Arrays.toString(engineAssets));
-            } catch (Exception e) {
-                emitLog("[ASSETS ERROR] " + e.getMessage());
-            }
-
-            // 1. Extract Node.js binary
+            // 1. Resolve Native Executable Node.js Binary (from nativeLibraryDir)
+            String nativeLibDir = getApplicationInfo().nativeLibraryDir;
+            File nodeLib = new File(nativeLibDir, "libnode.so");
             File nodeFile = new File(binDir, "node");
-            if (!nodeFile.exists() || nodeFile.length() == 0) {
-                emitLog("[EXTRACT] Extracting Node.js v22 standalone ARM64 binary...");
-                try (InputStream in = getAssets().open("engine/node");
-                     OutputStream out = new FileOutputStream(nodeFile)) {
-                    byte[] buffer = new byte[32768];
-                    int read;
-                    while ((read = in.read(buffer)) != -1) {
-                        out.write(buffer, 0, read);
-                    }
-                }
-                nodeFile.setReadable(true, false);
-                nodeFile.setExecutable(true, false);
-                emitLog("[EXTRACT] Node.js extracted. Size: " + (nodeFile.length() / 1024 / 1024) + " MB");
+
+            String nodeExecutablePath;
+            if (nodeLib.exists() && nodeLib.canExecute()) {
+                emitLog("[NATIVE] Found executable Node.js at nativeLibraryDir: " + nodeLib.getAbsolutePath());
+                nodeExecutablePath = nodeLib.getAbsolutePath();
+            } else if (nodeLib.exists()) {
+                emitLog("[NATIVE] Found libnode.so at nativeLibraryDir: " + nodeLib.getAbsolutePath());
+                nodeExecutablePath = nodeLib.getAbsolutePath();
             } else {
-                emitLog("[EXTRACT] Node.js binary cached.");
+                emitLog("[WARN] libnode.so not in nativeLibraryDir (" + nativeLibDir + "), falling back to files/bin/node");
+                nodeExecutablePath = nodeFile.getAbsolutePath();
             }
 
-            // 2. Extract DSH Core via pure Java Tar (support both .tar and .tar.gz)
+            // 2. Extract DSH Core via pure Java Tar
             File dshDir = new File(filesDir, "dsh");
             File dshBin = new File(dshDir, "lib/bin.js");
 
             if (!dshBin.exists()) {
-                String targetAsset = null;
-                boolean isGzip = false;
+                emitLog("[EXTRACT] Extracting DeepSeek Harness packages from engine/dsh-core.tar...");
+                try (InputStream rawIn = getAssets().open("engine/dsh-core.tar");
+                     TarArchiveInputStream tarIn = new TarArchiveInputStream(rawIn)) {
 
-                if (Arrays.asList(engineAssets).contains("dsh-core.tar")) {
-                    targetAsset = "engine/dsh-core.tar";
-                    isGzip = false;
-                } else if (Arrays.asList(engineAssets).contains("dsh-core.tar.gz")) {
-                    targetAsset = "engine/dsh-core.tar.gz";
-                    isGzip = true;
-                } else {
-                    targetAsset = "engine/dsh-core.tar";
-                }
+                    TarArchiveEntry entry;
+                    int count = 0;
+                    while ((entry = tarIn.getNextTarEntry()) != null) {
+                        File outputFile = new File(filesDir, entry.getName());
+                        if (entry.isDirectory()) {
+                            if (!outputFile.exists()) outputFile.mkdirs();
+                        } else {
+                            File parent = outputFile.getParentFile();
+                            if (parent != null && !parent.exists()) parent.mkdirs();
 
-                emitLog("[EXTRACT] Extracting DeepSeek Harness packages from " + targetAsset + "...");
-                try (InputStream rawIn = getAssets().open(targetAsset)) {
-                    InputStream inStream = isGzip ? new GzipCompressorInputStream(rawIn) : rawIn;
-                    try (TarArchiveInputStream tarIn = new TarArchiveInputStream(inStream)) {
-                        TarArchiveEntry entry;
-                        int count = 0;
-                        while ((entry = tarIn.getNextTarEntry()) != null) {
-                            File outputFile = new File(filesDir, entry.getName());
-                            if (entry.isDirectory()) {
-                                if (!outputFile.exists()) outputFile.mkdirs();
-                            } else {
-                                File parent = outputFile.getParentFile();
-                                if (parent != null && !parent.exists()) parent.mkdirs();
-
-                                try (OutputStream out = new FileOutputStream(outputFile)) {
-                                    byte[] buf = new byte[32768];
-                                    int len;
-                                    while ((len = tarIn.read(buf)) != -1) {
-                                        out.write(buf, 0, len);
-                                    }
+                            try (OutputStream out = new FileOutputStream(outputFile)) {
+                                byte[] buf = new byte[32768];
+                                int len;
+                                while ((len = tarIn.read(buf)) != -1) {
+                                    out.write(buf, 0, len);
                                 }
                             }
-                            count++;
-                            if (count % 500 == 0) {
-                                emitLog("[EXTRACT] Unpacked " + count + " files...");
-                            }
                         }
-                        emitLog("[EXTRACT] Extracted total " + count + " DSH package files successfully.");
+                        count++;
+                        if (count % 1000 == 0) {
+                            emitLog("[EXTRACT] Unpacked " + count + " files...");
+                        }
                     }
+                    emitLog("[EXTRACT] Extracted total " + count + " DSH package files successfully.");
                 }
             } else {
                 emitLog("[EXTRACT] DSH packages cached at " + dshDir.getAbsolutePath());
             }
 
             // 3. Test executing node --version
-            emitLog("[TEST] Testing Node execution permissions...");
+            emitLog("[TEST] Testing Node execution: " + nodeExecutablePath + " -v");
             try {
-                Process testProc = new ProcessBuilder(nodeFile.getAbsolutePath(), "-v").start();
+                Process testProc = new ProcessBuilder(nodeExecutablePath, "-v").start();
                 BufferedReader r = new BufferedReader(new InputStreamReader(testProc.getInputStream()));
                 String version = r.readLine();
                 testProc.waitFor();
-                emitLog("[TEST] Node.js verified! Version: " + version);
+                emitLog("[TEST SUCCESS] Node.js verified on Android! Version: " + version);
             } catch (Exception err) {
-                emitLog("[TEST ERROR] Node.js test execution failed: " + err.getMessage());
+                emitLog("[TEST ERROR] Node.js test failed: " + err.getMessage());
             }
 
             // 4. Launch On-Device DSH Server
             emitLog("[SERVER] Launching dsh --profile web --port 3000 ...");
             ProcessBuilder pb = new ProcessBuilder(
-                    nodeFile.getAbsolutePath(),
+                    nodeExecutablePath,
                     dshBin.getAbsolutePath(),
                     "--profile", "web",
                     "--no-open",
@@ -164,7 +139,7 @@ public class LocalEngineService extends Service {
             pb.directory(filesDir);
             pb.environment().put("HOME", filesDir.getAbsolutePath());
             pb.environment().put("NODE_PATH", new File(dshDir, "node_modules").getAbsolutePath());
-            pb.environment().put("PATH", binDir.getAbsolutePath() + ":/system/bin:/system/xbin");
+            pb.environment().put("PATH", nativeLibDir + ":" + binDir.getAbsolutePath() + ":/system/bin:/system/xbin");
             pb.redirectErrorStream(true);
 
             nodeProcess = pb.start();
