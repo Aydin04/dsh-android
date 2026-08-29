@@ -9,20 +9,27 @@ import android.content.Intent;
 import android.os.Build;
 import android.os.Environment;
 import android.os.IBinder;
+import android.util.Log;
 
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
+import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
+
+import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
 public class LocalEngineService extends Service {
 
+    private static final String TAG = "DSH_LOCAL_ENGINE";
     private static final String CHANNEL_ID = "DSH_LOCAL_ENGINE";
     public static boolean isEngineReady = false;
     private Process nodeProcess;
@@ -40,42 +47,56 @@ public class LocalEngineService extends Service {
             File binDir = new File(filesDir, "bin");
             if (!binDir.exists()) binDir.mkdirs();
 
+            // 1. Extract Node.js binary
             File nodeFile = new File(binDir, "node");
             if (!nodeFile.exists() || nodeFile.length() == 0) {
+                Log.d(TAG, "Extracting Node.js binary...");
                 try (InputStream in = getAssets().open("engine/node");
                      OutputStream out = new FileOutputStream(nodeFile)) {
-                    byte[] buffer = new byte[8192];
+                    byte[] buffer = new byte[16384];
                     int read;
                     while ((read = in.read(buffer)) != -1) {
                         out.write(buffer, 0, read);
                     }
                 }
-                nodeFile.setExecutable(true);
+                nodeFile.setReadable(true, false);
+                nodeFile.setExecutable(true, false);
             }
 
+            // 2. Extract DSH Core via pure Java TarArchiveInputStream (no system tar needed)
             File dshDir = new File(filesDir, "dsh");
             File dshBin = new File(dshDir, "lib/bin.js");
 
             if (!dshBin.exists()) {
-                File tarFile = new File(filesDir, "dsh-core.tar.gz");
-                try (InputStream in = getAssets().open("engine/dsh-core.tar.gz");
-                     OutputStream out = new FileOutputStream(tarFile)) {
-                    byte[] buffer = new byte[8192];
-                    int read;
-                    while ((read = in.read(buffer)) != -1) {
-                        out.write(buffer, 0, read);
+                Log.d(TAG, "Extracting DSH package using pure Java Tar...");
+                try (InputStream rawIn = getAssets().open("engine/dsh-core.tar.gz");
+                     GzipCompressorInputStream gzIn = new GzipCompressorInputStream(rawIn);
+                     TarArchiveInputStream tarIn = new TarArchiveInputStream(gzIn)) {
+                    
+                    TarArchiveEntry entry;
+                    while ((entry = tarIn.getNextTarEntry()) != null) {
+                        File outputFile = new File(filesDir, entry.getName());
+                        if (entry.isDirectory()) {
+                            if (!outputFile.exists()) outputFile.mkdirs();
+                        } else {
+                            File parent = outputFile.getParentFile();
+                            if (parent != null && !parent.exists()) parent.mkdirs();
+                            
+                            try (OutputStream out = new FileOutputStream(outputFile)) {
+                                byte[] buf = new byte[16384];
+                                int len;
+                                while ((len = tarIn.read(buf)) != -1) {
+                                    out.write(buf, 0, len);
+                                }
+                            }
+                        }
                     }
                 }
-
-                // Untar dsh package
-                ProcessBuilder tarPb = new ProcessBuilder("tar", "-xzf", tarFile.getAbsolutePath(), "-C", filesDir.getAbsolutePath());
-                Process tarProc = tarPb.start();
-                tarProc.waitFor();
-                tarFile.delete();
+                Log.d(TAG, "DSH extraction completed successfully.");
             }
 
-            // Launch On-Device DSH Server
-            String homeDir = Environment.getExternalStorageDirectory().getAbsolutePath();
+            // 3. Launch On-Device DSH Server
+            Log.d(TAG, "Starting DSH Node server on 127.0.0.1:3000...");
             ProcessBuilder pb = new ProcessBuilder(
                     nodeFile.getAbsolutePath(),
                     dshBin.getAbsolutePath(),
@@ -91,8 +112,20 @@ public class LocalEngineService extends Service {
 
             nodeProcess = pb.start();
 
-            // Poll port 3000 readiness
-            for (int i = 0; i < 40; i++) {
+            // Stream logs
+            new Thread(() -> {
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(nodeProcess.getInputStream()))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        Log.i(TAG, "[DSH Node] " + line);
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "Error reading DSH log", e);
+                }
+            }).start();
+
+            // 4. Poll port 3000 readiness
+            for (int i = 0; i < 60; i++) {
                 try {
                     URL url = new URL("http://127.0.0.1:3000/");
                     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -100,6 +133,7 @@ public class LocalEngineService extends Service {
                     conn.setReadTimeout(1000);
                     int code = conn.getResponseCode();
                     if (code == 200) {
+                        Log.d(TAG, "DSH Server is READY!");
                         isEngineReady = true;
                         sendBroadcast(new Intent("com.aydin.dsh.ENGINE_READY"));
                         break;
@@ -110,7 +144,7 @@ public class LocalEngineService extends Service {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.e(TAG, "Failed in extractAndRunEngine", e);
         }
     }
 
