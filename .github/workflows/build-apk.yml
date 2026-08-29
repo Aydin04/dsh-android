@@ -34,9 +34,8 @@ jobs:
 
       - name: Download and Bundle Optimized Native Node.js, Minimal Shared Libs, and Compressed DSH Core
         run: |
-          # Clean assets completely
-          rm -rf app/src/main/assets/engine
-          mkdir -p app/src/main/assets/engine
+          rm -rf $GITHUB_WORKSPACE/app/src/main/assets/engine
+          mkdir -p $GITHUB_WORKSPACE/app/src/main/assets/engine
           
           echo "1. Fetching Native Android Bionic Node.js and required shared libs..."
           mkdir -p /tmp/bionic_build && cd /tmp/bionic_build
@@ -83,10 +82,15 @@ jobs:
           echo "=== ASSETS IN WORKSPACE ENGINE ==="
           ls -lh $GITHUB_WORKSPACE/app/src/main/assets/engine/
 
-      - name: Build Debug APK (Clean & Fresh)
+      - name: Setup Gradle 8.5
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: 8.5
+          cache-disabled: true
+
+      - name: Build Debug APK
         run: |
-          chmod +x gradlew || gradle wrapper
-          ./gradlew clean assembleDebug --no-build-cache --no-daemon --stacktrace
+          gradle assembleDebug --no-build-cache --stacktrace
 
       - name: Check APK contents and Verify Size
         run: |
@@ -97,11 +101,11 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.3.2
-          name: "DSH Mobile v1.3.2 (True 140MB Clean Build & Patched RPATH Engine)"
+          tag_name: v1.3.3
+          name: "DSH Mobile v1.3.3 (True Slim ~140MB APK & Patched RPATH Engine)"
           body: |
-            ## 🚀 DSH Mobile Standalone Release v1.3.2
-            - 📉 **Ukuran Murni Dipangkas (~140 MB vs 404 MB)**: Menggunakan Gradle Wrapper (`./gradlew clean assembleDebug --no-daemon`) untuk membersihkan seluruh uncompressed tar cache.
+            ## 🚀 DSH Mobile Standalone Release v1.3.3
+            - 📉 **Ukuran Dipangkas Drastis (~140 MB vs 404 MB)**: Menghapus cache Gradle andal (`cache-disabled: true`) sehingga hanya menyertakan `.tar.gz` compressed.
             - ⚡ **Patched RPATH (`/data/user/0/com.aydin.dsh/files/lib`)**: Node.js otomatis menemukan seluruh library native (`libz.so.1`, `libcrypto.so.3`, `libcares.so`, `libicu`, `libc++_shared.so`).
             - 🌐 **100% Official DeepSeek Harness Dashboard On-Device**
           files: app/build/outputs/apk/debug/*.apk
