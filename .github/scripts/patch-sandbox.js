@@ -45,17 +45,7 @@ if (fs.existsSync(sandboxLocalPath)) {
   console.log('[PATCH SUCCESS] dsh-sandbox-local patched for Android!');
 }
 
-// 3. Patch dsh-base cordis.patch.yml default policy to danger-full-access
-const basePatchPath = '/tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-base/cordis.patch.yml';
-if (fs.existsSync(basePatchPath)) {
-  let yaml = fs.readFileSync(basePatchPath, 'utf8');
-  console.log('[PATCH] Patching default sandbox mode in cordis.patch.yml...');
-  yaml = yaml.replace(/workspace-write/g, 'danger-full-access');
-  fs.writeFileSync(basePatchPath, yaml, 'utf8');
-  console.log('[PATCH SUCCESS] cordis.patch.yml patched to danger-full-access!');
-}
-
-// 4. Inject Android & Root Environment guidance into System Prompt (dsh-sandbox-policy)
+// 3. Inject Android & Root Environment guidance into System Prompt (dsh-sandbox-policy)
 const sandboxPolicyPath = '/tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-sandbox-policy/lib/index.js';
 if (fs.existsSync(sandboxPolicyPath)) {
   let code = fs.readFileSync(sandboxPolicyPath, 'utf8');

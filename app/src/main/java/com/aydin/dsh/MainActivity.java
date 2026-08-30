@@ -77,6 +77,7 @@ public class MainActivity extends AppCompatActivity {
     private Button btnLogs;
 
     private static final int PERMISSION_REQ_CODE = 101;
+    private static final int MANAGE_STORAGE_REQ_CODE = 102;
     private static final String PREFS_NAME = "DSH_PREFS";
     private static final String KEY_SERVER_URL = "SERVER_URL";
     private static final String KEY_ZOOM_LEVEL = "ZOOM_LEVEL";
@@ -87,6 +88,7 @@ public class MainActivity extends AppCompatActivity {
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean isLoaded = false;
+    private boolean engineServiceStarted = false;
     private int currentZoom = 100;
     private boolean isDesktopMode = false;
     private boolean isBarVisible = false;
@@ -150,7 +152,6 @@ public class MainActivity extends AppCompatActivity {
         setupButtons();
         setupDraggableFloatingBar();
         setupWebView();
-        checkAndRequestPermissions();
 
         IntentFilter filter = new IntentFilter();
         filter.addAction(LocalEngineService.ACTION_LOG);
@@ -162,7 +163,7 @@ public class MainActivity extends AppCompatActivity {
             registerReceiver(engineReceiver, filter);
         }
 
-        startEngineService();
+        checkAndRequestPermissions();
     }
 
     private void setupDraggableFloatingBar() {
@@ -426,6 +427,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startEngineService() {
+        if (engineServiceStarted) return;
+        engineServiceStarted = true;
+
+        appendLog("[INIT] Memulai Engine Service setelah perizinan storage siap...");
         Intent serviceIntent = new Intent(this, LocalEngineService.class);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundService(serviceIntent);
@@ -550,10 +555,12 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
                     intent.setData(Uri.parse("package:" + getPackageName()));
-                    startActivity(intent);
+                    startActivityForResult(intent, MANAGE_STORAGE_REQ_CODE);
+                    return;
                 } catch (Exception e) {
                     Intent intent = new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
-                    startActivity(intent);
+                    startActivityForResult(intent, MANAGE_STORAGE_REQ_CODE);
+                    return;
                 }
             }
         } else {
@@ -574,6 +581,27 @@ public class MainActivity extends AppCompatActivity {
 
         if (!permissionsNeeded.isEmpty()) {
             ActivityCompat.requestPermissions(this, permissionsNeeded.toArray(new String[0]), PERMISSION_REQ_CODE);
+        } else {
+            startEngineService();
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == PERMISSION_REQ_CODE) {
+            startEngineService();
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // If coming back from Settings (Manage All Files Permission), start engine safely
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && Environment.isExternalStorageManager()) {
+            if (!engineServiceStarted) {
+                startEngineService();
+            }
         }
     }
 
