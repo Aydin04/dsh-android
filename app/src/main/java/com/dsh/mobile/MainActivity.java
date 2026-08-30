@@ -86,6 +86,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String KEY_ZOOM_LEVEL = "ZOOM_LEVEL";
     private static final String KEY_DESKTOP_MODE = "DESKTOP_MODE";
     private static final String KEY_BAR_VISIBLE = "BAR_VISIBLE";
+    private static final String KEY_ROOT_ENABLED = "ROOT_ENABLED";
     private static final String LOCAL_URL = "http://127.0.0.1:3080";
     private static final String DESKTOP_UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
@@ -152,6 +153,14 @@ public class MainActivity extends AppCompatActivity {
         currentZoom = prefs.getInt(KEY_ZOOM_LEVEL, 100);
         isDesktopMode = prefs.getBoolean(KEY_DESKTOP_MODE, false);
         isBarVisible = prefs.getBoolean(KEY_BAR_VISIBLE, false);
+        boolean isRootPersisted = prefs.getBoolean(KEY_ROOT_ENABLED, false);
+
+        if (isRootPersisted) {
+            btnRootToggle.setText("👑 Root OK");
+            btnRootToggle.setTextColor(0xFF3FB950);
+            File flagFile = new File(getFilesDir(), "root_enabled.flag");
+            try { flagFile.createNewFile(); } catch (Exception ignored) {}
+        }
 
         setupButtons();
         setupDraggableFloatingBar();
@@ -280,6 +289,17 @@ public class MainActivity extends AppCompatActivity {
 
             final boolean isRooted = granted;
             final String details = output;
+            
+            // Persist root state in SharedPreferences and create/delete root_enabled.flag
+            SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+            prefs.edit().putBoolean(KEY_ROOT_ENABLED, isRooted).apply();
+            File flagFile = new File(getFilesDir(), "root_enabled.flag");
+            if (isRooted) {
+                try { flagFile.createNewFile(); } catch (Exception ignored) {}
+            } else {
+                if (flagFile.exists()) flagFile.delete();
+            }
+
             handler.post(() -> {
                 if (isRooted) {
                     btnRootToggle.setText("👑 Root OK");
@@ -287,7 +307,7 @@ public class MainActivity extends AppCompatActivity {
                     appendLog("\n>>> [ROOT STATUS] Root Superuser (uid=0) Aktif: " + details);
                     new AlertDialog.Builder(this)
                             .setTitle("👑 Root Superuser Aktif")
-                            .setMessage("Izin Root (SU) berhasil didapatkan!\nAgent DeepSeek Harness sekarang memiliki akses Superuser penuh.\n\nDetail: " + details)
+                            .setMessage("Izin Root (SU) berhasil didapatkan!\nAgent DeepSeek Harness sekarang memiliki akses Superuser penuh (uid=0).\n\nDetail: " + details)
                             .setPositiveButton("Bagus", null)
                             .show();
                 } else {

@@ -159,19 +159,19 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.8.0
-          name: "DSH Mobile v1.8.0 (New Package ID `com.dsh.mobile` & Native In-App Config Editor)"
+          tag_name: v1.8.1
+          name: "DSH Mobile v1.8.1 (Hybrid Superuser Execution Engine & Root State Persistence)"
           body: |
-            ## 🚀 DSH Mobile Standalone Release v1.8.0
-            - 🏷️ **Official Clean Package ID (`com.dsh.mobile`)**:
-              - Mengubah package ID aplikasi dari `com.aydin.dsh` menjadi `com.dsh.mobile` secara menyeluruh di level manifest, build script, dan C/C++ RPATH binaries.
-            - 📝 **Native In-App Configuration Viewer & Editor (`📝 Config`)**:
-              - Tombol baru **`📝 Config`** di toolbar dan integrasi dialog viewer/editor konfigurasi internal. Anda dapat melihat, mengedit kode YAML konfigurasi server, menyimpannya langsung dengan auto-restart engine, atau membukanya di aplikasi editor teks eksternal favorit Anda.
-            - 🔄 **Automated CI/CD Upstream Sync**:
-              - GitHub Actions otomatis memeriksa pembaruan dari repositori DeepSeek Harness dan membangun APK baru secara berkala.
-            - 🐧 **Full Embedded PRoot + Alpine Linux Environment (`apk add`)**
-            - 👑 **Supercharged Dual-Mode Superuser (Root `su`)**
-            - 🛡️ **Full Android Permissions & Direct `/sdcard` Workspace**
+            ## 🚀 DSH Mobile Standalone Release v1.8.1
+            - 👑 **Hybrid Superuser (`su`) Execution Engine**:
+              - Shell dispatcher (`sh_shim.sh`) kini mendeteksi status Superuser secara dinamis.
+              - Jika mode root aktif, semua perintah terminal agent langsung dieksekusi melalui **host Magisk / KernelSU / APatch (`su -c`)** tanpa terblokir isolasi ptrace. Agent memiliki hak akses `uid=0` penuh ke `/system`, `/data`, `/data/adb`, hardware, dan tweaks kernel.
+              - Jika mode standar (non-root), perintah berjalan di dalam **container PRoot Alpine Linux (`apk add`)** dengan bind-mount lengkap ke `/system`, `/dev`, `/proc`, `/sys`, dan `/sdcard`.
+            - 💾 **Root State & Toolbar Persistence**:
+              - Status perizinan Root kini tersimpan permanen di `SharedPreferences` dan flag file lokal. Setelah aplikasi ditutup atau direstart, status **`👑 Root OK`** tetap tersimpan dan langsung aktif tanpa perlu menekan tombol ulang.
+            - 🏷️ **Official Package ID (`com.dsh.mobile`)**
+            - 📝 **Native In-App Configuration Editor (`📝 Config`)**
+            - 🛡️ **Full Permissions & Direct `/sdcard` Workspace**
             - 🗜️ **Tersedia Versi ZIP Hemat Kuota**: `dsh-mobile-compressed.zip`
           files: |
             app/build/outputs/apk/debug/app-debug.apk

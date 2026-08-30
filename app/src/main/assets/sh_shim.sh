@@ -1,13 +1,34 @@
 #!/system/bin/sh
-# Universal Shell Shim for DSH Mobile
-# Priority 1: If proot with Alpine rootfs exists, run command inside proot
+# Universal Hybrid Shell Shim for DSH Mobile
+# Support: Native Root SU (Magisk / KernelSU / APatch), PRoot Alpine Linux, and Android Bionic
+
+ROOT_FLAG_FILE="/data/user/0/com.dsh.mobile/files/root_enabled.flag"
 ROOTFS="/data/user/0/com.dsh.mobile/files/rootfs"
 PROOT="/data/user/0/com.dsh.mobile/files/bin/proot"
 
-if [ -f "$PROOT" ] && [ -d "$ROOTFS/bin" ]; then
-    export PROOT_TMP_DIR="/data/user/0/com.dsh.mobile/files"
-    exec "$PROOT" -0 -r "$ROOTFS" -b /sdcard:/sdcard -b /data/user/0/com.dsh.mobile/files:/dsh_app -w /sdcard /bin/sh "$@"
+# 1. If Root SU is enabled by user or root flag exists, execute directly with SU
+if [ -f "$ROOT_FLAG_FILE" ] || [ "$(id -u 2>/dev/null)" = "0" ]; then
+    for su_bin in /system/bin/su /system/xbin/su /data/adb/ksu/bin/su /data/adb/ap/bin/su /data/adb/magisk/su su; do
+        if command -v "$su_bin" >/dev/null 2>&1; then
+            exec "$su_bin" -c "$@"
+        fi
+    done
 fi
 
-# Priority 2: Fallback to system /system/bin/sh
+# 2. Non-root / Standard: If proot with Alpine rootfs exists, run command inside proot
+if [ -f "$PROOT" ] && [ -d "$ROOTFS/bin" ]; then
+    export PROOT_TMP_DIR="/data/user/0/com.dsh.mobile/files"
+    # Bind mounts: storage, app files, system binaries, device sockets, proc, and sys
+    exec "$PROOT" -0 -r "$ROOTFS" \
+        -b /sdcard:/sdcard \
+        -b /data/user/0/com.dsh.mobile/files:/dsh_app \
+        -b /system:/system \
+        -b /system/bin:/system/bin \
+        -b /dev:/dev \
+        -b /proc:/proc \
+        -b /sys:/sys \
+        -w /sdcard /bin/sh "$@"
+fi
+
+# 3. Fallback: Host Android /system/bin/sh
 exec /system/bin/sh "$@"
