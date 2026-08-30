@@ -204,11 +204,10 @@ public class LocalEngineService extends Service {
                 emitLog("[TEST ERROR] Node.js test failed: " + err.getMessage());
             }
 
-            // 5. Launch On-Device DSH Server with --expose-internals
+            // 5. Launch On-Device DSH Server
             emitLog("[SERVER] Launching dsh --profile web --port 3080 ...");
             ProcessBuilder pb = new ProcessBuilder(
                     nodeFile.getAbsolutePath(),
-                    "--expose-internals",
                     dshBin.getAbsolutePath(),
                     "--profile", "web",
                     "--no-open",

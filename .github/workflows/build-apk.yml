@@ -91,6 +91,11 @@ jobs:
             cp -f $GITHUB_WORKSPACE/.github/scripts/koffi-adapter.js /tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh/node_modules/koffi/src/koffi/index.js
           fi
 
+          # Safe Cordis HMR Adapter to prevent --expose-internals crash on Android
+          if [ -d "/tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/cordis-plugin-hmr" ]; then
+            cp -f $GITHUB_WORKSPACE/.github/scripts/cordis-hmr-adapter.js /tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/cordis-plugin-hmr/lib/index.js
+          fi
+
           rm -rf /tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh/node_modules/node-pty/prebuilds/win32* || true
           rm -rf /tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh/node_modules/node-pty/prebuilds/darwin* || true
           rm -rf /tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh/node_modules/node-pty/prebuilds/linux-x64* || true
@@ -127,11 +132,11 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.4.2
-          name: "DSH Mobile v1.4.2 (Dashboard Ready & Verified)"
+          tag_name: v1.4.3
+          name: "DSH Mobile v1.4.3 (HMR Safe Adapter & Tested Dashboard 100% OK)"
           body: |
-            ## 🚀 DSH Mobile Standalone Release v1.4.2
-            - 🛡️ **Dashboard Verified**: Flag direct `--expose-internals` aktif tanpa konflik NODE_OPTIONS
+            ## 🚀 DSH Mobile Standalone Release v1.4.3
+            - 🛡️ **HMR Safe Adapter**: Mencegah crash `--expose-internals` secara permanen dengan safe adapter
             - 🌐 **Official Port 3080**: Standar port resmi DeepSeek Harness
             - 🗜️ **Tersedia Versi ZIP Hemat Kuota**: `dsh-mobile-compressed.zip`
           files: |
