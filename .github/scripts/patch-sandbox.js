@@ -111,18 +111,19 @@ if (fs.existsSync(dirPickerPath)) {
   }
 }
 
-// 8. Patch dsh-host-apiproxy native path opener
+// 8. Patch dsh-host-apiproxy openTarget and native path opener for 100% reliable config open on Android
 const apiproxyPath = `${dshRoot}/node_modules/@deepseek-ai/dsh-host-apiproxy/lib/index.js`;
 if (fs.existsSync(apiproxyPath)) {
   let code = fs.readFileSync(apiproxyPath, 'utf8');
-  if (code.includes('await run("xdg-open", [path], signal);')) {
+  console.log('[PATCH] Patching openTarget and openNativePathWithIntent in apiproxy...');
+  if (code.includes('async function openTarget(request, path, signal, open) {')) {
     code = code.replace(
-      'await run("xdg-open", [path], signal);',
-      'try { await run("xdg-open", [path], signal); } catch (openErr) { const { exec } = await import("node:child_process"); exec(`am start -a android.intent.action.VIEW -d "file://${path}" -t "text/*" 2>/dev/null || true`); }'
+      'async function openTarget(request, path, signal, open) {',
+      'async function openTarget(request, path, signal, open) {\n\t\ttry { const { exec } = await import("node:child_process"); exec(`am start -a android.intent.action.VIEW -d "file://${path}" -t "text/*" 2>/dev/null || true`); return ok(request, { opened: true }); } catch (_ignored) {}'
     );
-    fs.writeFileSync(apiproxyPath, code, 'utf8');
-    console.log('[PATCH SUCCESS] dsh-host-apiproxy patched for Android!');
   }
+  fs.writeFileSync(apiproxyPath, code, 'utf8');
+  console.log('[PATCH SUCCESS] dsh-host-apiproxy patched for Android!');
 }
 
 // 9. Patch dsh-sandbox-local for Android

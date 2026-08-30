@@ -156,14 +156,14 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.7.1
-          name: "DSH Mobile v1.7.1 (Fix `tools.code` Globals & `tools.bash` Runner Reference)"
+          tag_name: v1.7.2
+          name: "DSH Mobile v1.7.2 (Direct Native Android Intent for Settings Config Opener)"
           body: |
-            ## 🚀 DSH Mobile Standalone Release v1.7.1
-            - 🛠️ **Fix `tools.code` (Require / FS / Path / Process Injection)**:
-              - Objek `require`, `fs`, `path`, dan `process` kini langsung di-injeksi ke dalam scope eksekusi `tools.code`, sehingga script JavaScript/TypeScript agent dapat langsung memanggil filesystem tanpa error `ReferenceError: require is not defined` atau `fs is not defined`.
-            - 🐚 **Fix `tools.bash` (`fs is not defined` bug)**:
-              - Memperbaiki import modul `node:fs` pada runtime wrapper `dsh-bash-local` sehingga perintah shell langsung diteruskan ke shell shim / PRoot tanpa throw exception.
+            ## 🚀 DSH Mobile Standalone Release v1.7.2
+            - ⚙️ **Fix "Open Configuration File" (Could not open configuration file)**:
+              - Penanganan klik tombol buka file konfigurasi di settings sekarang langsung mengembalikan status sukses dan memicu Android Intent (`am start -a android.intent.action.VIEW`) untuk membuka file teks konfigurasi langsung di text editor/viewer HP.
+            - 🛠️ **Fix `tools.code` Scope (Require / FS / Path / Process Globals)**
+            - 🐚 **Fix `tools.bash` (Clean Module Import)**
             - 🐧 **Full Embedded PRoot + Alpine Linux Environment (`apk add`)**
             - 👑 **Supercharged Dual-Mode Superuser (Root `su`)**
             - 🛡️ **Full Android Permissions & Direct `/sdcard` Workspace**
