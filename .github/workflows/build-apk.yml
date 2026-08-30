@@ -132,17 +132,17 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.4.7
-          name: "DSH Mobile v1.4.7 (Draggable Toolbar & Full Width Controls)"
+          tag_name: v1.4.8
+          name: "DSH Mobile v1.4.8 (Fixed Toggle & Auto-Fit Dashboard Zoom)"
           body: |
-            ## 🚀 DSH Mobile Standalone Release v1.4.7
-            - ✋ **Draggable Floating Toolbar (Bisa Digeser Bebas)**:
-              - Toolbar dan tombol `⚙️` sekarang dapat digeser (drag & drop) ke posisi manapun di layar agar tidak menghalangi tampilan.
-            - ↔️ **Horizontal Scrollable Toolbar**:
-              - Tombol zoom minus `-`, level, plus `+`, refresh `🔄`, desk, plugin, dan log sekarang 100% terlihat dan bisa di-scroll menyamping jika layar HP sempit.
-            - 🖥️ **Full Desktop Viewport (1280px)** + Scaling Elemen Dinamis
-            - 🔌 **In-App Plugin Manager**
-            - 🐋 **Logo Resmi DeepSeek Harness**
+            ## 🚀 DSH Mobile Standalone Release v1.4.8
+            - 🎯 **Fixed Toolbar Toggle (Klik ⚙️/✕)**:
+              - Membedakan gesture *Tap* (Buka/Tutup) dan *Drag* (Geser posisi) menggunakan `ViewConfiguration.touchSlop`. Mengetuk tombol `⚙️` sekarang dapat membuka dan menutup (minimize) toolbar kapan saja tanpa macet.
+              - Default toolbar dimulai dalam posisi tertutup / ter-minimize agar layar dashboard luas.
+            - 📱 **Auto-Fit Scale**:
+              - Mengaktifkan `OverviewMode` & `WideViewPort` native WebView sehingga saat dashboard pertama kali dibuka langsung pas di layar HP tanpa harus dicubit manual.
+            - ✋ **Draggable Floating Control Bar**
+            - 🔄 **Tombol Refresh Dashboard & Plugin Manager**
             - 🗜️ **Tersedia Versi ZIP Hemat Kuota**: `dsh-mobile-compressed.zip`
           files: |
             app/build/outputs/apk/debug/app-debug.apk

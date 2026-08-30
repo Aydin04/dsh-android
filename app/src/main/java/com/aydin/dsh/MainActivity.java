@@ -18,6 +18,7 @@ import android.os.Looper;
 import android.provider.Settings;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.webkit.ConsoleMessage;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
@@ -82,14 +83,16 @@ public class MainActivity extends AppCompatActivity {
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean isLoaded = false;
-    private int currentZoom = 70;
+    private int currentZoom = 100;
     private boolean isDesktopMode = true;
-    private boolean isBarVisible = true;
+    private boolean isBarVisible = false;
     private final StringBuilder logAccumulator = new StringBuilder();
 
     // Drag variables for moving the floating toolbar
+    private float startX, startY;
     private float dX, dY;
-    private int lastAction;
+    private boolean isDragging = false;
+    private int touchSlop;
 
     private final BroadcastReceiver engineReceiver = new BroadcastReceiver() {
         @Override
@@ -109,6 +112,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        touchSlop = ViewConfiguration.get(this).getScaledTouchSlop();
 
         webView = findViewById(R.id.webView);
         loadingLayout = findViewById(R.id.loadingLayout);
@@ -132,9 +137,9 @@ public class MainActivity extends AppCompatActivity {
         btnLogs = findViewById(R.id.btnLogs);
 
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        currentZoom = prefs.getInt(KEY_ZOOM_LEVEL, 70);
+        currentZoom = prefs.getInt(KEY_ZOOM_LEVEL, 100);
         isDesktopMode = prefs.getBoolean(KEY_DESKTOP_MODE, true);
-        isBarVisible = prefs.getBoolean(KEY_BAR_VISIBLE, true);
+        isBarVisible = prefs.getBoolean(KEY_BAR_VISIBLE, false);
 
         setupButtons();
         setupDraggableFloatingBar();
@@ -158,27 +163,32 @@ public class MainActivity extends AppCompatActivity {
         btnToggleBar.setOnTouchListener((view, event) -> {
             switch (event.getActionMasked()) {
                 case MotionEvent.ACTION_DOWN:
-                    dX = floatingDraggableContainer.getX() - event.getRawX();
-                    dY = floatingDraggableContainer.getY() - event.getRawY();
-                    lastAction = MotionEvent.ACTION_DOWN;
-                    break;
+                    startX = event.getRawX();
+                    startY = event.getRawY();
+                    dX = floatingDraggableContainer.getX() - startX;
+                    dY = floatingDraggableContainer.getY() - startY;
+                    isDragging = false;
+                    return true;
 
                 case MotionEvent.ACTION_MOVE:
-                    floatingDraggableContainer.setY(event.getRawY() + dY);
-                    floatingDraggableContainer.setX(event.getRawX() + dX);
-                    lastAction = MotionEvent.ACTION_MOVE;
-                    break;
+                    float moveX = Math.abs(event.getRawX() - startX);
+                    float moveY = Math.abs(event.getRawY() - startY);
+                    if (moveX > touchSlop || moveY > touchSlop) {
+                        isDragging = true;
+                        floatingDraggableContainer.setX(event.getRawX() + dX);
+                        floatingDraggableContainer.setY(event.getRawY() + dY);
+                    }
+                    return true;
 
                 case MotionEvent.ACTION_UP:
-                    if (lastAction == MotionEvent.ACTION_DOWN) {
+                    if (!isDragging) {
                         toggleControlBar();
                     }
-                    break;
+                    return true;
 
                 default:
                     return false;
             }
-            return true;
         });
     }
 
@@ -234,22 +244,19 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void adjustZoom(int delta) {
-        currentZoom = Math.max(30, Math.min(150, currentZoom + delta));
+        currentZoom = Math.max(40, Math.min(200, currentZoom + delta));
         applyZoom();
         getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .edit().putInt(KEY_ZOOM_LEVEL, currentZoom).apply();
     }
 
     private void applyZoom() {
+        WebSettings settings = webView.getSettings();
+        settings.setTextZoom(currentZoom);
+        
+        // CSS zoom for full layout container scaling
         double scaleFactor = currentZoom / 100.0;
         String js = "(() => {" +
-                "  let meta = document.querySelector('meta[name=\"viewport\"]');" +
-                "  if (!meta) {" +
-                "    meta = document.createElement('meta');" +
-                "    meta.name = 'viewport';" +
-                "    document.head.appendChild(meta);" +
-                "  }" +
-                "  meta.content = 'width=1280, initial-scale=" + scaleFactor + ", minimum-scale=0.1, maximum-scale=3.0, user-scalable=yes';" +
                 "  document.body.style.zoom = '" + scaleFactor + "';" +
                 "  document.documentElement.style.zoom = '" + scaleFactor + "';" +
                 "})();";
@@ -394,6 +401,8 @@ public class MainActivity extends AppCompatActivity {
         settings.setSupportZoom(true);
         settings.setBuiltInZoomControls(true);
         settings.setDisplayZoomControls(false);
+        settings.setUseWideViewPort(true);
+        settings.setLoadWithOverviewMode(true);
 
         applyModeSettings();
 
