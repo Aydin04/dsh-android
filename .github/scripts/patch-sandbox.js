@@ -29,20 +29,14 @@ if (fs.existsSync(sandboxLocalPath)) {
       'if (this.selectedRunner === "unavailable") return { runner: "passthrough", enforcement: "full" };'
     );
   }
-  if (code.includes('runnerArgv(runner, policy) {')) {
+  if (code.includes('const selected = this.selectRunner(policy.mode);')) {
     code = code.replace(
-      'runnerArgv(runner, policy) {',
-      'runnerArgv(runner, policy) {\n\t\tif (runner === "passthrough") return [];'
-    );
-  }
-  if (code.includes('confine(argv, policy) {')) {
-    code = code.replace(
-      'confine(argv, policy) {',
-      'confine(argv, policy) {\n\t\tconst selected = this.selectRunner(policy.mode);\n\t\tif (selected.runner === "passthrough") return { argv, enforcement: "full", denialSignatures: [], runnerFailureRules: [] };'
+      'const selected = this.selectRunner(policy.mode);',
+      'const selected = this.selectRunner(policy.mode);\n\t\tif (selected.runner === "passthrough") return { argv, enforcement: "full", denialSignatures: [], runnerFailureRules: [] };'
     );
   }
   fs.writeFileSync(sandboxLocalPath, code, 'utf8');
-  console.log('[PATCH SUCCESS] dsh-sandbox-local patched for Android!');
+  console.log('[PATCH SUCCESS] dsh-sandbox-local patched for Android cleanly!');
 }
 
 // 3. Inject Android & Root Environment guidance into System Prompt (dsh-sandbox-policy)

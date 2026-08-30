@@ -134,16 +134,16 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.5.6
-          name: "DSH Mobile v1.5.6 (Fix YAML Duplicate Key & Permission Wait Gate)"
+          tag_name: v1.5.7
+          name: "DSH Mobile v1.5.7 (Clean Syntax & Seamless Sandbox Passthrough)"
           body: |
-            ## 🚀 DSH Mobile Standalone Release v1.5.6
-            - 🛡️ **Fix YAMLException: duplicated mapping key**:
-              - Memperbaiki parsing overlay `cordis.patch.yml` sehingga engine boot 100% mulus saat fresh install.
-            - ⏳ **Smart Permission Gate (Menunggu Izin User)**:
-              - Engine sekarang menunggu hingga user selesai memberikan izin storage di pengaturan sebelum mulai mengekstrak dan booting server. Tidak akan terjadi error jika user membutuhkan waktu untuk menyetujui izin.
-            - 👑 **Tombol "👑 Root SU" Dedicated di Toolbar**
-            - 🧠 **Android & Root System Prompt Awareness**
+            ## 🚀 DSH Mobile Standalone Release v1.5.7
+            - 🛡️ **Fix SyntaxError: Identifier 'selected' has already been declared**:
+              - Memperbaiki parsing sintaks sandbox passthrough sehingga engine Node.js v24 boot 100% mulus tanpa crash loader.
+            - ⏳ **Smart Permission Gate**:
+              - Menunggu persetujuan izin storage dari user sebelum booting server.
+            - 👑 **Tombol "👑 Root SU" di Toolbar**
+            - 🧠 **Android OS ARM64 & Root Environment System Prompt Context**
             - 📂 **Default Root Internal Storage (`/sdcard`) Workspace**
             - 🗜️ **Tersedia Versi ZIP Hemat Kuota**: `dsh-mobile-compressed.zip`
           files: |
