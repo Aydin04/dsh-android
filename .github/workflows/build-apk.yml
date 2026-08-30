@@ -159,16 +159,16 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.8.1
-          name: "DSH Mobile v1.8.1 (Hybrid Superuser Execution Engine & Root State Persistence)"
+          tag_name: v1.8.2
+          name: "DSH Mobile v1.8.2 (Robust Root SU Shell Dispatcher & Dual Path Resolution)"
           body: |
-            ## 🚀 DSH Mobile Standalone Release v1.8.1
-            - 👑 **Hybrid Superuser (`su`) Execution Engine**:
-              - Shell dispatcher (`sh_shim.sh`) kini mendeteksi status Superuser secara dinamis.
-              - Jika mode root aktif, semua perintah terminal agent langsung dieksekusi melalui **host Magisk / KernelSU / APatch (`su -c`)** tanpa terblokir isolasi ptrace. Agent memiliki hak akses `uid=0` penuh ke `/system`, `/data`, `/data/adb`, hardware, dan tweaks kernel.
-              - Jika mode standar (non-root), perintah berjalan di dalam **container PRoot Alpine Linux (`apk add`)** dengan bind-mount lengkap ke `/system`, `/dev`, `/proc`, `/sys`, dan `/sdcard`.
+            ## 🚀 DSH Mobile Standalone Release v1.8.2
+            - 👑 **Robust Root SU Shell Dispatcher**:
+              - Memperbaiki parsing argumen shell `-c` pada `sh_shim.sh` saat memanggil `su -c "<command>"` sehingga perintah kompleks (seperti pipe `|`, multiple commands `;`, dan redirection) dapat dieksekusi secara mulus oleh agent di level Magisk/KernelSU/APatch.
+              - Menambahkan dual-path fallback resolution untuk flag root (`/data/user/0/com.dsh.mobile/` & `/data/data/com.dsh.mobile/`).
             - 💾 **Root State & Toolbar Persistence**:
-              - Status perizinan Root kini tersimpan permanen di `SharedPreferences` dan flag file lokal. Setelah aplikasi ditutup atau direstart, status **`👑 Root OK`** tetap tersimpan dan langsung aktif tanpa perlu menekan tombol ulang.
+              - Status perizinan Root tersimpan permanen di `SharedPreferences` dan flag file lokal.
+            - 🐧 **Full Embedded PRoot + Alpine Linux Environment (`apk add`)**
             - 🏷️ **Official Package ID (`com.dsh.mobile`)**
             - 📝 **Native In-App Configuration Editor (`📝 Config`)**
             - 🛡️ **Full Permissions & Direct `/sdcard` Workspace**
