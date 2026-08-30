@@ -204,17 +204,19 @@ public class LocalEngineService extends Service {
                 emitLog("[TEST ERROR] Node.js test failed: " + err.getMessage());
             }
 
-            // 5. Launch On-Device DSH Server
-            emitLog("[SERVER] Launching dsh --profile web --port 3000 ...");
+            // 5. Launch On-Device DSH Server with --expose-internals
+            emitLog("[SERVER] Launching dsh --profile web --port 3080 ...");
             ProcessBuilder pb = new ProcessBuilder(
                     nodeFile.getAbsolutePath(),
+                    "--expose-internals",
                     dshBin.getAbsolutePath(),
                     "--profile", "web",
                     "--no-open",
-                    "--port", "3000"
+                    "--port", "3080"
             );
             pb.directory(filesDir);
             pb.environment().put("HOME", filesDir.getAbsolutePath());
+            pb.environment().put("NODE_OPTIONS", "--expose-internals");
             pb.environment().put("LD_LIBRARY_PATH", libDir.getAbsolutePath());
             pb.environment().put("NODE_PATH", new File(dshDir, "node_modules").getAbsolutePath());
             pb.environment().put("PATH", binDir.getAbsolutePath() + ":/system/bin:/system/xbin");
@@ -235,11 +237,11 @@ public class LocalEngineService extends Service {
                 }
             }).start();
 
-            // 6. Poll port 3000 readiness (require 2 consecutive successful pings)
+            // 6. Poll port 3080 readiness (require 2 consecutive successful pings)
             int consecutiveSuccess = 0;
             for (int i = 1; i <= 60; i++) {
                 try {
-                    URL url = new URL("http://127.0.0.1:3000/");
+                    URL url = new URL("http://127.0.0.1:3080/");
                     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                     conn.setConnectTimeout(1500);
                     conn.setReadTimeout(1500);
@@ -259,7 +261,7 @@ public class LocalEngineService extends Service {
                     consecutiveSuccess = 0;
                 }
                 if (i % 5 == 0) {
-                    emitLog("[WAIT] Waiting for server on http://127.0.0.1:3000/ (" + i + "s)...");
+                    emitLog("[WAIT] Waiting for server on http://127.0.0.1:3080/ (" + i + "s)...");
                 }
                 Thread.sleep(1000);
             }

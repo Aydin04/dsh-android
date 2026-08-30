@@ -127,15 +127,13 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.4.0
-          name: "DSH Mobile v1.4.0 (Stable Socket Warmup & WebView Auto-Retry)"
+          tag_name: v1.4.1
+          name: "DSH Mobile v1.4.1 (Expose-Internals & Default Port 3080)"
           body: |
-            ## 🚀 DSH Mobile Standalone Release v1.4.0
-            - 🛡️ **Fix `ERR_CONNECTION_RESET`**:
-              - Menunggu socket server stabil penuh sebelum trigger WebView
-              - Auto-retry reload jika koneksi socket lokal mengalami reset saat inisialisasi awal
+            ## 🚀 DSH Mobile Standalone Release v1.4.1
+            - 🛡️ **Fix Cordis HMR**: Menambahkan flag Node.js `--expose-internals` untuk modul `@deepseek-ai/cordis-plugin-hmr`
+            - 🌐 **Official Port 3080**: Menyelaraskan seluruh koneksi ke port default resmi DeepSeek Harness
             - 🗜️ **Tersedia Versi ZIP Hemat Kuota**: `dsh-mobile-compressed.zip`
-            - 🌐 **100% Official DeepSeek Harness Web Dashboard On-Device**
           files: |
             app/build/outputs/apk/debug/app-debug.apk
             app/build/outputs/apk/debug/dsh-mobile-compressed.zip

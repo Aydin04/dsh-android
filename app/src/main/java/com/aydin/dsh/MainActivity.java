@@ -58,7 +58,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int PERMISSION_REQ_CODE = 101;
     private static final String PREFS_NAME = "DSH_PREFS";
     private static final String KEY_SERVER_URL = "SERVER_URL";
-    private static final String LOCAL_URL = "http://127.0.0.1:3000";
+    private static final String LOCAL_URL = "http://127.0.0.1:3080";
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean isLoaded = false;
