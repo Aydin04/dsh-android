@@ -27,6 +27,7 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Arrays;
+import java.util.List;
 
 public class LocalEngineService extends Service {
 
@@ -86,18 +87,23 @@ public class LocalEngineService extends Service {
             // 2. Extract compressed native shared libraries (engine-libs.tar.gz / engine-libs.tar)
             File testLib = new File(libDir, "libz.so.1");
             if (!testLib.exists()) {
-                emitLog("[EXTRACT] Extracting Node.js native shared libraries to " + libDir.getAbsolutePath() + "...");
-                
                 String libAsset = "engine/engine-libs.tar.gz";
                 boolean isGzip = true;
                 try {
                     String[] engineAssets = getAssets().list("engine");
-                    if (Arrays.asList(engineAssets).contains("engine-libs.tar")) {
-                        libAsset = "engine/engine-libs.tar";
-                        isGzip = false;
+                    if (engineAssets != null) {
+                        List<String> assetList = Arrays.asList(engineAssets);
+                        if (assetList.contains("engine-libs.tar.gz")) {
+                            libAsset = "engine/engine-libs.tar.gz";
+                            isGzip = true;
+                        } else if (assetList.contains("engine-libs.tar")) {
+                            libAsset = "engine/engine-libs.tar";
+                            isGzip = false;
+                        }
                     }
                 } catch (Exception ignored) {}
 
+                emitLog("[EXTRACT] Extracting Node.js native shared libraries from " + libAsset + "...");
                 try (InputStream rawIn = getAssets().open(libAsset)) {
                     InputStream inStream = isGzip ? new GzipCompressorInputStream(rawIn) : rawIn;
                     try (TarArchiveInputStream tarIn = new TarArchiveInputStream(inStream)) {
@@ -136,9 +142,15 @@ public class LocalEngineService extends Service {
                 boolean isGzip = true;
                 try {
                     String[] engineAssets = getAssets().list("engine");
-                    if (Arrays.asList(engineAssets).contains("dsh-core.tar")) {
-                        dshAsset = "engine/dsh-core.tar";
-                        isGzip = false;
+                    if (engineAssets != null) {
+                        List<String> assetList = Arrays.asList(engineAssets);
+                        if (assetList.contains("dsh-core.tar.gz")) {
+                            dshAsset = "engine/dsh-core.tar.gz";
+                            isGzip = true;
+                        } else if (assetList.contains("dsh-core.tar")) {
+                            dshAsset = "engine/dsh-core.tar";
+                            isGzip = false;
+                        }
                     }
                 } catch (Exception ignored) {}
 
