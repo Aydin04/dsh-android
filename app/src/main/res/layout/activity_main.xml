@@ -113,6 +113,15 @@
                     android:textSize="13sp" />
 
                 <Button
+                    android:id="@+id/btnConfigDoc"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:background="?attr/selectableItemBackground"
+                    android:text="📝 Config"
+                    android:textColor="#e3b341"
+                    android:textSize="11sp" />
+
+                <Button
                     android:id="@+id/btnRootToggle"
                     android:layout_width="wrap_content"
                     android:layout_height="36dp"

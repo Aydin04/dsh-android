@@ -3,11 +3,11 @@ plugins {
 }
 
 android {
-    namespace 'com.aydin.dsh'
+    namespace 'com.dsh.mobile'
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.aydin.dsh"
+        applicationId "com.dsh.mobile"
         minSdk 24
         targetSdk 28
         versionCode 1

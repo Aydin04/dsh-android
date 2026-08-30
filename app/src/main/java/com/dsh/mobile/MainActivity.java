@@ -1,4 +1,4 @@
-package com.aydin.dsh;
+package com.dsh.mobile;
 
 import android.Manifest;
 import android.content.BroadcastReceiver;
@@ -75,6 +75,7 @@ public class MainActivity extends AppCompatActivity {
     private Button btnDesktopMode;
     private Button btnPlugins;
     private Button btnLogs;
+    private Button btnConfigDoc;
 
     private static final int PERMISSION_REQ_CODE = 101;
     private static final int MANAGE_STORAGE_REQ_CODE = 102;
@@ -143,6 +144,7 @@ public class MainActivity extends AppCompatActivity {
         btnDesktopMode = findViewById(R.id.btnDesktopMode);
         btnPlugins = findViewById(R.id.btnPlugins);
         btnLogs = findViewById(R.id.btnLogs);
+        btnConfigDoc = findViewById(R.id.btnConfigDoc);
 
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         currentZoom = prefs.getInt(KEY_ZOOM_LEVEL, 100);
@@ -233,6 +235,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         btnConfig.setOnClickListener(v -> showServerConfigDialog(null));
+        btnConfigDoc.setOnClickListener(v -> showConfigFileViewerDialog(null));
 
         btnZoomIn.setOnClickListener(v -> adjustZoom(10));
         btnZoomOut.setOnClickListener(v -> adjustZoom(-10));
@@ -605,10 +608,75 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public static class WebAppInterface {
+    public class WebAppInterface {
         @JavascriptInterface
         public String getPlatform() {
             return "android";
+        }
+
+        @JavascriptInterface
+        public void openFileViewer(String path) {
+            handler.post(() -> showConfigFileViewerDialog(path));
+        }
+    }
+
+    private void showConfigFileViewerDialog(String filePath) {
+        try {
+            File file = (filePath != null && !filePath.isEmpty()) ? new File(filePath) : new File(getFilesDir(), ".dsh/profiles/web/cordis.yml");
+            if (!file.exists()) {
+                File alt = new File(getFilesDir(), ".dsh/config.yml");
+                if (alt.exists()) file = alt;
+            }
+
+            StringBuilder content = new StringBuilder();
+            if (file.exists()) {
+                try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+                    String l;
+                    while ((l = br.readLine()) != null) {
+                        content.append(l).append("\n");
+                    }
+                }
+            } else {
+                content.append("# DeepSeek Harness Configuration\n# File: ").append(file.getAbsolutePath()).append("\n\n");
+            }
+
+            final File targetFile = file;
+            final EditText editor = new EditText(this);
+            editor.setText(content.toString());
+            editor.setTypeface(android.graphics.Typeface.MONOSPACE);
+            editor.setTextSize(12);
+            editor.setHorizontallyScrolling(true);
+
+            ScrollView scroll = new ScrollView(this);
+            scroll.addView(editor);
+
+            new AlertDialog.Builder(this)
+                    .setTitle("⚙️ File Konfigurasi (" + targetFile.getName() + ")")
+                    .setView(scroll)
+                    .setPositiveButton("Simpan & Restart", (dialog, which) -> {
+                        try (FileWriter fw = new FileWriter(targetFile)) {
+                            fw.write(editor.getText().toString());
+                            Toast.makeText(this, "Konfigurasi disimpan! Merestart server...", Toast.LENGTH_SHORT).show();
+                            stopService(new Intent(this, LocalEngineService.class));
+                            startEngineService();
+                        } catch (Exception e) {
+                            Toast.makeText(this, "Gagal menyimpan: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                        }
+                    })
+                    .setNeutralButton("Buka di Editor Eksternal", (dialog, which) -> {
+                        try {
+                            Intent intent = new Intent(Intent.ACTION_VIEW);
+                            intent.setDataAndType(Uri.fromFile(targetFile), "text/*");
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                            startActivity(Intent.createChooser(intent, "Buka dengan..."));
+                        } catch (Exception e) {
+                            Toast.makeText(this, "Tidak ada aplikasi editor teks: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                        }
+                    })
+                    .setNegativeButton("Tutup", null)
+                    .show();
+        } catch (Exception err) {
+            Toast.makeText(this, "Error: " + err.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
 

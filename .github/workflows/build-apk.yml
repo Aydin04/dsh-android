@@ -5,6 +5,9 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+  schedule:
+    # Check for upstream DeepSeek Harness updates automatically every 6 hours
+    - cron: '0 */6 * * *'
   workflow_dispatch:
 
 permissions:
@@ -58,18 +61,18 @@ jobs:
           done
           
           cp data/data/com.termux/files/usr/bin/node $GITHUB_WORKSPACE/app/src/main/assets/engine/node
-          patchelf --set-rpath '/data/user/0/com.aydin.dsh/files/lib:/data/data/com.aydin.dsh/files/lib' $GITHUB_WORKSPACE/app/src/main/assets/engine/node
+          patchelf --set-rpath '/data/user/0/com.dsh.mobile/files/lib:/data/data/com.dsh.mobile/files/lib' $GITHUB_WORKSPACE/app/src/main/assets/engine/node
           chmod 755 $GITHUB_WORKSPACE/app/src/main/assets/engine/node
 
           if [ -f "data/data/com.termux/files/usr/bin/rg" ]; then
             cp data/data/com.termux/files/usr/bin/rg $GITHUB_WORKSPACE/app/src/main/assets/engine/rg
-            patchelf --set-rpath '/data/user/0/com.aydin.dsh/files/lib:/data/data/com.aydin.dsh/files/lib' $GITHUB_WORKSPACE/app/src/main/assets/engine/rg 2>/dev/null || true
+            patchelf --set-rpath '/data/user/0/com.dsh.mobile/files/lib:/data/data/com.dsh.mobile/files/lib' $GITHUB_WORKSPACE/app/src/main/assets/engine/rg 2>/dev/null || true
             chmod 755 $GITHUB_WORKSPACE/app/src/main/assets/engine/rg
           fi
 
           if [ -f "data/data/com.termux/files/usr/bin/proot" ]; then
             cp data/data/com.termux/files/usr/bin/proot $GITHUB_WORKSPACE/app/src/main/assets/engine/proot
-            patchelf --set-rpath '/data/user/0/com.aydin.dsh/files/lib:/data/data/com.aydin.dsh/files/lib' $GITHUB_WORKSPACE/app/src/main/assets/engine/proot 2>/dev/null || true
+            patchelf --set-rpath '/data/user/0/com.dsh.mobile/files/lib:/data/data/com.dsh.mobile/files/lib' $GITHUB_WORKSPACE/app/src/main/assets/engine/proot 2>/dev/null || true
             chmod 755 $GITHUB_WORKSPACE/app/src/main/assets/engine/proot
           fi
 
@@ -153,17 +156,19 @@ jobs:
           ls -lh dsh-mobile-compressed.zip
 
       - name: Create Release
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.7.2
-          name: "DSH Mobile v1.7.2 (Direct Native Android Intent for Settings Config Opener)"
+          tag_name: v1.8.0
+          name: "DSH Mobile v1.8.0 (New Package ID `com.dsh.mobile` & Native In-App Config Editor)"
           body: |
-            ## 🚀 DSH Mobile Standalone Release v1.7.2
-            - ⚙️ **Fix "Open Configuration File" (Could not open configuration file)**:
-              - Penanganan klik tombol buka file konfigurasi di settings sekarang langsung mengembalikan status sukses dan memicu Android Intent (`am start -a android.intent.action.VIEW`) untuk membuka file teks konfigurasi langsung di text editor/viewer HP.
-            - 🛠️ **Fix `tools.code` Scope (Require / FS / Path / Process Globals)**
-            - 🐚 **Fix `tools.bash` (Clean Module Import)**
+            ## 🚀 DSH Mobile Standalone Release v1.8.0
+            - 🏷️ **Official Clean Package ID (`com.dsh.mobile`)**:
+              - Mengubah package ID aplikasi dari `com.aydin.dsh` menjadi `com.dsh.mobile` secara menyeluruh di level manifest, build script, dan C/C++ RPATH binaries.
+            - 📝 **Native In-App Configuration Viewer & Editor (`📝 Config`)**:
+              - Tombol baru **`📝 Config`** di toolbar dan integrasi dialog viewer/editor konfigurasi internal. Anda dapat melihat, mengedit kode YAML konfigurasi server, menyimpannya langsung dengan auto-restart engine, atau membukanya di aplikasi editor teks eksternal favorit Anda.
+            - 🔄 **Automated CI/CD Upstream Sync**:
+              - GitHub Actions otomatis memeriksa pembaruan dari repositori DeepSeek Harness dan membangun APK baru secara berkala.
             - 🐧 **Full Embedded PRoot + Alpine Linux Environment (`apk add`)**
             - 👑 **Supercharged Dual-Mode Superuser (Root `su`)**
             - 🛡️ **Full Android Permissions & Direct `/sdcard` Workspace**

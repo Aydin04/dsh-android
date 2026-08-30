@@ -1,4 +1,4 @@
-package com.aydin.dsh;
+package com.dsh.mobile;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -31,8 +31,8 @@ import java.util.List;
 
 public class LocalEngineService extends Service {
 
-    public static final String ACTION_LOG = "com.aydin.dsh.ENGINE_LOG";
-    public static final String ACTION_READY = "com.aydin.dsh.ENGINE_READY";
+    public static final String ACTION_LOG = "com.dsh.mobile.ENGINE_LOG";
+    public static final String ACTION_READY = "com.dsh.mobile.ENGINE_READY";
     public static final String EXTRA_MESSAGE = "EXTRA_MESSAGE";
 
     private static final String TAG = "DSH_LOCAL_ENGINE";

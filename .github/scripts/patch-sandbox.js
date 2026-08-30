@@ -33,7 +33,7 @@ if (fs.existsSync(fsLocalPath)) {
   }
 }
 
-// 3. Patch dsh-terminal-bash to fallback to /data/user/0/com.aydin.dsh/files/bin/sh
+// 3. Patch dsh-terminal-bash to fallback to /data/user/0/com.dsh.mobile/files/bin/sh
 const terminalBashPath = `${dshRoot}/node_modules/@deepseek-ai/dsh-terminal-bash/lib/index.js`;
 if (fs.existsSync(terminalBashPath)) {
   let code = fs.readFileSync(terminalBashPath, 'utf8');
@@ -41,14 +41,14 @@ if (fs.existsSync(terminalBashPath)) {
     console.log('[PATCH] Patching dsh-terminal-bash default shell path...');
     code = code.replace(
       'const DEFAULT_BASH_SHELL = "/bin/bash";',
-      'import { existsSync as __existsSync } from "node:fs";\nconst DEFAULT_BASH_SHELL = __existsSync("/data/user/0/com.aydin.dsh/files/bin/sh") ? "/data/user/0/com.aydin.dsh/files/bin/sh" : (__existsSync("/bin/bash") ? "/bin/bash" : "/system/bin/sh");'
+      'import { existsSync as __existsSync } from "node:fs";\nconst DEFAULT_BASH_SHELL = __existsSync("/data/user/0/com.dsh.mobile/files/bin/sh") ? "/data/user/0/com.dsh.mobile/files/bin/sh" : (__existsSync("/bin/bash") ? "/bin/bash" : "/system/bin/sh");'
     );
     fs.writeFileSync(terminalBashPath, code, 'utf8');
     console.log('[PATCH SUCCESS] dsh-terminal-bash shell path patched!');
   }
 }
 
-// 4. Patch dsh-bash-local to use /data/user/0/com.aydin.dsh/files/bin/sh or sh without referencing undefined fs
+// 4. Patch dsh-bash-local to use /data/user/0/com.dsh.mobile/files/bin/sh or sh without referencing undefined fs
 const bashLocalPath = `${dshRoot}/node_modules/@deepseek-ai/dsh-bash-local/lib/index.js`;
 if (fs.existsSync(bashLocalPath)) {
   let code = fs.readFileSync(bashLocalPath, 'utf8');
@@ -58,7 +58,7 @@ if (fs.existsSync(bashLocalPath)) {
   }
   code = code.replace(
     /\"bash\"/g,
-    '(__bashExistsSync("/data/user/0/com.aydin.dsh/files/bin/sh") ? "/data/user/0/com.aydin.dsh/files/bin/sh" : (__bashExistsSync("/bin/bash") ? "bash" : "/system/bin/sh"))'
+    '(__bashExistsSync("/data/user/0/com.dsh.mobile/files/bin/sh") ? "/data/user/0/com.dsh.mobile/files/bin/sh" : (__bashExistsSync("/bin/bash") ? "bash" : "/system/bin/sh"))'
   );
   fs.writeFileSync(bashLocalPath, code, 'utf8');
   console.log('[PATCH SUCCESS] dsh-bash-local patched cleanly!');
@@ -90,7 +90,7 @@ if (fs.existsSync(toolFsSearchPath)) {
   if (code.includes('return (await import("@vscode/ripgrep")).rgPath;')) {
     code = code.replace(
       'return (await import("@vscode/ripgrep")).rgPath;',
-      'try { const { existsSync } = await import("node:fs"); if (existsSync("/data/user/0/com.aydin.dsh/files/bin/rg")) return "/data/user/0/com.aydin.dsh/files/bin/rg"; if (existsSync("/data/data/com.termux/files/usr/bin/rg")) return "/data/data/com.termux/files/usr/bin/rg"; return (await import("@vscode/ripgrep")).rgPath; } catch (e) { throw e; }'
+      'try { const { existsSync } = await import("node:fs"); if (existsSync("/data/user/0/com.dsh.mobile/files/bin/rg")) return "/data/user/0/com.dsh.mobile/files/bin/rg"; if (existsSync("/data/data/com.termux/files/usr/bin/rg")) return "/data/data/com.termux/files/usr/bin/rg"; return (await import("@vscode/ripgrep")).rgPath; } catch (e) { throw e; }'
     );
     fs.writeFileSync(toolFsSearchPath, code, 'utf8');
     console.log('[PATCH SUCCESS] dsh-tool-fs-search patched!');
