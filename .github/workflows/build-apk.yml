@@ -159,17 +159,17 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.8.2
-          name: "DSH Mobile v1.8.2 (Robust Root SU Shell Dispatcher & Dual Path Resolution)"
+          tag_name: v1.8.3
+          name: "DSH Mobile v1.8.3 (Direct Node-Level SU Dispatcher & In-App Upgrade Compatibility)"
           body: |
-            ## 🚀 DSH Mobile Standalone Release v1.8.2
-            - 👑 **Robust Root SU Shell Dispatcher**:
-              - Memperbaiki parsing argumen shell `-c` pada `sh_shim.sh` saat memanggil `su -c "<command>"` sehingga perintah kompleks (seperti pipe `|`, multiple commands `;`, dan redirection) dapat dieksekusi secara mulus oleh agent di level Magisk/KernelSU/APatch.
-              - Menambahkan dual-path fallback resolution untuk flag root (`/data/user/0/com.dsh.mobile/` & `/data/data/com.dsh.mobile/`).
-            - 💾 **Root State & Toolbar Persistence**:
-              - Status perizinan Root tersimpan permanen di `SharedPreferences` dan flag file lokal.
+            ## 🚀 DSH Mobile Standalone Release v1.8.3
+            - 👑 **Direct Node-Level Superuser (`su`) Dispatcher**:
+              - Eksekutor shell `dsh-bash-local` dan `dsh-terminal-bash` kini langsung mem-bypass shim dan mengarahkan argv perintah terminal ke **`/system/bin/su -c "<command>"`** secara native jika mode root aktif.
+              - Tidak ada lagi kendala permission denied atau ptrace block pada Magisk / KernelSU / APatch.
+            - 🔄 **In-App Upgrade / Non-Fresh-Install Compatibility**:
+              - Menambahkan kompatibilitas dual package ID (`com.dsh.mobile` & `com.aydin.dsh`) sehingga upgrade tanpa uninstall (dirty install) tetap mendeteksi flag root, binari, dan konfigurasi dengan sempurna.
+            - 💾 **Root State & Toolbar Persistence** (tersimpan permanen).
             - 🐧 **Full Embedded PRoot + Alpine Linux Environment (`apk add`)**
-            - 🏷️ **Official Package ID (`com.dsh.mobile`)**
             - 📝 **Native In-App Configuration Editor (`📝 Config`)**
             - 🛡️ **Full Permissions & Direct `/sdcard` Workspace**
             - 🗜️ **Tersedia Versi ZIP Hemat Kuota**: `dsh-mobile-compressed.zip`

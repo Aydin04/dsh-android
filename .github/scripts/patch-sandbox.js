@@ -33,35 +33,74 @@ if (fs.existsSync(fsLocalPath)) {
   }
 }
 
-// 3. Patch dsh-terminal-bash to fallback to /data/user/0/com.dsh.mobile/files/bin/sh
+// 3. Patch dsh-terminal-bash: Hybrid Root SU and PRoot Shell
 const terminalBashPath = `${dshRoot}/node_modules/@deepseek-ai/dsh-terminal-bash/lib/index.js`;
 if (fs.existsSync(terminalBashPath)) {
   let code = fs.readFileSync(terminalBashPath, 'utf8');
   if (code.includes('const DEFAULT_BASH_SHELL = "/bin/bash";')) {
     console.log('[PATCH] Patching dsh-terminal-bash default shell path...');
-    code = code.replace(
-      'const DEFAULT_BASH_SHELL = "/bin/bash";',
-      'import { existsSync as __existsSync } from "node:fs";\nconst DEFAULT_BASH_SHELL = __existsSync("/data/user/0/com.dsh.mobile/files/bin/sh") ? "/data/user/0/com.dsh.mobile/files/bin/sh" : (__existsSync("/bin/bash") ? "/bin/bash" : "/system/bin/sh");'
-    );
+    const shellResolver = `
+import { existsSync as __termExistsSync } from "node:fs";
+function __getAndroidTerminalShell() {
+  const isRoot = __termExistsSync("/data/user/0/com.dsh.mobile/files/root_enabled.flag") || __termExistsSync("/data/data/com.dsh.mobile/files/root_enabled.flag") || __termExistsSync("/data/user/0/com.aydin.dsh/files/root_enabled.flag");
+  if (isRoot) {
+    for (const su of ["/system/bin/su", "/system/xbin/su", "/data/adb/ksu/bin/su", "/data/adb/ap/bin/su", "/data/adb/magisk/su"]) {
+      if (__termExistsSync(su)) return su;
+    }
+  }
+  if (__termExistsSync("/data/user/0/com.dsh.mobile/files/bin/sh")) return "/data/user/0/com.dsh.mobile/files/bin/sh";
+  if (__termExistsSync("/data/data/com.dsh.mobile/files/bin/sh")) return "/data/data/com.dsh.mobile/files/bin/sh";
+  if (__termExistsSync("/data/user/0/com.aydin.dsh/files/bin/sh")) return "/data/user/0/com.aydin.dsh/files/bin/sh";
+  return "/system/bin/sh";
+}
+const DEFAULT_BASH_SHELL = __getAndroidTerminalShell();
+`;
+    code = code.replace('const DEFAULT_BASH_SHELL = "/bin/bash";', shellResolver);
     fs.writeFileSync(terminalBashPath, code, 'utf8');
     console.log('[PATCH SUCCESS] dsh-terminal-bash shell path patched!');
   }
 }
 
-// 4. Patch dsh-bash-local to use /data/user/0/com.dsh.mobile/files/bin/sh or sh without referencing undefined fs
+// 4. Patch dsh-bash-local to dynamically select Direct SU or PRoot Shell at runtime
 const bashLocalPath = `${dshRoot}/node_modules/@deepseek-ai/dsh-bash-local/lib/index.js`;
 if (fs.existsSync(bashLocalPath)) {
   let code = fs.readFileSync(bashLocalPath, 'utf8');
-  console.log('[PATCH] Patching dsh-bash-local shell executable with clean fs import...');
-  if (!code.includes('import { existsSync as __bashExistsSync } from "node:fs";')) {
-    code = 'import { existsSync as __bashExistsSync } from "node:fs";\n' + code;
+  console.log('[PATCH] Patching dsh-bash-local with hybrid Direct SU / PRoot dispatching...');
+  const hybridResolver = `
+import { existsSync as __bashExistsSync } from "node:fs";
+function __resolveAndroidShellArgv(command) {
+  const isRoot = __bashExistsSync("/data/user/0/com.dsh.mobile/files/root_enabled.flag") || 
+                 __bashExistsSync("/data/data/com.dsh.mobile/files/root_enabled.flag") || 
+                 __bashExistsSync("/data/user/0/com.aydin.dsh/files/root_enabled.flag") ||
+                 __bashExistsSync("/data/data/com.aydin.dsh/files/root_enabled.flag");
+  if (isRoot) {
+    for (const su of ["/system/bin/su", "/system/xbin/su", "/data/adb/ksu/bin/su", "/data/adb/ap/bin/su", "/data/adb/magisk/su"]) {
+      if (__bashExistsSync(su)) {
+        return [su, "-c", command];
+      }
+    }
+  }
+  for (const sh of ["/data/user/0/com.dsh.mobile/files/bin/sh", "/data/data/com.dsh.mobile/files/bin/sh", "/data/user/0/com.aydin.dsh/files/bin/sh", "/data/data/com.aydin.dsh/files/bin/sh"]) {
+    if (__bashExistsSync(sh)) {
+      return [sh, "-c", command];
+    }
+  }
+  return ["/system/bin/sh", "-c", command];
+}
+`;
+  if (!code.includes('__resolveAndroidShellArgv')) {
+    code = hybridResolver + code;
   }
   code = code.replace(
-    /\"bash\"/g,
-    '(__bashExistsSync("/data/user/0/com.dsh.mobile/files/bin/sh") ? "/data/user/0/com.dsh.mobile/files/bin/sh" : (__bashExistsSync("/bin/bash") ? "bash" : "/system/bin/sh"))'
+    /run\(spec\)\s*\{\s*return this\.runArgv\(spec,\s*\[\s*"bash",\s*"-c",\s*spec\.command\s*\]\);\s*\}/g,
+    'run(spec) { return this.runArgv(spec, __resolveAndroidShellArgv(spec.command)); }'
+  );
+  code = code.replace(
+    /start\(spec\)\s*\{\s*return this\.startArgv\(spec,\s*\[\s*"bash",\s*"-c",\s*spec\.command\s*\]\);\s*\}/g,
+    'start(spec) { return this.startArgv(spec, __resolveAndroidShellArgv(spec.command)); }'
   );
   fs.writeFileSync(bashLocalPath, code, 'utf8');
-  console.log('[PATCH SUCCESS] dsh-bash-local patched cleanly!');
+  console.log('[PATCH SUCCESS] dsh-bash-local patched with Direct SU & PRoot dispatching!');
 }
 
 // 5. Patch dsh-code-runtime-worker-thread to inject require, fs, and path into AsyncFunction execution scope
@@ -90,7 +129,7 @@ if (fs.existsSync(toolFsSearchPath)) {
   if (code.includes('return (await import("@vscode/ripgrep")).rgPath;')) {
     code = code.replace(
       'return (await import("@vscode/ripgrep")).rgPath;',
-      'try { const { existsSync } = await import("node:fs"); if (existsSync("/data/user/0/com.dsh.mobile/files/bin/rg")) return "/data/user/0/com.dsh.mobile/files/bin/rg"; if (existsSync("/data/data/com.termux/files/usr/bin/rg")) return "/data/data/com.termux/files/usr/bin/rg"; return (await import("@vscode/ripgrep")).rgPath; } catch (e) { throw e; }'
+      'try { const { existsSync } = await import("node:fs"); if (existsSync("/data/user/0/com.dsh.mobile/files/bin/rg")) return "/data/user/0/com.dsh.mobile/files/bin/rg"; if (existsSync("/data/data/com.dsh.mobile/files/bin/rg")) return "/data/data/com.dsh.mobile/files/bin/rg"; if (existsSync("/data/user/0/com.aydin.dsh/files/bin/rg")) return "/data/user/0/com.aydin.dsh/files/bin/rg"; return (await import("@vscode/ripgrep")).rgPath; } catch (e) { throw e; }'
     );
     fs.writeFileSync(toolFsSearchPath, code, 'utf8');
     console.log('[PATCH SUCCESS] dsh-tool-fs-search patched!');
