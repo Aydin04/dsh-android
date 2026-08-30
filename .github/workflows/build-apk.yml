@@ -47,7 +47,7 @@ jobs:
           curl -sL "https://packages.termux.dev/apt/termux-main/pool/main/libi/libicu/libicu_78.3_aarch64.deb" -o icu.deb
           curl -sL "https://packages.termux.dev/apt/termux-main/pool/main/libc/libc++/libc++_29_aarch64.deb" -o libc++.deb
           curl -sL "https://packages.termux.dev/apt/termux-main/pool/main/o/openssl/openssl_1:3.6.3_aarch64.deb" -o openssl.deb
-          curl -sL "https://packages.termux.dev/apt/termux-main/pool/main/r/ripgrep/ripgrep_14.1.1-1_aarch64.deb" -o ripgrep.deb || true
+          curl -sL "https://packages.termux.dev/apt/termux-main/pool/main/r/ripgrep/ripgrep_15.2.0_aarch64.deb" -o ripgrep.deb
           
           for f in *.deb; do
             ar x "$f"
