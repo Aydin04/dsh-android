@@ -96,8 +96,8 @@ jobs:
             cp -f $GITHUB_WORKSPACE/.github/scripts/cordis-hmr-adapter.js /tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/cordis-plugin-hmr/lib/index.js
           fi
 
-          # Safe Hardlink Patch to prevent EACCES link() crash on Android SELinux
-          node $GITHUB_WORKSPACE/.github/scripts/patch-hardlinks.js
+          # Safe Android Sandbox & Hardlink Patch (bypass bwrap/landlock crash and enable full root access)
+          node $GITHUB_WORKSPACE/.github/scripts/patch-sandbox.js
 
           rm -rf /tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh/node_modules/node-pty/prebuilds/win32* || true
           rm -rf /tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh/node_modules/node-pty/prebuilds/darwin* || true
@@ -118,7 +118,6 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: 8.5
-          cache-disabled: true
 
       - name: Build Debug APK
         run: |
@@ -135,14 +134,16 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.5.3
-          name: "DSH Mobile v1.5.3 (Root Internal Storage & Auto Full Sandbox Access)"
+          tag_name: v1.5.4
+          name: "DSH Mobile v1.5.4 (Root Support, Zero-Error Sandbox & /sdcard Workspace)"
           body: |
-            ## 🚀 DSH Mobile Standalone Release v1.5.3
+            ## 🚀 DSH Mobile Standalone Release v1.5.4
+            - ⚡ **Zero-Error Android Sandbox Execution**:
+              - Secara permanen mem-bypass penolakan kernel Linux Landlock/bwrap sehingga agent dapat mengeksekusi perintah shell (bash, git, node, python) tanpa error *SANDBOX_UNAVAILABLE*.
+            - 👑 **Dukungan Root Penuh (Magisk / KernelSU / APatch / Termux)**:
+              - Menambahkan path biner root (`/data/adb/ksu/bin`, `/data/adb/ap/bin`, `/data/adb/magisk`, `/sbin`, `/data/data/com.termux/files/usr/bin`) ke dalam `$PATH`. Jika perangkat di-root, agent dapat langsung menggunakan perintah `su` untuk eksekusi level tertinggi.
             - 📂 **Root Internal Storage (`/sdcard`)**:
-              - Workspace default sekarang langsung berada di root penyimpanan internal (`/storage/emulated/0` atau `/sdcard`), bukan di folder aplikasi atau subfolder.
-            - ⚡ **Auto `danger-full-access` Permissions**:
-              - Mengotomatiskan permission mode `DSH_PERMISSION_MODE=danger-full-access` sehingga agent DeepSeek Harness dapat menjalankan perintah shell (bash, glob, file read/write) tanpa terganjal sandbox Linux Landlock/bwrap yang tidak didukung kernel Android.
+              - Workspace default langsung mengarah ke penyimpanan internal utama HP Anda.
             - 🛡️ **Fix EACCES `link()` Session Persistence**:
               - Fallback atomic file write yang aman di Android SELinux.
             - 🗜️ **Tersedia Versi ZIP Hemat Kuota**: `dsh-mobile-compressed.zip`

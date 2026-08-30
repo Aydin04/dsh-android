@@ -211,6 +211,17 @@ public class LocalEngineService extends Service {
 
             emitLog("[SERVER] Launching dsh --profile web --port 3080 ...");
             emitLog("[SERVER] Primary Workspace Directory: " + workspaceDir.getAbsolutePath());
+            
+            // Build rich PATH including standard Android bins, Termux bins, and Magisk/KSU/APatch root su bins
+            String enrichedPath = binDir.getAbsolutePath() + 
+                    ":/data/adb/ksu/bin" + 
+                    ":/data/adb/ap/bin" + 
+                    ":/data/adb/magisk" + 
+                    ":/sbin" + 
+                    ":/system/bin" + 
+                    ":/system/xbin" + 
+                    ":/data/data/com.termux/files/usr/bin";
+
             ProcessBuilder pb = new ProcessBuilder(
                     nodeFile.getAbsolutePath(),
                     dshBin.getAbsolutePath(),
@@ -222,8 +233,9 @@ public class LocalEngineService extends Service {
             pb.environment().put("HOME", filesDir.getAbsolutePath());
             pb.environment().put("LD_LIBRARY_PATH", libDir.getAbsolutePath());
             pb.environment().put("NODE_PATH", new File(dshDir, "node_modules").getAbsolutePath());
-            pb.environment().put("PATH", binDir.getAbsolutePath() + ":/system/bin:/system/xbin");
+            pb.environment().put("PATH", enrichedPath);
             pb.environment().put("DSH_PERMISSION_MODE", "danger-full-access");
+            pb.environment().put("TMPDIR", filesDir.getAbsolutePath());
             pb.redirectErrorStream(true);
 
             nodeProcess = pb.start();
