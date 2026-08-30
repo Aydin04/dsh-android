@@ -96,6 +96,9 @@ jobs:
             cp -f $GITHUB_WORKSPACE/.github/scripts/cordis-hmr-adapter.js /tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/cordis-plugin-hmr/lib/index.js
           fi
 
+          # Safe Hardlink Patch to prevent EACCES link() crash on Android SELinux
+          node $GITHUB_WORKSPACE/.github/scripts/patch-hardlinks.js
+
           rm -rf /tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh/node_modules/node-pty/prebuilds/win32* || true
           rm -rf /tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh/node_modules/node-pty/prebuilds/darwin* || true
           rm -rf /tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh/node_modules/node-pty/prebuilds/linux-x64* || true
@@ -132,17 +135,15 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.5.1
-          name: "DSH Mobile v1.5.1 (Full Canvas & Element Zoom Fix)"
+          tag_name: v1.5.2
+          name: "DSH Mobile v1.5.2 (Fix EACCES Link & Open /sdcard/DSH Storage)"
           body: |
-            ## 🚀 DSH Mobile Standalone Release v1.5.1
-            - 🔍 **Full Element Canvas Zoom (`setInitialScale`)**:
-              - Mengganti `setTextZoom` (yang hanya merubah ukuran huruf) dengan `setInitialScale` native WebView. Sekarang saat menekan `+` atau `-`, **seluruh sidebar, form, chat bubble, tombol, dan teks ikut mengecil/membesar bersamaan**.
-            - ✕ **Dedicated Close / Minimize Button**:
-              - Tombol merah `✕` untuk menutup/meminimize toolbar dengan 1 klik pasti.
-              - Tombol floating bulat biru `⚙️` terpisah untuk membuka toolbar & bisa digeser (*drag*) bebas.
-            - ✋ **Draggable Floating Control Bar**
-            - 🔄 **Tombol Refresh Dashboard & Plugin Manager**
+            ## 🚀 DSH Mobile Standalone Release v1.5.2
+            - 🛡️ **Fix EACCES `link()` Session Persistence Error**:
+              - Mengatasi error SELinux permission denied saat menulis sesi JSONL dengan fallback `copyFile` yang aman di Android.
+            - 📂 **Direct External Storage Access (`/sdcard/DSH`)**:
+              - Workspace default langsung terhubung ke internal storage publik `/sdcard/DSH` sehingga file proyek, script, dan chat agent bisa diakses langsung melalui file manager HP.
+            - 🔍 **Full Element Canvas Zoom** & ✕ **Dedicated Minimize Toolbar**
             - 🗜️ **Tersedia Versi ZIP Hemat Kuota**: `dsh-mobile-compressed.zip`
           files: |
             app/build/outputs/apk/debug/app-debug.apk

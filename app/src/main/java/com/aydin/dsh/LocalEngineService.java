@@ -205,7 +205,15 @@ public class LocalEngineService extends Service {
             }
 
             // 5. Launch On-Device DSH Server
+            // Set workspace working directory to external storage /sdcard/DSH for full user access
+            File externalDir = Environment.getExternalStorageDirectory();
+            File workspaceDir = new File(externalDir, "DSH");
+            if (!workspaceDir.exists()) {
+                workspaceDir.mkdirs();
+            }
+
             emitLog("[SERVER] Launching dsh --profile web --port 3080 ...");
+            emitLog("[SERVER] Workspace Working Directory: " + workspaceDir.getAbsolutePath());
             ProcessBuilder pb = new ProcessBuilder(
                     nodeFile.getAbsolutePath(),
                     dshBin.getAbsolutePath(),
@@ -213,7 +221,7 @@ public class LocalEngineService extends Service {
                     "--no-open",
                     "--port", "3080"
             );
-            pb.directory(filesDir);
+            pb.directory(workspaceDir.exists() ? workspaceDir : filesDir);
             pb.environment().put("HOME", filesDir.getAbsolutePath());
             pb.environment().put("LD_LIBRARY_PATH", libDir.getAbsolutePath());
             pb.environment().put("NODE_PATH", new File(dshDir, "node_modules").getAbsolutePath());
