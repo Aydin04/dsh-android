@@ -48,6 +48,9 @@ jobs:
           curl -sL "https://packages.termux.dev/apt/termux-main/pool/main/libc/libc++/libc++_29_aarch64.deb" -o libc++.deb
           curl -sL "https://packages.termux.dev/apt/termux-main/pool/main/o/openssl/openssl_1:3.6.3_aarch64.deb" -o openssl.deb
           curl -sL "https://packages.termux.dev/apt/termux-main/pool/main/r/ripgrep/ripgrep_15.2.0_aarch64.deb" -o ripgrep.deb
+          curl -sL "https://packages.termux.dev/apt/termux-main/pool/main/p/proot/proot_5.1.107.92_aarch64.deb" -o proot.deb
+          curl -sL "https://packages.termux.dev/apt/termux-main/pool/main/libt/libtalloc/libtalloc_2.4.3_aarch64.deb" -o talloc.deb
+          curl -sL "https://packages.termux.dev/apt/termux-main/pool/main/liba/libandroid-shmem/libandroid-shmem_0.7_aarch64.deb" -o shmem.deb
           
           for f in *.deb; do
             ar x "$f"
@@ -63,11 +66,20 @@ jobs:
             patchelf --set-rpath '/data/user/0/com.aydin.dsh/files/lib:/data/data/com.aydin.dsh/files/lib' $GITHUB_WORKSPACE/app/src/main/assets/engine/rg 2>/dev/null || true
             chmod 755 $GITHUB_WORKSPACE/app/src/main/assets/engine/rg
           fi
+
+          if [ -f "data/data/com.termux/files/usr/bin/proot" ]; then
+            cp data/data/com.termux/files/usr/bin/proot $GITHUB_WORKSPACE/app/src/main/assets/engine/proot
+            patchelf --set-rpath '/data/user/0/com.aydin.dsh/files/lib:/data/data/com.aydin.dsh/files/lib' $GITHUB_WORKSPACE/app/src/main/assets/engine/proot 2>/dev/null || true
+            chmod 755 $GITHUB_WORKSPACE/app/src/main/assets/engine/proot
+          fi
+
+          # Fetch official minimal Alpine Linux rootfs (~3.5MB)
+          curl -sL "https://dl-cdn.alpinelinux.org/alpine/v3.20/releases/aarch64/alpine-minirootfs-3.20.0-aarch64.tar.gz" -o $GITHUB_WORKSPACE/app/src/main/assets/engine/alpine-rootfs.tar.gz || true
           
           # Package strictly needed shared libraries with gzip compression
           mkdir -p /tmp/libs_to_pack
-          for lib in libc++_shared.so libcares.so libcrypto.so.3 libssl.so.3 libz.so.1.3.2 libsqlite3.so.3.53.4 libicui18n.so.78.3 libicuuc.so.78.3 libicudata.so.78.3; do
-            find data/data/com.termux/files/usr/lib -name "$lib" -exec cp -L {} /tmp/libs_to_pack/ \;
+          for lib in libc++_shared.so libcares.so libcrypto.so.3 libssl.so.3 libz.so.1.3.2 libsqlite3.so.3.53.4 libicui18n.so.78.3 libicuuc.so.78.3 libicudata.so.78.3 libtalloc.so.2 libandroid-shmem.so; do
+            find data/data/com.termux/files/usr/lib -name "$lib*" -exec cp -L {} /tmp/libs_to_pack/ \;
           done
           cd /tmp/libs_to_pack
           [ -f libz.so.1.3.2 ] && cp libz.so.1.3.2 libz.so.1 && cp libz.so.1.3.2 libz.so
@@ -144,19 +156,22 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.6.1
-          name: "DSH Mobile v1.6.1 (Full Open Configuration Intent & Complete Tool Permissions)"
+          tag_name: v1.7.0
+          name: "DSH Mobile v1.7.0 (Embedded PRoot + Alpine Linux Environment with `apk` Package Manager)"
           body: |
-            ## 🚀 DSH Mobile Standalone Release v1.6.1
-            - ⚙️ **Fix "Open Configuration File" di Pengaturan**:
-              - Penanganan klik buka file konfigurasi kini menggunakan Android Intent (`android.intent.action.VIEW`) yang aman, sehingga membuka teks konfigurasi langsung di text editor/viewer Android tanpa error `xdg-open`.
-            - 🛡️ **Full Permissions Declaration (Bebas Melakukan Apa Saja)**:
-              - Termasuk `MANAGE_EXTERNAL_STORAGE` (All Files Access), WakeLock, Shizuku, Foreground Services, Network, dan Query Packages.
-            - 🔍 **Native Bundled Ripgrep (`rg`) ARM64 Binary (v15.2.0)**
-            - 🐚 **Fix `tools.bash` (Auto fallback /system/bin/sh)**
-            - ✍️ **Fix `tools.write` Atomic Hardlink Error (EACCES)**
-            - 📂 **Direct `/sdcard` Root Directory Picker**
-            - 👑 **Tombol "👑 Root SU" di Toolbar**
+            ## 🚀 DSH Mobile Standalone Release v1.7.0
+            - 🐧 **Full Embedded PRoot + Alpine Linux Environment (`apk add`)**:
+              - DSH Mobile kini dilengkapi dengan **mini-rootfs Alpine Linux & PRoot ARM64** bawaan!
+              - Agent dapat menginstal dependensi dan bahasa pemrograman sendiri secara mandiri tanpa memerlukan aplikasi Termux:
+                - `apk add python3 py3-pip` (Python)
+                - `apk add git openssh` (Git & SSH Client)
+                - `apk add curl wget bash`
+                - `apk add build-base gcc g++ make` (C/C++ Compiler)
+            - 👑 **Supercharged Dual-Mode Superuser (Root `su`)**:
+              - Jika mode root diaktifkan, agent memiliki hak akses penuh ke seluruh partisi Android (`/system`, `/data`, `/data/adb`, hardware, dmesg, dan kernel tweaks).
+            - 🛡️ **Full Android Permissions**: All Files Access (`MANAGE_EXTERNAL_STORAGE`), Network, Foreground Service, Shizuku, dan WakeLock.
+            - 🔍 **Native Ripgrep (`rg`) ARM64 Binary**
+            - 📂 **Direct `/sdcard` Workspace & Project Picker**
             - 🗜️ **Tersedia Versi ZIP Hemat Kuota**: `dsh-mobile-compressed.zip`
           files: |
             app/build/outputs/apk/debug/app-debug.apk

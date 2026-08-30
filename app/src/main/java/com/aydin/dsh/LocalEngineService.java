@@ -88,21 +88,96 @@ public class LocalEngineService extends Service {
             File rgFile = new File(binDir, "rg");
             try {
                 String[] engineAssets = getAssets().list("engine");
-                if (engineAssets != null && Arrays.asList(engineAssets).contains("rg")) {
-                    emitLog("[EXTRACT] Extracting Ripgrep (rg) binary to " + rgFile.getAbsolutePath() + "...");
-                    try (InputStream in = getAssets().open("engine/rg");
-                         OutputStream out = new FileOutputStream(rgFile)) {
+                if (engineAssets != null) {
+                    List<String> assetList = Arrays.asList(engineAssets);
+                    if (assetList.contains("rg")) {
+                        emitLog("[EXTRACT] Extracting Ripgrep (rg) binary to " + rgFile.getAbsolutePath() + "...");
+                        try (InputStream in = getAssets().open("engine/rg");
+                             OutputStream out = new FileOutputStream(rgFile)) {
+                            byte[] buf = new byte[8192];
+                            int len;
+                            while ((len = in.read(buf)) != -1) {
+                                out.write(buf, 0, len);
+                            }
+                        }
+                        rgFile.setReadable(true, false);
+                        rgFile.setExecutable(true, false);
+                        try { Runtime.getRuntime().exec("chmod 755 " + rgFile.getAbsolutePath()).waitFor(); } catch (Exception ignored) {}
+                    }
+
+                    // Extract proot binary
+                    File prootFile = new File(binDir, "proot");
+                    if (assetList.contains("proot")) {
+                        emitLog("[EXTRACT] Extracting PRoot binary to " + prootFile.getAbsolutePath() + "...");
+                        try (InputStream in = getAssets().open("engine/proot");
+                             OutputStream out = new FileOutputStream(prootFile)) {
+                            byte[] buf = new byte[8192];
+                            int len;
+                            while ((len = in.read(buf)) != -1) {
+                                out.write(buf, 0, len);
+                            }
+                        }
+                        prootFile.setReadable(true, false);
+                        prootFile.setExecutable(true, false);
+                        try { Runtime.getRuntime().exec("chmod 755 " + prootFile.getAbsolutePath()).waitFor(); } catch (Exception ignored) {}
+                    }
+
+                    // Extract universal sh / bash shim
+                    File shShimFile = new File(binDir, "sh");
+                    File bashShimFile = new File(binDir, "bash");
+                    try (InputStream in = getAssets().open("sh_shim.sh");
+                         OutputStream out = new FileOutputStream(shShimFile)) {
                         byte[] buf = new byte[8192];
                         int len;
                         while ((len = in.read(buf)) != -1) {
                             out.write(buf, 0, len);
                         }
                     }
-                    rgFile.setReadable(true, false);
-                    rgFile.setExecutable(true, false);
-                    try {
-                        Runtime.getRuntime().exec("chmod 755 " + rgFile.getAbsolutePath()).waitFor();
-                    } catch (Exception ignored) {}
+                    shShimFile.setReadable(true, false);
+                    shShimFile.setExecutable(true, false);
+                    try { Runtime.getRuntime().exec("chmod 755 " + shShimFile.getAbsolutePath()).waitFor(); } catch (Exception ignored) {}
+                    try (InputStream in = getAssets().open("sh_shim.sh");
+                         OutputStream out = new FileOutputStream(bashShimFile)) {
+                        byte[] buf = new byte[8192];
+                        int len;
+                        while ((len = in.read(buf)) != -1) {
+                            out.write(buf, 0, len);
+                        }
+                    }
+                    bashShimFile.setReadable(true, false);
+                    bashShimFile.setExecutable(true, false);
+                    try { Runtime.getRuntime().exec("chmod 755 " + bashShimFile.getAbsolutePath()).waitFor(); } catch (Exception ignored) {}
+
+                    // Extract Alpine Rootfs if bundled
+                    File rootfsDir = new File(filesDir, "rootfs");
+                    if (!rootfsDir.exists() && assetList.contains("alpine-rootfs.tar.gz")) {
+                        rootfsDir.mkdirs();
+                        emitLog("[EXTRACT] Extracting Alpine Linux Rootfs (apk package manager ready)...");
+                        try (InputStream rawIn = getAssets().open("engine/alpine-rootfs.tar.gz");
+                             InputStream gzipIn = new GzipCompressorInputStream(rawIn);
+                             TarArchiveInputStream tarIn = new TarArchiveInputStream(gzipIn)) {
+                            TarArchiveEntry entry;
+                            while ((entry = tarIn.getNextTarEntry()) != null) {
+                                File target = new File(rootfsDir, entry.getName());
+                                if (entry.isDirectory()) {
+                                    target.mkdirs();
+                                } else {
+                                    File parent = target.getParentFile();
+                                    if (parent != null && !parent.exists()) parent.mkdirs();
+                                    try (OutputStream out = new FileOutputStream(target)) {
+                                        byte[] buf = new byte[16384];
+                                        int len;
+                                        while ((len = tarIn.read(buf)) != -1) {
+                                            out.write(buf, 0, len);
+                                        }
+                                    }
+                                }
+                            }
+                            emitLog("[EXTRACT SUCCESS] Alpine Linux Rootfs ready!");
+                        } catch (Exception e) {
+                            emitLog("[ROOTFS EXTRACT ERROR] " + e.getMessage());
+                        }
+                    }
                 }
             } catch (Exception ignored) {}
 
