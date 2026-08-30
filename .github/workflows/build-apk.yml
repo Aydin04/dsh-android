@@ -144,22 +144,19 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.6.0
-          name: "DSH Mobile v1.6.0 (All Permissions Granted, Native Ripgrep & Total Fixes)"
+          tag_name: v1.6.1
+          name: "DSH Mobile v1.6.1 (Full Open Configuration Intent & Complete Tool Permissions)"
           body: |
-            ## 🚀 DSH Mobile Standalone Release v1.6.0
-            - 🛡️ **Full Permissions Declaration (Bebas Melakukan Apa Saja Tanpa Batasan)**:
-              - Menambahkan seluruh izin Android lengkap di AndroidManifest: All Files Management (`MANAGE_EXTERNAL_STORAGE`), Storage, Network State, WakeLock, Foreground Service, Shizuku, dan Query All Packages.
-            - 🔍 **Native Bundled Ripgrep (`rg`) ARM64 Binary**:
-              - Mengemas binary native `rg` ARM64 langsung ke dalam APK sehingga pencarian `tools.glob` dan `tools.grep` berjalan instan tanpa error `--no-config`.
-            - 🐚 **Fix `tools.bash` Foreground/Background Execution**:
-              - Shell otomatis fallback ke `/system/bin/sh` bawaan Android dan biner Termux sehingga perintah `ls`, `pwd`, `id`, `wc`, dll dieksekusi 100% mulus.
-            - ✍️ **Fix `tools.write` Atomic Hardlink Error (EACCES)**:
-              - Penulisan file di `/sdcard` maupun di workspace lancar tanpa penolakan hardlink OS.
-            - 📂 **Direct `/sdcard` Root Directory Picker**:
-              - Membuka root internal storage secara langsung.
+            ## 🚀 DSH Mobile Standalone Release v1.6.1
+            - ⚙️ **Fix "Open Configuration File" di Pengaturan**:
+              - Penanganan klik buka file konfigurasi kini menggunakan Android Intent (`android.intent.action.VIEW`) yang aman, sehingga membuka teks konfigurasi langsung di text editor/viewer Android tanpa error `xdg-open`.
+            - 🛡️ **Full Permissions Declaration (Bebas Melakukan Apa Saja)**:
+              - Termasuk `MANAGE_EXTERNAL_STORAGE` (All Files Access), WakeLock, Shizuku, Foreground Services, Network, dan Query Packages.
+            - 🔍 **Native Bundled Ripgrep (`rg`) ARM64 Binary (v15.2.0)**
+            - 🐚 **Fix `tools.bash` (Auto fallback /system/bin/sh)**
+            - ✍️ **Fix `tools.write` Atomic Hardlink Error (EACCES)**
+            - 📂 **Direct `/sdcard` Root Directory Picker**
             - 👑 **Tombol "👑 Root SU" di Toolbar**
-            - 🧠 **CommonJS & Android System Prompt Context**
             - 🗜️ **Tersedia Versi ZIP Hemat Kuota**: `dsh-mobile-compressed.zip`
           files: |
             app/build/outputs/apk/debug/app-debug.apk

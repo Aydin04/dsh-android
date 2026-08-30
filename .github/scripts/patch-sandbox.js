@@ -91,7 +91,22 @@ if (fs.existsSync(dirPickerPath)) {
   }
 }
 
-// 7. Patch dsh-sandbox-local to allow direct execution on Android (no Landlock/bwrap crash)
+// 7. Patch dsh-host-apiproxy native path opener (Open configuration file handler on Android)
+const apiproxyPath = `${dshRoot}/node_modules/@deepseek-ai/dsh-host-apiproxy/lib/index.js`;
+if (fs.existsSync(apiproxyPath)) {
+  let code = fs.readFileSync(apiproxyPath, 'utf8');
+  if (code.includes('await run("xdg-open", [path], signal);')) {
+    console.log('[PATCH] Patching openNativePathWithIntent in dsh-host-apiproxy for Android...');
+    code = code.replace(
+      'await run("xdg-open", [path], signal);',
+      'try { await run("xdg-open", [path], signal); } catch (openErr) { const { exec } = await import("node:child_process"); exec(`am start -a android.intent.action.VIEW -d "file://${path}" -t "text/*" 2>/dev/null || true`); }'
+    );
+    fs.writeFileSync(apiproxyPath, code, 'utf8');
+    console.log('[PATCH SUCCESS] dsh-host-apiproxy patched for Android!');
+  }
+}
+
+// 8. Patch dsh-sandbox-local to allow direct execution on Android (no Landlock/bwrap crash)
 const sandboxLocalPath = `${dshRoot}/node_modules/@deepseek-ai/dsh-sandbox-local/lib/index.js`;
 if (fs.existsSync(sandboxLocalPath)) {
   let code = fs.readFileSync(sandboxLocalPath, 'utf8');
@@ -112,7 +127,7 @@ if (fs.existsSync(sandboxLocalPath)) {
   console.log('[PATCH SUCCESS] dsh-sandbox-local patched for Android cleanly!');
 }
 
-// 8. Inject Android & Root Environment guidance into System Prompt (dsh-sandbox-policy)
+// 9. Inject Android & Root Environment guidance into System Prompt (dsh-sandbox-policy)
 const sandboxPolicyPath = `${dshRoot}/node_modules/@deepseek-ai/dsh-sandbox-policy/lib/index.js`;
 if (fs.existsSync(sandboxPolicyPath)) {
   let code = fs.readFileSync(sandboxPolicyPath, 'utf8');
