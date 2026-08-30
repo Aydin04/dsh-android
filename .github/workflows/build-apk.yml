@@ -132,18 +132,15 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.4.4
-          name: "DSH Mobile v1.4.4 (DeepSeek Logo, Desktop Scale & Plugin Manager)"
+          tag_name: v1.4.5
+          name: "DSH Mobile v1.4.5 (Full Desktop Viewport Scale & Layout Fix)"
           body: |
-            ## 🚀 DSH Mobile Standalone Release v1.4.4
-            - 🐋 **Logo Resmi DeepSeek**: Ikon vector resmi DeepSeek Harness pada aplikasi Android
-            - 🖥️ **Desktop View & Zoom Controls**:
-              - Pengatur skala zoom dinamis (40% - 150%) untuk mengatasi layout mobile yang sempit
-              - Tombol switch Desktop/Mobile View
-            - 🔌 **In-App Plugin Manager**:
-              - Pasang plugin Cordis/DSH langsung dari UI aplikasi tanpa harus mengetik manual di terminal
-            - 📋 **Terminal Logs Viewer**:
-              - Log viewer tetap dapat diakses kapan saja melalui tombol kontrol di pojok layar
+            ## 🚀 DSH Mobile Standalone Release v1.4.5
+            - 🖥️ **Full Desktop Viewport Scaling (1280px)**:
+              - Memaksa layout render 1280px Desktop secara native
+              - Skala zoom mengecilkan seluruh elemen UI (sidebar, input bar, chat bubbles), bukan hanya teks
+            - 🐋 **Logo Resmi DeepSeek Harness**
+            - 🔌 **In-App Plugin Manager**
             - 🗜️ **Tersedia Versi ZIP Hemat Kuota**: `dsh-mobile-compressed.zip`
           files: |
             app/build/outputs/apk/debug/app-debug.apk

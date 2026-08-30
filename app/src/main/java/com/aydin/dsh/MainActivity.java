@@ -72,10 +72,11 @@ public class MainActivity extends AppCompatActivity {
     private static final String KEY_ZOOM_LEVEL = "ZOOM_LEVEL";
     private static final String KEY_DESKTOP_MODE = "DESKTOP_MODE";
     private static final String LOCAL_URL = "http://127.0.0.1:3080";
+    private static final String DESKTOP_UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean isLoaded = false;
-    private int currentZoom = 80;
+    private int currentZoom = 70;
     private boolean isDesktopMode = true;
     private final StringBuilder logAccumulator = new StringBuilder();
 
@@ -117,7 +118,7 @@ public class MainActivity extends AppCompatActivity {
         btnLogs = findViewById(R.id.btnLogs);
 
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        currentZoom = prefs.getInt(KEY_ZOOM_LEVEL, 80);
+        currentZoom = prefs.getInt(KEY_ZOOM_LEVEL, 70);
         isDesktopMode = prefs.getBoolean(KEY_DESKTOP_MODE, true);
 
         setupButtons();
@@ -175,16 +176,26 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void adjustZoom(int delta) {
-        currentZoom = Math.max(40, Math.min(150, currentZoom + delta));
+        currentZoom = Math.max(30, Math.min(150, currentZoom + delta));
         applyZoom();
         getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .edit().putInt(KEY_ZOOM_LEVEL, currentZoom).apply();
     }
 
     private void applyZoom() {
-        WebSettings settings = webView.getSettings();
-        settings.setTextZoom(currentZoom);
-        webView.setInitialScale(currentZoom);
+        double scaleFactor = currentZoom / 100.0;
+        String js = "(() => {" +
+                "  let meta = document.querySelector('meta[name=\"viewport\"]');" +
+                "  if (!meta) {" +
+                "    meta = document.createElement('meta');" +
+                "    meta.name = 'viewport';" +
+                "    document.head.appendChild(meta);" +
+                "  }" +
+                "  meta.content = 'width=1280, initial-scale=" + scaleFactor + ", minimum-scale=0.1, maximum-scale=3.0, user-scalable=yes';" +
+                "  document.body.style.zoom = '" + scaleFactor + "';" +
+                "  document.documentElement.style.zoom = '" + scaleFactor + "';" +
+                "})();";
+        webView.evaluateJavascript(js, null);
         updateZoomDisplay();
     }
 
@@ -194,9 +205,16 @@ public class MainActivity extends AppCompatActivity {
 
     private void toggleDesktopMode() {
         isDesktopMode = !isDesktopMode;
+        applyModeSettings();
+        getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit().putBoolean(KEY_DESKTOP_MODE, isDesktopMode).apply();
+        webView.reload();
+    }
+
+    private void applyModeSettings() {
         WebSettings settings = webView.getSettings();
         if (isDesktopMode) {
-            settings.setUserAgentString("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+            settings.setUserAgentString(DESKTOP_UA);
             settings.setUseWideViewPort(true);
             settings.setLoadWithOverviewMode(true);
             btnDesktopMode.setText("🖥️ Desk");
@@ -208,9 +226,6 @@ public class MainActivity extends AppCompatActivity {
             btnDesktopMode.setText("📱 Mobile");
             btnDesktopMode.setTextColor(0xFF8B949E);
         }
-        getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                .edit().putBoolean(KEY_DESKTOP_MODE, isDesktopMode).apply();
-        webView.reload();
     }
 
     private void showPluginManagerDialog() {
@@ -318,14 +333,11 @@ public class MainActivity extends AppCompatActivity {
         settings.setAllowContentAccess(true);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         settings.setMediaPlaybackRequiresUserGesture(false);
+        settings.setSupportZoom(true);
+        settings.setBuiltInZoomControls(true);
+        settings.setDisplayZoomControls(false);
 
-        if (isDesktopMode) {
-            settings.setUserAgentString("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
-            settings.setUseWideViewPort(true);
-            settings.setLoadWithOverviewMode(true);
-        }
-
-        applyZoom();
+        applyModeSettings();
 
         webView.addJavascriptInterface(new WebAppInterface(), "AndroidBridge");
 
@@ -338,6 +350,7 @@ public class MainActivity extends AppCompatActivity {
                     loadingLayout.setVisibility(View.GONE);
                     webView.setVisibility(View.VISIBLE);
                     controlBar.setVisibility(View.VISIBLE);
+                    applyZoom();
                 }
             }
 
