@@ -135,15 +135,16 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.5.2
-          name: "DSH Mobile v1.5.2 (Fix EACCES Link & Open /sdcard/DSH Storage)"
+          tag_name: v1.5.3
+          name: "DSH Mobile v1.5.3 (Root Internal Storage & Auto Full Sandbox Access)"
           body: |
-            ## 🚀 DSH Mobile Standalone Release v1.5.2
-            - 🛡️ **Fix EACCES `link()` Session Persistence Error**:
-              - Mengatasi error SELinux permission denied saat menulis sesi JSONL dengan fallback `copyFile` yang aman di Android.
-            - 📂 **Direct External Storage Access (`/sdcard/DSH`)**:
-              - Workspace default langsung terhubung ke internal storage publik `/sdcard/DSH` sehingga file proyek, script, dan chat agent bisa diakses langsung melalui file manager HP.
-            - 🔍 **Full Element Canvas Zoom** & ✕ **Dedicated Minimize Toolbar**
+            ## 🚀 DSH Mobile Standalone Release v1.5.3
+            - 📂 **Root Internal Storage (`/sdcard`)**:
+              - Workspace default sekarang langsung berada di root penyimpanan internal (`/storage/emulated/0` atau `/sdcard`), bukan di folder aplikasi atau subfolder.
+            - ⚡ **Auto `danger-full-access` Permissions**:
+              - Mengotomatiskan permission mode `DSH_PERMISSION_MODE=danger-full-access` sehingga agent DeepSeek Harness dapat menjalankan perintah shell (bash, glob, file read/write) tanpa terganjal sandbox Linux Landlock/bwrap yang tidak didukung kernel Android.
+            - 🛡️ **Fix EACCES `link()` Session Persistence**:
+              - Fallback atomic file write yang aman di Android SELinux.
             - 🗜️ **Tersedia Versi ZIP Hemat Kuota**: `dsh-mobile-compressed.zip`
           files: |
             app/build/outputs/apk/debug/app-debug.apk

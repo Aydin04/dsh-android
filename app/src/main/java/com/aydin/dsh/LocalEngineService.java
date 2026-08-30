@@ -205,15 +205,12 @@ public class LocalEngineService extends Service {
             }
 
             // 5. Launch On-Device DSH Server
-            // Set workspace working directory to external storage /sdcard/DSH for full user access
+            // Set workspace working directory directly to root of internal storage (/sdcard)
             File externalDir = Environment.getExternalStorageDirectory();
-            File workspaceDir = new File(externalDir, "DSH");
-            if (!workspaceDir.exists()) {
-                workspaceDir.mkdirs();
-            }
+            File workspaceDir = (externalDir != null && externalDir.exists()) ? externalDir : new File("/sdcard");
 
             emitLog("[SERVER] Launching dsh --profile web --port 3080 ...");
-            emitLog("[SERVER] Workspace Working Directory: " + workspaceDir.getAbsolutePath());
+            emitLog("[SERVER] Primary Workspace Directory: " + workspaceDir.getAbsolutePath());
             ProcessBuilder pb = new ProcessBuilder(
                     nodeFile.getAbsolutePath(),
                     dshBin.getAbsolutePath(),
@@ -226,6 +223,7 @@ public class LocalEngineService extends Service {
             pb.environment().put("LD_LIBRARY_PATH", libDir.getAbsolutePath());
             pb.environment().put("NODE_PATH", new File(dshDir, "node_modules").getAbsolutePath());
             pb.environment().put("PATH", binDir.getAbsolutePath() + ":/system/bin:/system/xbin");
+            pb.environment().put("DSH_PERMISSION_MODE", "danger-full-access");
             pb.redirectErrorStream(true);
 
             nodeProcess = pb.start();
