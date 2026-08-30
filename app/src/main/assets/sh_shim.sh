@@ -9,9 +9,9 @@ ROOTFS="/data/user/0/com.dsh.mobile/files/rootfs"
 PROOT="/data/user/0/com.dsh.mobile/files/bin/proot"
 [ ! -f "$PROOT" ] && PROOT="/data/data/com.dsh.mobile/files/bin/proot"
 
-# 1. If Root SU is enabled by user or root flag exists, execute directly with SU in host environment
-if [ -f "$ROOT_FLAG_FILE" ] || [ -f "$ROOT_FLAG_ALT" ] || [ "$(id -u 2>/dev/null)" = "0" ]; then
-    for su_bin in /system/bin/su /system/xbin/su /data/adb/ksu/bin/su /data/adb/ap/bin/su /data/adb/magisk/su su; do
+# 1. Native Root SU: Check root flag or test su availability directly
+if [ -f "$ROOT_FLAG_FILE" ] || [ -f "$ROOT_FLAG_ALT" ] || [ "$(id -u 2>/dev/null)" = "0" ] || command -v su >/dev/null 2>&1; then
+    for su_bin in su /system/bin/su /system/xbin/su /data/adb/ksu/bin/su /data/adb/ap/bin/su /data/adb/magisk/su; do
         if command -v "$su_bin" >/dev/null 2>&1 || [ -x "$su_bin" ]; then
             if [ "$1" = "-c" ]; then
                 shift

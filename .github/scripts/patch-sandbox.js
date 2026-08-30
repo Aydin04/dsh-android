@@ -68,25 +68,15 @@ if (fs.existsSync(bashLocalPath)) {
   let code = fs.readFileSync(bashLocalPath, 'utf8');
   console.log('[PATCH] Patching dsh-bash-local with hybrid Direct SU / PRoot dispatching...');
   const hybridResolver = `
-import { existsSync as __bashExistsSync } from "node:fs";
 function __resolveAndroidShellArgv(command) {
-  const isRoot = __bashExistsSync("/data/user/0/com.dsh.mobile/files/root_enabled.flag") || 
-                 __bashExistsSync("/data/data/com.dsh.mobile/files/root_enabled.flag") || 
-                 __bashExistsSync("/data/user/0/com.aydin.dsh/files/root_enabled.flag") ||
-                 __bashExistsSync("/data/data/com.aydin.dsh/files/root_enabled.flag");
-  if (isRoot) {
-    for (const su of ["su", "/system/bin/su", "/system/xbin/su", "/data/adb/ksu/bin/su", "/data/adb/ap/bin/su", "/data/adb/magisk/su"]) {
-      if (__bashExistsSync(su) || su === "su") {
-        return [su, "-mm", "-c", command];
-      }
-    }
-  }
   for (const sh of ["/data/user/0/com.dsh.mobile/files/bin/sh", "/data/data/com.dsh.mobile/files/bin/sh", "/data/user/0/com.aydin.dsh/files/bin/sh", "/data/data/com.aydin.dsh/files/bin/sh"]) {
-    if (__bashExistsSync(sh)) {
-      return [sh, "-c", command];
-    }
+    try {
+      if (require("node:fs").existsSync(sh)) {
+        return [sh, "-c", command];
+      }
+    } catch (_) {}
   }
-  return ["/system/bin/sh", "-c", command];
+  return ["su", "-mm", "-c", command];
 }
 `;
   if (!code.includes('__resolveAndroidShellArgv')) {
