@@ -62,12 +62,11 @@ const DEFAULT_BASH_SHELL = __getAndroidTerminalShell();
   }
 }
 
-// 4. Patch dsh-bash-local to dynamically select Direct SU or PRoot Shell at runtime
+// 4. Patch dsh-bash-local and dsh-bash-sandbox to dynamically select Direct SU or PRoot Shell at runtime
 const bashLocalPath = `${dshRoot}/node_modules/@deepseek-ai/dsh-bash-local/lib/index.js`;
-if (fs.existsSync(bashLocalPath)) {
-  let code = fs.readFileSync(bashLocalPath, 'utf8');
-  console.log('[PATCH] Patching dsh-bash-local with hybrid Direct SU / PRoot dispatching...');
-  const hybridResolver = `
+const bashSandboxPath = `${dshRoot}/node_modules/@deepseek-ai/dsh-bash-sandbox/lib/index.js`;
+
+const hybridResolver = `
 function __resolveAndroidShellArgv(command) {
   for (const sh of ["/data/user/0/com.dsh.mobile/files/bin/sh", "/data/data/com.dsh.mobile/files/bin/sh", "/data/user/0/com.aydin.dsh/files/bin/sh", "/data/data/com.aydin.dsh/files/bin/sh"]) {
     try {
@@ -79,6 +78,10 @@ function __resolveAndroidShellArgv(command) {
   return ["su", "-mm", "-c", command];
 }
 `;
+
+if (fs.existsSync(bashLocalPath)) {
+  let code = fs.readFileSync(bashLocalPath, 'utf8');
+  console.log('[PATCH] Patching dsh-bash-local with hybrid Direct SU / PRoot dispatching...');
   if (!code.includes('__resolveAndroidShellArgv')) {
     code = hybridResolver + code;
   }
@@ -92,6 +95,20 @@ function __resolveAndroidShellArgv(command) {
   );
   fs.writeFileSync(bashLocalPath, code, 'utf8');
   console.log('[PATCH SUCCESS] dsh-bash-local patched with Direct SU & PRoot dispatching!');
+}
+
+if (fs.existsSync(bashSandboxPath)) {
+  let code = fs.readFileSync(bashSandboxPath, 'utf8');
+  console.log('[PATCH] Patching dsh-bash-sandbox confine method...');
+  if (!code.includes('__resolveAndroidShellArgv')) {
+    code = hybridResolver + code;
+  }
+  code = code.replace(
+    /confine\(command,\s*policy\)\s*\{\s*return this\.ctx\.sandbox\.confine\(\[\s*"bash",\s*"-c",\s*command\s*\],\s*policy\);\s*\}/g,
+    'confine(command, policy) { return this.ctx.sandbox.confine(__resolveAndroidShellArgv(command), policy); }'
+  );
+  fs.writeFileSync(bashSandboxPath, code, 'utf8');
+  console.log('[PATCH SUCCESS] dsh-bash-sandbox patched with Direct SU & PRoot dispatching!');
 }
 
 // 5. Patch dsh-code-runtime-worker-thread to inject require, fs, and path into AsyncFunction execution scope
