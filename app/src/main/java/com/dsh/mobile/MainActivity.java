@@ -270,21 +270,31 @@ public class MainActivity extends AppCompatActivity {
         new Thread(() -> {
             boolean granted = false;
             String output = "";
-            try {
-                Process p = Runtime.getRuntime().exec("su");
-                try (DataOutputStream os = new DataOutputStream(p.getOutputStream());
-                     BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
-                    os.writeBytes("id\nexit\n");
-                    os.flush();
-                    String line = reader.readLine();
-                    if (line != null && line.contains("uid=0")) {
-                        granted = true;
-                        output = line;
+            String[] suCheckCommands = new String[]{
+                "/system/bin/su",
+                "/system/xbin/su",
+                "/data/adb/ksu/bin/su",
+                "/data/adb/ap/bin/su",
+                "/data/adb/magisk/su",
+                "su"
+            };
+
+            for (String suBin : suCheckCommands) {
+                try {
+                    Process p = Runtime.getRuntime().exec(new String[]{suBin, "-c", "id"});
+                    try (BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
+                        String line = reader.readLine();
+                        if (line != null && line.contains("uid=0")) {
+                            granted = true;
+                            output = line + " (via " + suBin + ")";
+                            p.waitFor();
+                            break;
+                        }
                     }
                     p.waitFor();
+                } catch (Exception e) {
+                    output = e.getMessage();
                 }
-            } catch (Exception e) {
-                output = e.getMessage();
             }
 
             final boolean isRooted = granted;
@@ -307,7 +317,7 @@ public class MainActivity extends AppCompatActivity {
                     appendLog("\n>>> [ROOT STATUS] Root Superuser (uid=0) Aktif: " + details);
                     new AlertDialog.Builder(this)
                             .setTitle("👑 Root Superuser Aktif")
-                            .setMessage("Izin Root (SU) berhasil didapatkan!\nAgent DeepSeek Harness sekarang memiliki akses Superuser penuh (uid=0).\n\nDetail: " + details)
+                            .setMessage("Izin Root (SU) berhasil didapatkan!\nAgent DeepSeek Harness sekarang memiliki akses Superuser penuh (uid=0) langsung ke sistem Android.\n\nDetail: " + details)
                             .setPositiveButton("Bagus", null)
                             .show();
                 } else {
@@ -316,7 +326,7 @@ public class MainActivity extends AppCompatActivity {
                     appendLog("\n>>> [ROOT STATUS] Root SU tidak tersedia atau ditolak: " + details);
                     new AlertDialog.Builder(this)
                             .setTitle("Status Root Superuser")
-                            .setMessage("Perangkat belum di-root atau izin SU ditolak di Magisk/KernelSU.\n\nCatatan: Aplikasi dan Agent tetap berjalan normal tanpa root!")
+                            .setMessage("Perangkat belum di-root atau izin SU ditolak di Magisk / KernelSU / APatch.\n\nCatatan: Jika ditolak, aplikasi akan berjalan menggunakan sandbox PRoot.")
                             .setPositiveButton("Mengerti", null)
                             .show();
                 }

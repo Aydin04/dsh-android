@@ -42,15 +42,16 @@ if (fs.existsSync(terminalBashPath)) {
     const shellResolver = `
 import { existsSync as __termExistsSync } from "node:fs";
 function __getAndroidTerminalShell() {
-  const isRoot = __termExistsSync("/data/user/0/com.dsh.mobile/files/root_enabled.flag") || __termExistsSync("/data/data/com.dsh.mobile/files/root_enabled.flag") || __termExistsSync("/data/user/0/com.aydin.dsh/files/root_enabled.flag");
+  const isRoot = __termExistsSync("/data/user/0/com.dsh.mobile/files/root_enabled.flag") || 
+                 __termExistsSync("/data/data/com.dsh.mobile/files/root_enabled.flag") || 
+                 __termExistsSync("/data/user/0/com.aydin.dsh/files/root_enabled.flag") ||
+                 __termExistsSync("/data/data/com.aydin.dsh/files/root_enabled.flag");
   if (isRoot) {
-    for (const su of ["/system/bin/su", "/system/xbin/su", "/data/adb/ksu/bin/su", "/data/adb/ap/bin/su", "/data/adb/magisk/su"]) {
-      if (__termExistsSync(su)) return su;
-    }
+    return "su";
   }
-  if (__termExistsSync("/data/user/0/com.dsh.mobile/files/bin/sh")) return "/data/user/0/com.dsh.mobile/files/bin/sh";
-  if (__termExistsSync("/data/data/com.dsh.mobile/files/bin/sh")) return "/data/data/com.dsh.mobile/files/bin/sh";
-  if (__termExistsSync("/data/user/0/com.aydin.dsh/files/bin/sh")) return "/data/user/0/com.aydin.dsh/files/bin/sh";
+  for (const sh of ["/data/user/0/com.dsh.mobile/files/bin/sh", "/data/data/com.dsh.mobile/files/bin/sh", "/data/user/0/com.aydin.dsh/files/bin/sh", "/data/data/com.aydin.dsh/files/bin/sh"]) {
+    if (__termExistsSync(sh)) return sh;
+  }
   return "/system/bin/sh";
 }
 const DEFAULT_BASH_SHELL = __getAndroidTerminalShell();
@@ -74,9 +75,9 @@ function __resolveAndroidShellArgv(command) {
                  __bashExistsSync("/data/user/0/com.aydin.dsh/files/root_enabled.flag") ||
                  __bashExistsSync("/data/data/com.aydin.dsh/files/root_enabled.flag");
   if (isRoot) {
-    for (const su of ["/system/bin/su", "/system/xbin/su", "/data/adb/ksu/bin/su", "/data/adb/ap/bin/su", "/data/adb/magisk/su"]) {
-      if (__bashExistsSync(su)) {
-        return [su, "-c", command];
+    for (const su of ["su", "/system/bin/su", "/system/xbin/su", "/data/adb/ksu/bin/su", "/data/adb/ap/bin/su", "/data/adb/magisk/su"]) {
+      if (__bashExistsSync(su) || su === "su") {
+        return [su, "-mm", "-c", command];
       }
     }
   }
