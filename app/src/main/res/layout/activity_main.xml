@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/rootContainer"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#0d1117">
@@ -16,109 +17,124 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Toggle Fab/Pill to Show/Hide Floating Control Bar -->
-    <Button
-        android:id="@+id/btnToggleBar"
-        android:layout_width="38dp"
-        android:layout_height="38dp"
-        android:layout_margin="8dp"
-        android:background="#e6161b22"
-        android:elevation="10dp"
-        android:text="⚙️"
-        android:textColor="#f0f6fc"
-        android:textSize="14sp"
-        android:visibility="gone"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <!-- Top Quick Control Bar (Floating above Dashboard) -->
+    <!-- Draggable Floating Container -->
     <LinearLayout
-        android:id="@+id/controlBar"
+        android:id="@+id/floatingDraggableContainer"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="4dp"
-        android:layout_marginTop="8dp"
-        android:background="#f2161b22"
-        android:elevation="9dp"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingHorizontal="6dp"
-        android:paddingVertical="3dp"
+        android:padding="4dp"
         android:visibility="gone"
-        app:layout_constraintEnd_toStartOf="@id/btnToggleBar"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-        <Button
-            android:id="@+id/btnZoomOut"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:background="?attr/selectableItemBackground"
-            android:text="-"
-            android:textColor="#58a6ff"
-            android:textSize="15sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/tvZoomLevel"
+        <!-- Horizontal Scrollable Toolbar to prevent any button from clipping -->
+        <HorizontalScrollView
+            android:id="@+id/controlBarScroll"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:paddingStart="3dp"
-            android:paddingEnd="3dp"
-            android:text="70%"
+            android:background="@drawable/bg_floating_bar"
+            android:elevation="9dp"
+            android:fadeScrollbars="true"
+            android:overScrollMode="never"
+            android:paddingHorizontal="6dp"
+            android:paddingVertical="2dp"
+            android:scrollbars="none"
+            android:visibility="visible">
+
+            <LinearLayout
+                android:id="@+id/controlBar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btnZoomOut"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:background="?attr/selectableItemBackground"
+                    android:text="-"
+                    android:textColor="#58a6ff"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvZoomLevel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp"
+                    android:text="70%"
+                    android:textColor="#f0f6fc"
+                    android:textSize="12sp" />
+
+                <Button
+                    android:id="@+id/btnZoomIn"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:background="?attr/selectableItemBackground"
+                    android:text="+"
+                    android:textColor="#58a6ff"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="18dp"
+                    android:layout_marginHorizontal="4dp"
+                    android:background="#30363d" />
+
+                <Button
+                    android:id="@+id/btnRefreshWeb"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:background="?attr/selectableItemBackground"
+                    android:text="🔄"
+                    android:textColor="#f0f6fc"
+                    android:textSize="13sp" />
+
+                <Button
+                    android:id="@+id/btnDesktopMode"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:background="?attr/selectableItemBackground"
+                    android:text="🖥️ Desk"
+                    android:textColor="#58a6ff"
+                    android:textSize="11sp" />
+
+                <Button
+                    android:id="@+id/btnPlugins"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:background="?attr/selectableItemBackground"
+                    android:text="🔌 Plugin"
+                    android:textColor="#3fb950"
+                    android:textSize="11sp" />
+
+                <Button
+                    android:id="@+id/btnLogs"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:background="?attr/selectableItemBackground"
+                    android:text="📋 Log"
+                    android:textColor="#e3b341"
+                    android:textSize="11sp" />
+            </LinearLayout>
+        </HorizontalScrollView>
+
+        <!-- Toggle Button to Show/Hide Toolbar and Drag around -->
+        <Button
+            android:id="@+id/btnToggleBar"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="4dp"
+            android:background="@drawable/bg_floating_toggle"
+            android:elevation="10dp"
+            android:text="⚙️"
             android:textColor="#f0f6fc"
-            android:textSize="11sp" />
-
-        <Button
-            android:id="@+id/btnZoomIn"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:background="?attr/selectableItemBackground"
-            android:text="+"
-            android:textColor="#58a6ff"
-            android:textSize="15sp"
-            android:textStyle="bold" />
-
-        <View
-            android:layout_width="1dp"
-            android:layout_height="18dp"
-            android:layout_marginHorizontal="3dp"
-            android:background="#30363d" />
-
-        <Button
-            android:id="@+id/btnRefreshWeb"
-            android:layout_width="wrap_content"
-            android:layout_height="32dp"
-            android:background="?attr/selectableItemBackground"
-            android:text="🔄"
-            android:textColor="#f0f6fc"
-            android:textSize="12sp" />
-
-        <Button
-            android:id="@+id/btnDesktopMode"
-            android:layout_width="wrap_content"
-            android:layout_height="32dp"
-            android:background="?attr/selectableItemBackground"
-            android:text="🖥️ Desk"
-            android:textColor="#58a6ff"
-            android:textSize="11sp" />
-
-        <Button
-            android:id="@+id/btnPlugins"
-            android:layout_width="wrap_content"
-            android:layout_height="32dp"
-            android:background="?attr/selectableItemBackground"
-            android:text="🔌 Plugin"
-            android:textColor="#3fb950"
-            android:textSize="11sp" />
-
-        <Button
-            android:id="@+id/btnLogs"
-            android:layout_width="wrap_content"
-            android:layout_height="32dp"
-            android:background="?attr/selectableItemBackground"
-            android:text="📋 Log"
-            android:textColor="#e3b341"
-            android:textSize="11sp" />
+            android:textSize="15sp" />
     </LinearLayout>
 
     <!-- Loading & Live Debug Console Layout -->

@@ -16,6 +16,7 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
+import android.view.MotionEvent;
 import android.view.View;
 import android.webkit.ConsoleMessage;
 import android.webkit.JavascriptInterface;
@@ -27,6 +28,7 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -50,7 +52,8 @@ public class MainActivity extends AppCompatActivity {
 
     private WebView webView;
     private LinearLayout loadingLayout;
-    private LinearLayout controlBar;
+    private LinearLayout floatingDraggableContainer;
+    private HorizontalScrollView controlBarScroll;
     private TextView loadingText;
     private TextView subText;
     private TextView debugLogs;
@@ -84,6 +87,10 @@ public class MainActivity extends AppCompatActivity {
     private boolean isBarVisible = true;
     private final StringBuilder logAccumulator = new StringBuilder();
 
+    // Drag variables for moving the floating toolbar
+    private float dX, dY;
+    private int lastAction;
+
     private final BroadcastReceiver engineReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -105,7 +112,8 @@ public class MainActivity extends AppCompatActivity {
 
         webView = findViewById(R.id.webView);
         loadingLayout = findViewById(R.id.loadingLayout);
-        controlBar = findViewById(R.id.controlBar);
+        floatingDraggableContainer = findViewById(R.id.floatingDraggableContainer);
+        controlBarScroll = findViewById(R.id.controlBarScroll);
         loadingText = findViewById(R.id.loadingText);
         subText = findViewById(R.id.subText);
         debugLogs = findViewById(R.id.debugLogs);
@@ -129,6 +137,7 @@ public class MainActivity extends AppCompatActivity {
         isBarVisible = prefs.getBoolean(KEY_BAR_VISIBLE, true);
 
         setupButtons();
+        setupDraggableFloatingBar();
         setupWebView();
         checkAndRequestPermissions();
 
@@ -143,6 +152,34 @@ public class MainActivity extends AppCompatActivity {
         }
 
         startEngineService();
+    }
+
+    private void setupDraggableFloatingBar() {
+        btnToggleBar.setOnTouchListener((view, event) -> {
+            switch (event.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN:
+                    dX = floatingDraggableContainer.getX() - event.getRawX();
+                    dY = floatingDraggableContainer.getY() - event.getRawY();
+                    lastAction = MotionEvent.ACTION_DOWN;
+                    break;
+
+                case MotionEvent.ACTION_MOVE:
+                    floatingDraggableContainer.setY(event.getRawY() + dY);
+                    floatingDraggableContainer.setX(event.getRawX() + dX);
+                    lastAction = MotionEvent.ACTION_MOVE;
+                    break;
+
+                case MotionEvent.ACTION_UP:
+                    if (lastAction == MotionEvent.ACTION_DOWN) {
+                        toggleControlBar();
+                    }
+                    break;
+
+                default:
+                    return false;
+            }
+            return true;
+        });
     }
 
     private void setupButtons() {
@@ -162,8 +199,8 @@ public class MainActivity extends AppCompatActivity {
         btnCloseLogs.setOnClickListener(v -> {
             loadingLayout.setVisibility(View.GONE);
             webView.setVisibility(View.VISIBLE);
-            btnToggleBar.setVisibility(View.VISIBLE);
-            controlBar.setVisibility(isBarVisible ? View.VISIBLE : View.GONE);
+            floatingDraggableContainer.setVisibility(View.VISIBLE);
+            controlBarScroll.setVisibility(isBarVisible ? View.VISIBLE : View.GONE);
         });
 
         btnLogs.setOnClickListener(v -> {
@@ -172,8 +209,6 @@ public class MainActivity extends AppCompatActivity {
         });
 
         btnConfig.setOnClickListener(v -> showServerConfigDialog(null));
-
-        btnToggleBar.setOnClickListener(v -> toggleControlBar());
 
         btnZoomIn.setOnClickListener(v -> adjustZoom(10));
         btnZoomOut.setOnClickListener(v -> adjustZoom(-10));
@@ -192,7 +227,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void toggleControlBar() {
         isBarVisible = !isBarVisible;
-        controlBar.setVisibility(isBarVisible ? View.VISIBLE : View.GONE);
+        controlBarScroll.setVisibility(isBarVisible ? View.VISIBLE : View.GONE);
         btnToggleBar.setText(isBarVisible ? "✕" : "⚙️");
         getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .edit().putBoolean(KEY_BAR_VISIBLE, isBarVisible).apply();
@@ -372,8 +407,8 @@ public class MainActivity extends AppCompatActivity {
                     isLoaded = true;
                     loadingLayout.setVisibility(View.GONE);
                     webView.setVisibility(View.VISIBLE);
-                    btnToggleBar.setVisibility(View.VISIBLE);
-                    controlBar.setVisibility(isBarVisible ? View.VISIBLE : View.GONE);
+                    floatingDraggableContainer.setVisibility(View.VISIBLE);
+                    controlBarScroll.setVisibility(isBarVisible ? View.VISIBLE : View.GONE);
                     btnToggleBar.setText(isBarVisible ? "✕" : "⚙️");
                     applyZoom();
                 }

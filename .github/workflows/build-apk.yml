@@ -132,15 +132,15 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.4.6
-          name: "DSH Mobile v1.4.6 (Collapsible Toolbar & Dashboard Refresh)"
+          tag_name: v1.4.7
+          name: "DSH Mobile v1.4.7 (Draggable Toolbar & Full Width Controls)"
           body: |
-            ## 🚀 DSH Mobile Standalone Release v1.4.6
-            - ⚙️ **Collapsible Toolbar (Sembunyikan/Tampilkan Menu)**:
-              - Tombol gear mini `⚙️` / `✕` untuk menyembunyikan/menampilkan bar kontrol kapan saja agar layar dashboard luas dan bersih.
-            - 🔄 **Tombol Refresh Dashboard**:
-              - Reload dashboard web langsung dalam 1 klik tanpa harus restart service engine.
-            - 🖥️ **Full Desktop Canvas (1280px)** + Scaling Dinamis
+            ## 🚀 DSH Mobile Standalone Release v1.4.7
+            - ✋ **Draggable Floating Toolbar (Bisa Digeser Bebas)**:
+              - Toolbar dan tombol `⚙️` sekarang dapat digeser (drag & drop) ke posisi manapun di layar agar tidak menghalangi tampilan.
+            - ↔️ **Horizontal Scrollable Toolbar**:
+              - Tombol zoom minus `-`, level, plus `+`, refresh `🔄`, desk, plugin, dan log sekarang 100% terlihat dan bisa di-scroll menyamping jika layar HP sempit.
+            - 🖥️ **Full Desktop Viewport (1280px)** + Scaling Elemen Dinamis
             - 🔌 **In-App Plugin Manager**
             - 🐋 **Logo Resmi DeepSeek Harness**
             - 🗜️ **Tersedia Versi ZIP Hemat Kuota**: `dsh-mobile-compressed.zip`
