@@ -235,21 +235,28 @@ public class LocalEngineService extends Service {
                 }
             }).start();
 
-            // 6. Poll port 3000 readiness
+            // 6. Poll port 3000 readiness (require 2 consecutive successful pings)
+            int consecutiveSuccess = 0;
             for (int i = 1; i <= 60; i++) {
                 try {
                     URL url = new URL("http://127.0.0.1:3000/");
                     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                    conn.setConnectTimeout(1000);
-                    conn.setReadTimeout(1000);
+                    conn.setConnectTimeout(1500);
+                    conn.setReadTimeout(1500);
                     int code = conn.getResponseCode();
                     if (code == 200) {
-                        emitLog("[READY] HTTP 200 OK received! DeepSeek Harness dashboard ready.");
-                        isEngineReady = true;
-                        sendBroadcast(new Intent(ACTION_READY));
-                        break;
+                        consecutiveSuccess++;
+                        if (consecutiveSuccess >= 2) {
+                            emitLog("[READY] HTTP 200 OK confirmed! DeepSeek Harness dashboard ready.");
+                            isEngineReady = true;
+                            sendBroadcast(new Intent(ACTION_READY));
+                            break;
+                        }
+                    } else {
+                        consecutiveSuccess = 0;
                     }
-                } catch (Exception ignored) {
+                } catch (Exception e) {
+                    consecutiveSuccess = 0;
                 }
                 if (i % 5 == 0) {
                     emitLog("[WAIT] Waiting for server on http://127.0.0.1:3000/ (" + i + "s)...");
