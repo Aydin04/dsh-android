@@ -30,6 +30,7 @@ import android.webkit.WebViewClient;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.HorizontalScrollView;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -64,7 +65,8 @@ public class MainActivity extends AppCompatActivity {
     private Button btnRetry;
     private Button btnCloseLogs;
     private Button btnConfig;
-    private Button btnToggleBar;
+    private ImageButton btnToggleBar;
+    private Button btnCloseBar;
     private Button btnZoomIn;
     private Button btnZoomOut;
     private Button btnRefreshWeb;
@@ -83,7 +85,7 @@ public class MainActivity extends AppCompatActivity {
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean isLoaded = false;
-    private int currentZoom = 100;
+    private int currentZoom = 60;
     private boolean isDesktopMode = true;
     private boolean isBarVisible = false;
     private final StringBuilder logAccumulator = new StringBuilder();
@@ -129,6 +131,7 @@ public class MainActivity extends AppCompatActivity {
         btnCloseLogs = findViewById(R.id.btnCloseLogs);
         btnConfig = findViewById(R.id.btnConfig);
         btnToggleBar = findViewById(R.id.btnToggleBar);
+        btnCloseBar = findViewById(R.id.btnCloseBar);
         btnZoomIn = findViewById(R.id.btnZoomIn);
         btnZoomOut = findViewById(R.id.btnZoomOut);
         btnRefreshWeb = findViewById(R.id.btnRefreshWeb);
@@ -137,7 +140,7 @@ public class MainActivity extends AppCompatActivity {
         btnLogs = findViewById(R.id.btnLogs);
 
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        currentZoom = prefs.getInt(KEY_ZOOM_LEVEL, 100);
+        currentZoom = prefs.getInt(KEY_ZOOM_LEVEL, 60);
         isDesktopMode = prefs.getBoolean(KEY_DESKTOP_MODE, true);
         isBarVisible = prefs.getBoolean(KEY_BAR_VISIBLE, false);
 
@@ -218,6 +221,13 @@ public class MainActivity extends AppCompatActivity {
             btnCloseLogs.setVisibility(View.VISIBLE);
         });
 
+        btnCloseBar.setOnClickListener(v -> {
+            isBarVisible = false;
+            controlBarScroll.setVisibility(View.GONE);
+            getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                    .edit().putBoolean(KEY_BAR_VISIBLE, false).apply();
+        });
+
         btnConfig.setOnClickListener(v -> showServerConfigDialog(null));
 
         btnZoomIn.setOnClickListener(v -> adjustZoom(10));
@@ -238,27 +248,35 @@ public class MainActivity extends AppCompatActivity {
     private void toggleControlBar() {
         isBarVisible = !isBarVisible;
         controlBarScroll.setVisibility(isBarVisible ? View.VISIBLE : View.GONE);
-        btnToggleBar.setText(isBarVisible ? "✕" : "⚙️");
         getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .edit().putBoolean(KEY_BAR_VISIBLE, isBarVisible).apply();
     }
 
     private void adjustZoom(int delta) {
-        currentZoom = Math.max(40, Math.min(200, currentZoom + delta));
-        applyZoom();
+        currentZoom = Math.max(30, Math.min(150, currentZoom + delta));
+        applyViewportAndZoom();
         getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .edit().putInt(KEY_ZOOM_LEVEL, currentZoom).apply();
     }
 
-    private void applyZoom() {
-        WebSettings settings = webView.getSettings();
-        settings.setTextZoom(currentZoom);
-        
-        // CSS zoom for full layout container scaling
+    private void applyViewportAndZoom() {
         double scaleFactor = currentZoom / 100.0;
+        int targetWidth = isDesktopMode ? 1280 : 400;
+
         String js = "(() => {" +
-                "  document.body.style.zoom = '" + scaleFactor + "';" +
+                "  let meta = document.querySelector('meta[name=\"viewport\"]');" +
+                "  if (!meta) {" +
+                "    meta = document.createElement('meta');" +
+                "    meta.name = 'viewport';" +
+                "    document.head.appendChild(meta);" +
+                "  }" +
+                "  meta.content = 'width=" + targetWidth + ", initial-scale=" + scaleFactor + ", minimum-scale=0.1, maximum-scale=3.0, user-scalable=yes';" +
+                "  document.documentElement.style.width = '" + targetWidth + "px';" +
+                "  document.body.style.width = '" + targetWidth + "px';" +
+                "  document.documentElement.style.minWidth = '" + targetWidth + "px';" +
+                "  document.body.style.minWidth = '" + targetWidth + "px';" +
                 "  document.documentElement.style.zoom = '" + scaleFactor + "';" +
+                "  document.body.style.zoom = '" + scaleFactor + "';" +
                 "})();";
         webView.evaluateJavascript(js, null);
         updateZoomDisplay();
@@ -401,8 +419,6 @@ public class MainActivity extends AppCompatActivity {
         settings.setSupportZoom(true);
         settings.setBuiltInZoomControls(true);
         settings.setDisplayZoomControls(false);
-        settings.setUseWideViewPort(true);
-        settings.setLoadWithOverviewMode(true);
 
         applyModeSettings();
 
@@ -418,8 +434,7 @@ public class MainActivity extends AppCompatActivity {
                     webView.setVisibility(View.VISIBLE);
                     floatingDraggableContainer.setVisibility(View.VISIBLE);
                     controlBarScroll.setVisibility(isBarVisible ? View.VISIBLE : View.GONE);
-                    btnToggleBar.setText(isBarVisible ? "✕" : "⚙️");
-                    applyZoom();
+                    applyViewportAndZoom();
                 }
             }
 
