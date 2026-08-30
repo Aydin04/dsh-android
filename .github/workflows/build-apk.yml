@@ -132,15 +132,14 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.5.0
-          name: "DSH Mobile v1.5.0 (Clean Natural Scaling & Perfect Minimize)"
+          tag_name: v1.5.1
+          name: "DSH Mobile v1.5.1 (Full Canvas & Element Zoom Fix)"
           body: |
-            ## 🚀 DSH Mobile Standalone Release v1.5.0
-            - 📱 **Clean Natural Scaling**:
-              - Mengembalikan render natural WebView tanpa forced CSS zoom yang mengecilkan/membesarkan secara ekstrem.
-              - Tampilan mobile normal 100% dan mode desktop bekerja selayaknya desktop browser standar.
+            ## 🚀 DSH Mobile Standalone Release v1.5.1
+            - 🔍 **Full Element Canvas Zoom (`setInitialScale`)**:
+              - Mengganti `setTextZoom` (yang hanya merubah ukuran huruf) dengan `setInitialScale` native WebView. Sekarang saat menekan `+` atau `-`, **seluruh sidebar, form, chat bubble, tombol, dan teks ikut mengecil/membesar bersamaan**.
             - ✕ **Dedicated Close / Minimize Button**:
-              - Tombol merah `✕` di toolbar untuk menutup/meminimize toolbar dengan 1 klik pasti.
+              - Tombol merah `✕` untuk menutup/meminimize toolbar dengan 1 klik pasti.
               - Tombol floating bulat biru `⚙️` terpisah untuk membuka toolbar & bisa digeser (*drag*) bebas.
             - ✋ **Draggable Floating Control Bar**
             - 🔄 **Tombol Refresh Dashboard & Plugin Manager**

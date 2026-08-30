@@ -253,15 +253,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void adjustZoom(int delta) {
-        currentZoom = Math.max(50, Math.min(200, currentZoom + delta));
-        applyNativeZoom();
+        currentZoom = Math.max(40, Math.min(200, currentZoom + delta));
+        applyWholeElementZoom();
         getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .edit().putInt(KEY_ZOOM_LEVEL, currentZoom).apply();
     }
 
-    private void applyNativeZoom() {
-        WebSettings settings = webView.getSettings();
-        settings.setTextZoom(currentZoom);
+    private void applyWholeElementZoom() {
+        // Use WebView full canvas scaling (scales text + elements + sidebar simultaneously)
+        webView.setInitialScale(currentZoom);
         updateZoomDisplay();
     }
 
@@ -403,8 +403,11 @@ public class MainActivity extends AppCompatActivity {
         settings.setBuiltInZoomControls(true);
         settings.setDisplayZoomControls(false);
 
+        // Keep text zoom neutral (100%) so fonts don't get disproportionately distorted
+        settings.setTextZoom(100);
+
         applyModeSettings();
-        applyNativeZoom();
+        applyWholeElementZoom();
 
         webView.addJavascriptInterface(new WebAppInterface(), "AndroidBridge");
 
@@ -418,7 +421,7 @@ public class MainActivity extends AppCompatActivity {
                     webView.setVisibility(View.VISIBLE);
                     floatingDraggableContainer.setVisibility(View.VISIBLE);
                     controlBarScroll.setVisibility(isBarVisible ? View.VISIBLE : View.GONE);
-                    applyNativeZoom();
+                    applyWholeElementZoom();
                 }
             }
 
