@@ -60,8 +60,10 @@ public class MainActivity extends AppCompatActivity {
     private Button btnRetry;
     private Button btnCloseLogs;
     private Button btnConfig;
+    private Button btnToggleBar;
     private Button btnZoomIn;
     private Button btnZoomOut;
+    private Button btnRefreshWeb;
     private Button btnDesktopMode;
     private Button btnPlugins;
     private Button btnLogs;
@@ -71,6 +73,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String KEY_SERVER_URL = "SERVER_URL";
     private static final String KEY_ZOOM_LEVEL = "ZOOM_LEVEL";
     private static final String KEY_DESKTOP_MODE = "DESKTOP_MODE";
+    private static final String KEY_BAR_VISIBLE = "BAR_VISIBLE";
     private static final String LOCAL_URL = "http://127.0.0.1:3080";
     private static final String DESKTOP_UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
@@ -78,6 +81,7 @@ public class MainActivity extends AppCompatActivity {
     private boolean isLoaded = false;
     private int currentZoom = 70;
     private boolean isDesktopMode = true;
+    private boolean isBarVisible = true;
     private final StringBuilder logAccumulator = new StringBuilder();
 
     private final BroadcastReceiver engineReceiver = new BroadcastReceiver() {
@@ -111,8 +115,10 @@ public class MainActivity extends AppCompatActivity {
         btnRetry = findViewById(R.id.btnRetry);
         btnCloseLogs = findViewById(R.id.btnCloseLogs);
         btnConfig = findViewById(R.id.btnConfig);
+        btnToggleBar = findViewById(R.id.btnToggleBar);
         btnZoomIn = findViewById(R.id.btnZoomIn);
         btnZoomOut = findViewById(R.id.btnZoomOut);
+        btnRefreshWeb = findViewById(R.id.btnRefreshWeb);
         btnDesktopMode = findViewById(R.id.btnDesktopMode);
         btnPlugins = findViewById(R.id.btnPlugins);
         btnLogs = findViewById(R.id.btnLogs);
@@ -120,6 +126,7 @@ public class MainActivity extends AppCompatActivity {
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         currentZoom = prefs.getInt(KEY_ZOOM_LEVEL, 70);
         isDesktopMode = prefs.getBoolean(KEY_DESKTOP_MODE, true);
+        isBarVisible = prefs.getBoolean(KEY_BAR_VISIBLE, true);
 
         setupButtons();
         setupWebView();
@@ -155,7 +162,8 @@ public class MainActivity extends AppCompatActivity {
         btnCloseLogs.setOnClickListener(v -> {
             loadingLayout.setVisibility(View.GONE);
             webView.setVisibility(View.VISIBLE);
-            controlBar.setVisibility(View.VISIBLE);
+            btnToggleBar.setVisibility(View.VISIBLE);
+            controlBar.setVisibility(isBarVisible ? View.VISIBLE : View.GONE);
         });
 
         btnLogs.setOnClickListener(v -> {
@@ -165,14 +173,29 @@ public class MainActivity extends AppCompatActivity {
 
         btnConfig.setOnClickListener(v -> showServerConfigDialog(null));
 
+        btnToggleBar.setOnClickListener(v -> toggleControlBar());
+
         btnZoomIn.setOnClickListener(v -> adjustZoom(10));
         btnZoomOut.setOnClickListener(v -> adjustZoom(-10));
+
+        btnRefreshWeb.setOnClickListener(v -> {
+            Toast.makeText(this, "Memuat ulang dashboard...", Toast.LENGTH_SHORT).show();
+            webView.reload();
+        });
 
         btnDesktopMode.setOnClickListener(v -> toggleDesktopMode());
 
         btnPlugins.setOnClickListener(v -> showPluginManagerDialog());
 
         updateZoomDisplay();
+    }
+
+    private void toggleControlBar() {
+        isBarVisible = !isBarVisible;
+        controlBar.setVisibility(isBarVisible ? View.VISIBLE : View.GONE);
+        btnToggleBar.setText(isBarVisible ? "✕" : "⚙️");
+        getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit().putBoolean(KEY_BAR_VISIBLE, isBarVisible).apply();
     }
 
     private void adjustZoom(int delta) {
@@ -349,7 +372,9 @@ public class MainActivity extends AppCompatActivity {
                     isLoaded = true;
                     loadingLayout.setVisibility(View.GONE);
                     webView.setVisibility(View.VISIBLE);
-                    controlBar.setVisibility(View.VISIBLE);
+                    btnToggleBar.setVisibility(View.VISIBLE);
+                    controlBar.setVisibility(isBarVisible ? View.VISIBLE : View.GONE);
+                    btnToggleBar.setText(isBarVisible ? "✕" : "⚙️");
                     applyZoom();
                 }
             }
