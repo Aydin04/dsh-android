@@ -83,6 +83,7 @@ jobs:
             mkdir -p /tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh/node_modules/node-pty/prebuilds/android-arm64
             cp -f /tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh/node_modules/node-pty/prebuilds/linux-arm64/pty.node \
                /tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh/node_modules/node-pty/prebuilds/android-arm64/pty.node 2>/dev/null || true
+            cp -f $GITHUB_WORKSPACE/.github/scripts/node-pty-utils.js /tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh/node_modules/node-pty/lib/utils.js
           fi
 
           # Safe Koffi Android Adapter to prevent crash on Android
@@ -126,14 +127,14 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.3.8
-          name: "DSH Mobile v1.3.8 (Zero-Crash Standalone Engine + ZIP Bundle)"
+          tag_name: v1.3.9
+          name: "DSH Mobile v1.3.9 (Verified Zero-Crash Standalone Engine + ZIP Bundle)"
           body: |
-            ## 🚀 DSH Mobile Standalone Release v1.3.8
+            ## 🚀 DSH Mobile Standalone Release v1.3.9
             - 🗜️ **Tersedia Versi ZIP Super Hemat Kuota**: `dsh-mobile-compressed.zip`
-            - 🛡️ **Zero-Crash Standalone Engine**:
-              - Patch layout & ABI adapter untuk Koffi FFI di Android
-              - Bundled ARM64 `node-pty` prebuilds
+            - 🛡️ **Zero-Crash Standalone Engine (Verified)**:
+              - Node-PTY universal Android POSIX fallback adapter
+              - Koffi C-FFI Android ABI runtime adapter
             - 🌐 **100% Official DeepSeek Harness Web Dashboard**
           files: |
             app/build/outputs/apk/debug/app-debug.apk
