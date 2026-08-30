@@ -156,22 +156,17 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.7.0
-          name: "DSH Mobile v1.7.0 (Embedded PRoot + Alpine Linux Environment with `apk` Package Manager)"
+          tag_name: v1.7.1
+          name: "DSH Mobile v1.7.1 (Fix `tools.code` Globals & `tools.bash` Runner Reference)"
           body: |
-            ## 🚀 DSH Mobile Standalone Release v1.7.0
-            - 🐧 **Full Embedded PRoot + Alpine Linux Environment (`apk add`)**:
-              - DSH Mobile kini dilengkapi dengan **mini-rootfs Alpine Linux & PRoot ARM64** bawaan!
-              - Agent dapat menginstal dependensi dan bahasa pemrograman sendiri secara mandiri tanpa memerlukan aplikasi Termux:
-                - `apk add python3 py3-pip` (Python)
-                - `apk add git openssh` (Git & SSH Client)
-                - `apk add curl wget bash`
-                - `apk add build-base gcc g++ make` (C/C++ Compiler)
-            - 👑 **Supercharged Dual-Mode Superuser (Root `su`)**:
-              - Jika mode root diaktifkan, agent memiliki hak akses penuh ke seluruh partisi Android (`/system`, `/data`, `/data/adb`, hardware, dmesg, dan kernel tweaks).
-            - 🛡️ **Full Android Permissions**: All Files Access (`MANAGE_EXTERNAL_STORAGE`), Network, Foreground Service, Shizuku, dan WakeLock.
-            - 🔍 **Native Ripgrep (`rg`) ARM64 Binary**
-            - 📂 **Direct `/sdcard` Workspace & Project Picker**
+            ## 🚀 DSH Mobile Standalone Release v1.7.1
+            - 🛠️ **Fix `tools.code` (Require / FS / Path / Process Injection)**:
+              - Objek `require`, `fs`, `path`, dan `process` kini langsung di-injeksi ke dalam scope eksekusi `tools.code`, sehingga script JavaScript/TypeScript agent dapat langsung memanggil filesystem tanpa error `ReferenceError: require is not defined` atau `fs is not defined`.
+            - 🐚 **Fix `tools.bash` (`fs is not defined` bug)**:
+              - Memperbaiki import modul `node:fs` pada runtime wrapper `dsh-bash-local` sehingga perintah shell langsung diteruskan ke shell shim / PRoot tanpa throw exception.
+            - 🐧 **Full Embedded PRoot + Alpine Linux Environment (`apk add`)**
+            - 👑 **Supercharged Dual-Mode Superuser (Root `su`)**
+            - 🛡️ **Full Android Permissions & Direct `/sdcard` Workspace**
             - 🗜️ **Tersedia Versi ZIP Hemat Kuota**: `dsh-mobile-compressed.zip`
           files: |
             app/build/outputs/apk/debug/app-debug.apk
