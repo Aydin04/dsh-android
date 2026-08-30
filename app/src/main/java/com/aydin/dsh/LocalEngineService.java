@@ -231,6 +231,7 @@ public class LocalEngineService extends Service {
             );
             pb.directory(workspaceDir.exists() ? workspaceDir : filesDir);
             pb.environment().put("HOME", filesDir.getAbsolutePath());
+            pb.environment().put("DSH_EXTERNAL_STORAGE", workspaceDir.getAbsolutePath());
             pb.environment().put("LD_LIBRARY_PATH", libDir.getAbsolutePath());
             pb.environment().put("NODE_PATH", new File(dshDir, "node_modules").getAbsolutePath());
             pb.environment().put("PATH", enrichedPath);

@@ -137,16 +137,15 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.5.8
-          name: "DSH Mobile v1.5.8 (Fix Write Tool Hardlinks, Spawn Bash & Glob/Ripgrep)"
+          tag_name: v1.5.9
+          name: "DSH Mobile v1.5.9 (Direct /sdcard Storage Picker & Full Tool Fixes)"
           body: |
-            ## 🚀 DSH Mobile Standalone Release v1.5.8
-            - ✍️ **Fix `tools.write` Atomic Link Error (EACCES)**:
-              - Mengganti pemanggilan `linkFile` pada modul `dsh-fs-local` dengan `rename`/`copyFile` sehingga agent dapat menulis file HTML, JS, CSS, Python, dll secara lancar baik di `/sdcard` maupun di penyimpanan aplikasi.
-            - 🐚 **Fix `tools.bash` (spawn bash EACCES)**:
-              - Menambahkan fallback shell ke `/system/bin/sh` bawaan Android dan biner Termux jika `/bin/bash` standar Linux tidak tersedia di host Android.
-            - 🔍 **Fix `tools.glob` & `tools.grep` (Ripgrep Launch Failed)**:
-              - Memasukkan biner ARM64 `@vscode/ripgrep-linux-arm64` dan fallback grep bawaan sistem sehingga pencarian file & konten berjalan 100% mulus.
+            ## 🚀 DSH Mobile Standalone Release v1.5.9
+            - 📂 **Direct `/sdcard` (Internal Storage) File & Project Picker**:
+              - Tombol buka folder / project picker di dashboard web sekarang langsung membuka root memori internal (`/sdcard` atau `/storage/emulated/0`), bukan folder privat `com.aydin`.
+            - ✍️ **Fix `tools.write` Atomic Hardlink Error (EACCES)**
+            - 🐚 **Fix `tools.bash` (spawn bash EACCES with /system/bin/sh fallback)**
+            - 🔍 **Fix `tools.glob` & `tools.grep` (Ripgrep ARM64)**
             - 👑 **Tombol "👑 Root SU" di Toolbar**
             - 🧠 **Android OS ARM64 System Prompt Awareness**
             - 🗜️ **Tersedia Versi ZIP Hemat Kuota**: `dsh-mobile-compressed.zip`

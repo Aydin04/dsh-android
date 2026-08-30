@@ -63,7 +63,22 @@ if (fs.existsSync(toolFsSearchPath)) {
   }
 }
 
-// 5. Patch dsh-sandbox-local to allow direct execution on Android (no Landlock/bwrap crash)
+// 5. Patch dsh-host-directory-picker-browse to set default browsing root to /sdcard instead of internal homedir
+const dirPickerPath = `${dshRoot}/node_modules/@deepseek-ai/dsh-host-directory-picker-browse/lib/index.js`;
+if (fs.existsSync(dirPickerPath)) {
+  let code = fs.readFileSync(dirPickerPath, 'utf8');
+  if (code.includes('const target = resolve(path ?? home);')) {
+    console.log('[PATCH] Patching dsh-host-directory-picker-browse home root...');
+    code = code.replace(
+      'const home = homedir();',
+      'const home = (typeof process !== "undefined" && process.env.DSH_EXTERNAL_STORAGE) ? process.env.DSH_EXTERNAL_STORAGE : (fs.existsSync("/sdcard") ? "/sdcard" : homedir());'
+    );
+    fs.writeFileSync(dirPickerPath, code, 'utf8');
+    console.log('[PATCH SUCCESS] dsh-host-directory-picker-browse patched for /sdcard!');
+  }
+}
+
+// 6. Patch dsh-sandbox-local to allow direct execution on Android (no Landlock/bwrap crash)
 const sandboxLocalPath = `${dshRoot}/node_modules/@deepseek-ai/dsh-sandbox-local/lib/index.js`;
 if (fs.existsSync(sandboxLocalPath)) {
   let code = fs.readFileSync(sandboxLocalPath, 'utf8');
@@ -84,7 +99,7 @@ if (fs.existsSync(sandboxLocalPath)) {
   console.log('[PATCH SUCCESS] dsh-sandbox-local patched for Android cleanly!');
 }
 
-// 6. Inject Android & Root Environment guidance into System Prompt (dsh-sandbox-policy)
+// 7. Inject Android & Root Environment guidance into System Prompt (dsh-sandbox-policy)
 const sandboxPolicyPath = `${dshRoot}/node_modules/@deepseek-ai/dsh-sandbox-policy/lib/index.js`;
 if (fs.existsSync(sandboxPolicyPath)) {
   let code = fs.readFileSync(sandboxPolicyPath, 'utf8');
