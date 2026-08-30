@@ -5,7 +5,97 @@
     android:layout_height="match_parent"
     android:background="#0d1117">
 
-    <!-- Loading and Live Debug Console Layout -->
+    <!-- WebView Container -->
+    <WebView
+        android:id="@+id/webView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Top Quick Control Bar (Floating above Dashboard) -->
+    <LinearLayout
+        android:id="@+id/controlBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="8dp"
+        android:background="#cc161b22"
+        android:elevation="8dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="4dp"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <Button
+            android:id="@+id/btnZoomOut"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="?attr/selectableItemBackground"
+            android:text="-"
+            android:textColor="#58a6ff"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvZoomLevel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:text="80%"
+            android:textColor="#f0f6fc"
+            android:textSize="11sp" />
+
+        <Button
+            android:id="@+id/btnZoomIn"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="?attr/selectableItemBackground"
+            android:text="+"
+            android:textColor="#58a6ff"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <View
+            android:layout_width="1dp"
+            android:layout_height="20dp"
+            android:layout_marginHorizontal="4dp"
+            android:background="#30363d" />
+
+        <Button
+            android:id="@+id/btnDesktopMode"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:background="?attr/selectableItemBackground"
+            android:text="🖥️ Desk"
+            android:textColor="#f0f6fc"
+            android:textSize="11sp" />
+
+        <Button
+            android:id="@+id/btnPlugins"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:background="?attr/selectableItemBackground"
+            android:text="🔌 Plugin"
+            android:textColor="#3fb950"
+            android:textSize="11sp" />
+
+        <Button
+            android:id="@+id/btnLogs"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:background="?attr/selectableItemBackground"
+            android:text="📋 Log"
+            android:textColor="#e3b341"
+            android:textSize="11sp" />
+    </LinearLayout>
+
+    <!-- Loading & Live Debug Console Layout -->
     <LinearLayout
         android:id="@+id/loadingLayout"
         android:layout_width="match_parent"
@@ -115,17 +205,17 @@
                 android:layout_weight="1"
                 android:text="Restart Engine"
                 android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/btnCloseLogs"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_weight="1"
+                android:text="Show Web"
+                android:visibility="gone"
+                android:textSize="12sp" />
         </LinearLayout>
     </LinearLayout>
-
-    <WebView
-        android:id="@+id/webView"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

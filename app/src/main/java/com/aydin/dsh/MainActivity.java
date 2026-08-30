@@ -38,6 +38,9 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
@@ -47,21 +50,33 @@ public class MainActivity extends AppCompatActivity {
 
     private WebView webView;
     private LinearLayout loadingLayout;
+    private LinearLayout controlBar;
     private TextView loadingText;
     private TextView subText;
     private TextView debugLogs;
+    private TextView tvZoomLevel;
     private ScrollView logScrollView;
     private Button btnCopyLog;
     private Button btnRetry;
+    private Button btnCloseLogs;
     private Button btnConfig;
+    private Button btnZoomIn;
+    private Button btnZoomOut;
+    private Button btnDesktopMode;
+    private Button btnPlugins;
+    private Button btnLogs;
 
     private static final int PERMISSION_REQ_CODE = 101;
     private static final String PREFS_NAME = "DSH_PREFS";
     private static final String KEY_SERVER_URL = "SERVER_URL";
+    private static final String KEY_ZOOM_LEVEL = "ZOOM_LEVEL";
+    private static final String KEY_DESKTOP_MODE = "DESKTOP_MODE";
     private static final String LOCAL_URL = "http://127.0.0.1:3080";
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean isLoaded = false;
+    private int currentZoom = 80;
+    private boolean isDesktopMode = true;
     private final StringBuilder logAccumulator = new StringBuilder();
 
     private final BroadcastReceiver engineReceiver = new BroadcastReceiver() {
@@ -85,13 +100,25 @@ public class MainActivity extends AppCompatActivity {
 
         webView = findViewById(R.id.webView);
         loadingLayout = findViewById(R.id.loadingLayout);
+        controlBar = findViewById(R.id.controlBar);
         loadingText = findViewById(R.id.loadingText);
         subText = findViewById(R.id.subText);
         debugLogs = findViewById(R.id.debugLogs);
+        tvZoomLevel = findViewById(R.id.tvZoomLevel);
         logScrollView = findViewById(R.id.logScrollView);
         btnCopyLog = findViewById(R.id.btnCopyLog);
         btnRetry = findViewById(R.id.btnRetry);
+        btnCloseLogs = findViewById(R.id.btnCloseLogs);
         btnConfig = findViewById(R.id.btnConfig);
+        btnZoomIn = findViewById(R.id.btnZoomIn);
+        btnZoomOut = findViewById(R.id.btnZoomOut);
+        btnDesktopMode = findViewById(R.id.btnDesktopMode);
+        btnPlugins = findViewById(R.id.btnPlugins);
+        btnLogs = findViewById(R.id.btnLogs);
+
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        currentZoom = prefs.getInt(KEY_ZOOM_LEVEL, 80);
+        isDesktopMode = prefs.getBoolean(KEY_DESKTOP_MODE, true);
 
         setupButtons();
         setupWebView();
@@ -124,7 +151,145 @@ public class MainActivity extends AppCompatActivity {
             startEngineService();
         });
 
+        btnCloseLogs.setOnClickListener(v -> {
+            loadingLayout.setVisibility(View.GONE);
+            webView.setVisibility(View.VISIBLE);
+            controlBar.setVisibility(View.VISIBLE);
+        });
+
+        btnLogs.setOnClickListener(v -> {
+            loadingLayout.setVisibility(View.VISIBLE);
+            btnCloseLogs.setVisibility(View.VISIBLE);
+        });
+
         btnConfig.setOnClickListener(v -> showServerConfigDialog(null));
+
+        btnZoomIn.setOnClickListener(v -> adjustZoom(10));
+        btnZoomOut.setOnClickListener(v -> adjustZoom(-10));
+
+        btnDesktopMode.setOnClickListener(v -> toggleDesktopMode());
+
+        btnPlugins.setOnClickListener(v -> showPluginManagerDialog());
+
+        updateZoomDisplay();
+    }
+
+    private void adjustZoom(int delta) {
+        currentZoom = Math.max(40, Math.min(150, currentZoom + delta));
+        applyZoom();
+        getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit().putInt(KEY_ZOOM_LEVEL, currentZoom).apply();
+    }
+
+    private void applyZoom() {
+        WebSettings settings = webView.getSettings();
+        settings.setTextZoom(currentZoom);
+        webView.setInitialScale(currentZoom);
+        updateZoomDisplay();
+    }
+
+    private void updateZoomDisplay() {
+        tvZoomLevel.setText(currentZoom + "%");
+    }
+
+    private void toggleDesktopMode() {
+        isDesktopMode = !isDesktopMode;
+        WebSettings settings = webView.getSettings();
+        if (isDesktopMode) {
+            settings.setUserAgentString("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+            settings.setUseWideViewPort(true);
+            settings.setLoadWithOverviewMode(true);
+            btnDesktopMode.setText("🖥️ Desk");
+            btnDesktopMode.setTextColor(0xFF58A6FF);
+        } else {
+            settings.setUserAgentString(null);
+            settings.setUseWideViewPort(false);
+            settings.setLoadWithOverviewMode(false);
+            btnDesktopMode.setText("📱 Mobile");
+            btnDesktopMode.setTextColor(0xFF8B949E);
+        }
+        getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit().putBoolean(KEY_DESKTOP_MODE, isDesktopMode).apply();
+        webView.reload();
+    }
+
+    private void showPluginManagerDialog() {
+        final EditText input = new EditText(this);
+        input.setHint("contoh: github:ben7am1n/dsh-telegram");
+        input.setSingleLine(true);
+
+        new AlertDialog.Builder(this)
+                .setTitle("🔌 DSH Plugin Manager")
+                .setMessage("Tambahkan Plugin Cordis / DeepSeek Harness:\n(Aplikasi akan otomatis mengunduh & restart engine)")
+                .setView(input)
+                .setPositiveButton("Pasang Plugin", (dialog, which) -> {
+                    String pluginName = input.getText().toString().trim();
+                    if (!pluginName.isEmpty()) {
+                        installPlugin(pluginName);
+                    }
+                })
+                .setNeutralButton("Lihat Daftar Plugin", (dialog, which) -> listInstalledPlugins())
+                .setNegativeButton("Batal", null)
+                .show();
+    }
+
+    private void installPlugin(String pluginName) {
+        appendLog("\n>>> [PLUGIN] Menginstall plugin: " + pluginName + "...");
+        Toast.makeText(this, "Sedang memasang plugin: " + pluginName, Toast.LENGTH_LONG).show();
+
+        new Thread(() -> {
+            try {
+                File filesDir = getFilesDir();
+                File nodeFile = new File(filesDir, "bin/node");
+                File libDir = new File(filesDir, "lib");
+                File dshDir = new File(filesDir, "dsh");
+                File dshBin = new File(dshDir, "lib/bin.js");
+
+                ProcessBuilder pb = new ProcessBuilder(
+                        nodeFile.getAbsolutePath(),
+                        dshBin.getAbsolutePath(),
+                        "plugin",
+                        "--profile", "web",
+                        "add",
+                        pluginName
+                );
+                pb.directory(filesDir);
+                pb.environment().put("HOME", filesDir.getAbsolutePath());
+                pb.environment().put("LD_LIBRARY_PATH", libDir.getAbsolutePath());
+                pb.environment().put("NODE_PATH", new File(dshDir, "node_modules").getAbsolutePath());
+                pb.environment().put("PATH", new File(filesDir, "bin").getAbsolutePath() + ":/system/bin");
+                pb.redirectErrorStream(true);
+
+                Process proc = pb.start();
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        appendLog("[PLUGIN LOG] " + line);
+                    }
+                }
+                int exitCode = proc.waitFor();
+                appendLog("[PLUGIN] Selesai dengan kode: " + exitCode);
+
+                handler.post(() -> {
+                    Toast.makeText(this, "Plugin selesai dipasang! Me-restart server...", Toast.LENGTH_SHORT).show();
+                    stopService(new Intent(this, LocalEngineService.class));
+                    startEngineService();
+                });
+            } catch (Exception e) {
+                appendLog("[PLUGIN ERROR] " + e.getMessage());
+            }
+        }).start();
+    }
+
+    private void listInstalledPlugins() {
+        File filesDir = getFilesDir();
+        File pluginsDir = new File(filesDir, ".dsh/profiles/web/cordis.yml");
+        String info = pluginsDir.exists() ? "File konfigurasi aktif: .dsh/profiles/web/cordis.yml" : "Belum ada plugin eksternal terpasang.";
+        new AlertDialog.Builder(this)
+                .setTitle("Status Plugin Web Profile")
+                .setMessage(info)
+                .setPositiveButton("Tutup", null)
+                .show();
     }
 
     private void startEngineService() {
@@ -151,10 +316,16 @@ public class MainActivity extends AppCompatActivity {
         settings.setDatabaseEnabled(true);
         settings.setAllowFileAccess(true);
         settings.setAllowContentAccess(true);
-        settings.setUseWideViewPort(true);
-        settings.setLoadWithOverviewMode(true);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         settings.setMediaPlaybackRequiresUserGesture(false);
+
+        if (isDesktopMode) {
+            settings.setUserAgentString("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+            settings.setUseWideViewPort(true);
+            settings.setLoadWithOverviewMode(true);
+        }
+
+        applyZoom();
 
         webView.addJavascriptInterface(new WebAppInterface(), "AndroidBridge");
 
@@ -166,6 +337,7 @@ public class MainActivity extends AppCompatActivity {
                     isLoaded = true;
                     loadingLayout.setVisibility(View.GONE);
                     webView.setVisibility(View.VISIBLE);
+                    controlBar.setVisibility(View.VISIBLE);
                 }
             }
 
@@ -174,8 +346,7 @@ public class MainActivity extends AppCompatActivity {
                 super.onReceivedError(view, request, error);
                 String errDesc = error.getDescription().toString();
                 appendLog("[WebView Error] " + errDesc + " on " + request.getUrl());
-                
-                // Auto-retry reload if connection was reset or refused during initial server warm-up
+
                 if (request.isForMainFrame() && (errDesc.contains("ERR_CONNECTION_RESET") || errDesc.contains("ERR_CONNECTION_REFUSED") || errDesc.contains("net::ERR_"))) {
                     handler.postDelayed(() -> {
                         appendLog("[WebView Retry] Retrying connection to dashboard...");
@@ -208,7 +379,7 @@ public class MainActivity extends AppCompatActivity {
 
         final EditText input = new EditText(this);
         input.setText(currentUrl);
-        input.setHint("http://127.0.0.1:3000 atau http://IP-VPS:3000");
+        input.setHint("http://127.0.0.1:3080 atau http://IP-VPS:3080");
         input.setSingleLine(true);
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this)
@@ -227,7 +398,7 @@ public class MainActivity extends AppCompatActivity {
                         webView.loadUrl(url);
                     }
                 })
-                .setNegativeButton("Lokal HP (127.0.0.1:3000)", (dialog, which) -> {
+                .setNegativeButton("Lokal HP (127.0.0.1:3080)", (dialog, which) -> {
                     prefs.edit().putString(KEY_SERVER_URL, LOCAL_URL).apply();
                     webView.loadUrl(LOCAL_URL);
                 });
@@ -250,9 +421,11 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         } else {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                permissionsNeeded.add(Manifest.permission.READ_EXTERNAL_STORAGE);
+            }
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                 permissionsNeeded.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
-                permissionsNeeded.add(Manifest.permission.READ_EXTERNAL_STORAGE);
             }
         }
 
@@ -268,44 +441,16 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public class WebAppInterface {
+    public static class WebAppInterface {
         @JavascriptInterface
-        public void openSettings() {
-            runOnUiThread(() -> showServerConfigDialog(null));
-        }
-
-        @JavascriptInterface
-        public void requestAllPermissions() {
-            runOnUiThread(() -> checkAndRequestPermissions());
-        }
-
-        @JavascriptInterface
-        public void showToast(String message) {
-            runOnUiThread(() -> Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show());
+        public String getPlatform() {
+            return "android";
         }
     }
 
     @Override
     protected void onDestroy() {
-        try {
-            unregisterReceiver(engineReceiver);
-        } catch (Exception ignored) {
-        }
+        unregisterReceiver(engineReceiver);
         super.onDestroy();
-    }
-
-    @Override
-    public void onBackPressed() {
-        if (webView.canGoBack() && webView.getVisibility() == View.VISIBLE) {
-            webView.goBack();
-        } else {
-            new AlertDialog.Builder(this)
-                    .setTitle("DSH Mobile")
-                    .setMessage("Ganti mode server atau keluar?")
-                    .setPositiveButton("Ganti Server", (d, w) -> showServerConfigDialog(null))
-                    .setNegativeButton("Keluar", (d, w) -> finish())
-                    .setNeutralButton("Batal", null)
-                    .show();
-        }
     }
 }
