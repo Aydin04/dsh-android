@@ -83,7 +83,7 @@
                     android:layout_height="wrap_content"
                     android:paddingStart="4dp"
                     android:paddingEnd="4dp"
-                    android:text="70%"
+                    android:text="100%"
                     android:textColor="#f0f6fc"
                     android:textSize="12sp" />
 
@@ -111,6 +111,15 @@
                     android:text="🔄"
                     android:textColor="#f0f6fc"
                     android:textSize="13sp" />
+
+                <Button
+                    android:id="@+id/btnRootToggle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:background="?attr/selectableItemBackground"
+                    android:text="👑 Root SU"
+                    android:textColor="#d2a8ff"
+                    android:textSize="11sp" />
 
                 <Button
                     android:id="@+id/btnDesktopMode"

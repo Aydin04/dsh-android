@@ -134,18 +134,17 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.5.4
-          name: "DSH Mobile v1.5.4 (Root Support, Zero-Error Sandbox & /sdcard Workspace)"
+          tag_name: v1.5.5
+          name: "DSH Mobile v1.5.5 (Root SU Toolbar Button & Android System Prompt Awareness)"
           body: |
-            ## 🚀 DSH Mobile Standalone Release v1.5.4
-            - ⚡ **Zero-Error Android Sandbox Execution**:
-              - Secara permanen mem-bypass penolakan kernel Linux Landlock/bwrap sehingga agent dapat mengeksekusi perintah shell (bash, git, node, python) tanpa error *SANDBOX_UNAVAILABLE*.
-            - 👑 **Dukungan Root Penuh (Magisk / KernelSU / APatch / Termux)**:
-              - Menambahkan path biner root (`/data/adb/ksu/bin`, `/data/adb/ap/bin`, `/data/adb/magisk`, `/sbin`, `/data/data/com.termux/files/usr/bin`) ke dalam `$PATH`. Jika perangkat di-root, agent dapat langsung menggunakan perintah `su` untuk eksekusi level tertinggi.
-            - 📂 **Root Internal Storage (`/sdcard`)**:
-              - Workspace default langsung mengarah ke penyimpanan internal utama HP Anda.
-            - 🛡️ **Fix EACCES `link()` Session Persistence**:
-              - Fallback atomic file write yang aman di Android SELinux.
+            ## 🚀 DSH Mobile Standalone Release v1.5.5
+            - 👑 **Tombol "👑 Root SU" Dedicated di Toolbar**:
+              - Tombol interaktif baru di toolbar floating untuk memeriksa status Root dan meminta izin Superuser (SU) secara instan ke Magisk/KernelSU/APatch.
+            - 🧠 **Android & Root System Prompt Awareness**:
+              - System prompt agent otomatis diinjeksi konteks lingkungan: Host Android OS ARM64, direktori internal `/sdcard`, serta instruksi cara mengecek dan mengeksekusi perintah Superuser (`which su`, `su -c id`).
+            - ⚡ **Zero-Error Android Sandbox Execution (Unconfined Mode)**
+            - 📂 **Default Root Internal Storage (`/sdcard`) Workspace**
+            - 🛡️ **Fix EACCES `link()` Session Persistence**
             - 🗜️ **Tersedia Versi ZIP Hemat Kuota**: `dsh-mobile-compressed.zip`
           files: |
             app/build/outputs/apk/debug/app-debug.apk

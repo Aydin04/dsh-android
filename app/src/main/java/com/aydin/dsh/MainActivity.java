@@ -43,6 +43,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import java.io.BufferedReader;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
@@ -70,6 +71,7 @@ public class MainActivity extends AppCompatActivity {
     private Button btnZoomIn;
     private Button btnZoomOut;
     private Button btnRefreshWeb;
+    private Button btnRootToggle;
     private Button btnDesktopMode;
     private Button btnPlugins;
     private Button btnLogs;
@@ -135,6 +137,7 @@ public class MainActivity extends AppCompatActivity {
         btnZoomIn = findViewById(R.id.btnZoomIn);
         btnZoomOut = findViewById(R.id.btnZoomOut);
         btnRefreshWeb = findViewById(R.id.btnRefreshWeb);
+        btnRootToggle = findViewById(R.id.btnRootToggle);
         btnDesktopMode = findViewById(R.id.btnDesktopMode);
         btnPlugins = findViewById(R.id.btnPlugins);
         btnLogs = findViewById(R.id.btnLogs);
@@ -238,11 +241,61 @@ public class MainActivity extends AppCompatActivity {
             webView.reload();
         });
 
+        btnRootToggle.setOnClickListener(v -> requestRootSuperuserAccess());
+
         btnDesktopMode.setOnClickListener(v -> toggleDesktopMode());
 
         btnPlugins.setOnClickListener(v -> showPluginManagerDialog());
 
         updateZoomDisplay();
+    }
+
+    private void requestRootSuperuserAccess() {
+        Toast.makeText(this, "Memeriksa & meminta izin Root (SU)...", Toast.LENGTH_SHORT).show();
+        new Thread(() -> {
+            boolean granted = false;
+            String output = "";
+            try {
+                Process p = Runtime.getRuntime().exec("su");
+                try (DataOutputStream os = new DataOutputStream(p.getOutputStream());
+                     BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
+                    os.writeBytes("id\nexit\n");
+                    os.flush();
+                    String line = reader.readLine();
+                    if (line != null && line.contains("uid=0")) {
+                        granted = true;
+                        output = line;
+                    }
+                    p.waitFor();
+                }
+            } catch (Exception e) {
+                output = e.getMessage();
+            }
+
+            final boolean isRooted = granted;
+            final String details = output;
+            handler.post(() -> {
+                if (isRooted) {
+                    btnRootToggle.setText("👑 Root OK");
+                    btnRootToggle.setTextColor(0xFF3FB950);
+                    appendLog("\n>>> [ROOT STATUS] Root Superuser (uid=0) Aktif: " + details);
+                    new AlertDialog.Builder(this)
+                            .setTitle("👑 Root Superuser Aktif")
+                            .setMessage("Izin Root (SU) berhasil didapatkan!\nAgent DeepSeek Harness sekarang memiliki akses Superuser penuh.\n\nDetail: " + details)
+                            .setPositiveButton("Bagus", null)
+                            .show();
+                } else {
+                    btnRootToggle.setText("👑 Request SU");
+                    btnRootToggle.setTextColor(0xFFD2A8FF);
+                    appendLog("\n>>> [ROOT STATUS] Root SU tidak tersedia atau ditolak: " + details);
+                    new AlertDialog.Builder(this)
+                            .setTitle("Status Root Superuser")
+                            .setMessage("Perangkat belum di-root atau izin SU ditolak di Magisk/KernelSU.\n\nCatatan: Aplikasi dan Agent tetap berjalan normal tanpa root!")
+                            .setPositiveButton("Mengerti", null)
+                            .show();
+                }
+            });
+        }).start();
     }
 
     private void toggleControlBar() {
@@ -260,7 +313,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void applyWholeElementZoom() {
-        // Use WebView full canvas scaling (scales text + elements + sidebar simultaneously)
         webView.setInitialScale(currentZoom);
         updateZoomDisplay();
     }
@@ -403,7 +455,7 @@ public class MainActivity extends AppCompatActivity {
         settings.setBuiltInZoomControls(true);
         settings.setDisplayZoomControls(false);
 
-        // Keep text zoom neutral (100%) so fonts don't get disproportionately distorted
+        // Keep text zoom neutral (100%)
         settings.setTextZoom(100);
 
         applyModeSettings();
