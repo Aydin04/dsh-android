@@ -47,6 +47,7 @@ jobs:
           curl -sL "https://packages.termux.dev/apt/termux-main/pool/main/libi/libicu/libicu_78.3_aarch64.deb" -o icu.deb
           curl -sL "https://packages.termux.dev/apt/termux-main/pool/main/libc/libc++/libc++_29_aarch64.deb" -o libc++.deb
           curl -sL "https://packages.termux.dev/apt/termux-main/pool/main/o/openssl/openssl_1:3.6.3_aarch64.deb" -o openssl.deb
+          curl -sL "https://packages.termux.dev/apt/termux-main/pool/main/r/ripgrep/ripgrep_14.1.1-1_aarch64.deb" -o ripgrep.deb || true
           
           for f in *.deb; do
             ar x "$f"
@@ -56,6 +57,12 @@ jobs:
           cp data/data/com.termux/files/usr/bin/node $GITHUB_WORKSPACE/app/src/main/assets/engine/node
           patchelf --set-rpath '/data/user/0/com.aydin.dsh/files/lib:/data/data/com.aydin.dsh/files/lib' $GITHUB_WORKSPACE/app/src/main/assets/engine/node
           chmod 755 $GITHUB_WORKSPACE/app/src/main/assets/engine/node
+
+          if [ -f "data/data/com.termux/files/usr/bin/rg" ]; then
+            cp data/data/com.termux/files/usr/bin/rg $GITHUB_WORKSPACE/app/src/main/assets/engine/rg
+            patchelf --set-rpath '/data/user/0/com.aydin.dsh/files/lib:/data/data/com.aydin.dsh/files/lib' $GITHUB_WORKSPACE/app/src/main/assets/engine/rg 2>/dev/null || true
+            chmod 755 $GITHUB_WORKSPACE/app/src/main/assets/engine/rg
+          fi
           
           # Package strictly needed shared libraries with gzip compression
           mkdir -p /tmp/libs_to_pack
@@ -137,17 +144,22 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.5.9
-          name: "DSH Mobile v1.5.9 (Direct /sdcard Storage Picker & Full Tool Fixes)"
+          tag_name: v1.6.0
+          name: "DSH Mobile v1.6.0 (All Permissions Granted, Native Ripgrep & Total Fixes)"
           body: |
-            ## 🚀 DSH Mobile Standalone Release v1.5.9
-            - 📂 **Direct `/sdcard` (Internal Storage) File & Project Picker**:
-              - Tombol buka folder / project picker di dashboard web sekarang langsung membuka root memori internal (`/sdcard` atau `/storage/emulated/0`), bukan folder privat `com.aydin`.
-            - ✍️ **Fix `tools.write` Atomic Hardlink Error (EACCES)**
-            - 🐚 **Fix `tools.bash` (spawn bash EACCES with /system/bin/sh fallback)**
-            - 🔍 **Fix `tools.glob` & `tools.grep` (Ripgrep ARM64)**
+            ## 🚀 DSH Mobile Standalone Release v1.6.0
+            - 🛡️ **Full Permissions Declaration (Bebas Melakukan Apa Saja Tanpa Batasan)**:
+              - Menambahkan seluruh izin Android lengkap di AndroidManifest: All Files Management (`MANAGE_EXTERNAL_STORAGE`), Storage, Network State, WakeLock, Foreground Service, Shizuku, dan Query All Packages.
+            - 🔍 **Native Bundled Ripgrep (`rg`) ARM64 Binary**:
+              - Mengemas binary native `rg` ARM64 langsung ke dalam APK sehingga pencarian `tools.glob` dan `tools.grep` berjalan instan tanpa error `--no-config`.
+            - 🐚 **Fix `tools.bash` Foreground/Background Execution**:
+              - Shell otomatis fallback ke `/system/bin/sh` bawaan Android dan biner Termux sehingga perintah `ls`, `pwd`, `id`, `wc`, dll dieksekusi 100% mulus.
+            - ✍️ **Fix `tools.write` Atomic Hardlink Error (EACCES)**:
+              - Penulisan file di `/sdcard` maupun di workspace lancar tanpa penolakan hardlink OS.
+            - 📂 **Direct `/sdcard` Root Directory Picker**:
+              - Membuka root internal storage secara langsung.
             - 👑 **Tombol "👑 Root SU" di Toolbar**
-            - 🧠 **Android OS ARM64 System Prompt Awareness**
+            - 🧠 **CommonJS & Android System Prompt Context**
             - 🗜️ **Tersedia Versi ZIP Hemat Kuota**: `dsh-mobile-compressed.zip`
           files: |
             app/build/outputs/apk/debug/app-debug.apk

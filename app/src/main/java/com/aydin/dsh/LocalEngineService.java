@@ -84,6 +84,28 @@ public class LocalEngineService extends Service {
             } catch (Exception ignored) {
             }
 
+            // Extract native ripgrep binary if bundled
+            File rgFile = new File(binDir, "rg");
+            try {
+                String[] engineAssets = getAssets().list("engine");
+                if (engineAssets != null && Arrays.asList(engineAssets).contains("rg")) {
+                    emitLog("[EXTRACT] Extracting Ripgrep (rg) binary to " + rgFile.getAbsolutePath() + "...");
+                    try (InputStream in = getAssets().open("engine/rg");
+                         OutputStream out = new FileOutputStream(rgFile)) {
+                        byte[] buf = new byte[8192];
+                        int len;
+                        while ((len = in.read(buf)) != -1) {
+                            out.write(buf, 0, len);
+                        }
+                    }
+                    rgFile.setReadable(true, false);
+                    rgFile.setExecutable(true, false);
+                    try {
+                        Runtime.getRuntime().exec("chmod 755 " + rgFile.getAbsolutePath()).waitFor();
+                    } catch (Exception ignored) {}
+                }
+            } catch (Exception ignored) {}
+
             // 2. Extract compressed native shared libraries (engine-libs.tar.gz / engine-libs.tar)
             File testLib = new File(libDir, "libz.so.1");
             if (!testLib.exists()) {

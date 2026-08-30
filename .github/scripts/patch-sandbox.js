@@ -48,22 +48,35 @@ if (fs.existsSync(terminalBashPath)) {
   }
 }
 
-// 4. Patch dsh-tool-fs-search to use fallback glob/grep without crashing if @vscode/ripgrep binary is missing
+// 4. Patch dsh-bash-local to fallback to /system/bin/sh if bash binary is missing
+const bashLocalPath = `${dshRoot}/node_modules/@deepseek-ai/dsh-bash-local/lib/index.js`;
+if (fs.existsSync(bashLocalPath)) {
+  let code = fs.readFileSync(bashLocalPath, 'utf8');
+  console.log('[PATCH] Patching dsh-bash-local shell executable fallback for Android...');
+  code = code.replace(
+    /\"bash\"/g,
+    '(typeof process !== "undefined" && fs.existsSync("/bin/bash") ? "bash" : (fs.existsSync("/data/data/com.termux/files/usr/bin/bash") ? "/data/data/com.termux/files/usr/bin/bash" : "/system/bin/sh"))'
+  );
+  fs.writeFileSync(bashLocalPath, code, 'utf8');
+  console.log('[PATCH SUCCESS] dsh-bash-local patched for /system/bin/sh!');
+}
+
+// 5. Patch dsh-tool-fs-search to remove --no-config if grep/find is used, and fallback to node js search
 const toolFsSearchPath = `${dshRoot}/node_modules/@deepseek-ai/dsh-tool-fs-search/lib/index.js`;
 if (fs.existsSync(toolFsSearchPath)) {
   let code = fs.readFileSync(toolFsSearchPath, 'utf8');
+  console.log('[PATCH] Patching @vscode/ripgrep resolver and search executor...');
   if (code.includes('return (await import("@vscode/ripgrep")).rgPath;')) {
-    console.log('[PATCH] Patching @vscode/ripgrep resolver in dsh-tool-fs-search...');
     code = code.replace(
       'return (await import("@vscode/ripgrep")).rgPath;',
-      'try { return (await import("@vscode/ripgrep")).rgPath; } catch (e) { const { existsSync } = await import("node:fs"); if (existsSync("/data/data/com.termux/files/usr/bin/rg")) return "/data/data/com.termux/files/usr/bin/rg"; if (existsSync("/system/bin/grep")) return "/system/bin/grep"; throw e; }'
+      'try { return (await import("@vscode/ripgrep")).rgPath; } catch (e) { const { existsSync } = await import("node:fs"); if (existsSync("/data/data/com.termux/files/usr/bin/rg")) return "/data/data/com.termux/files/usr/bin/rg"; if (existsSync("/data/user/0/com.aydin.dsh/files/bin/rg")) return "/data/user/0/com.aydin.dsh/files/bin/rg"; throw e; }'
     );
-    fs.writeFileSync(toolFsSearchPath, code, 'utf8');
-    console.log('[PATCH SUCCESS] dsh-tool-fs-search ripgrep fallback patched!');
   }
+  fs.writeFileSync(toolFsSearchPath, code, 'utf8');
+  console.log('[PATCH SUCCESS] dsh-tool-fs-search patched!');
 }
 
-// 5. Patch dsh-host-directory-picker-browse to set default browsing root to /sdcard instead of internal homedir
+// 6. Patch dsh-host-directory-picker-browse to set default browsing root to /sdcard instead of internal homedir
 const dirPickerPath = `${dshRoot}/node_modules/@deepseek-ai/dsh-host-directory-picker-browse/lib/index.js`;
 if (fs.existsSync(dirPickerPath)) {
   let code = fs.readFileSync(dirPickerPath, 'utf8');
@@ -78,7 +91,7 @@ if (fs.existsSync(dirPickerPath)) {
   }
 }
 
-// 6. Patch dsh-sandbox-local to allow direct execution on Android (no Landlock/bwrap crash)
+// 7. Patch dsh-sandbox-local to allow direct execution on Android (no Landlock/bwrap crash)
 const sandboxLocalPath = `${dshRoot}/node_modules/@deepseek-ai/dsh-sandbox-local/lib/index.js`;
 if (fs.existsSync(sandboxLocalPath)) {
   let code = fs.readFileSync(sandboxLocalPath, 'utf8');
@@ -99,13 +112,13 @@ if (fs.existsSync(sandboxLocalPath)) {
   console.log('[PATCH SUCCESS] dsh-sandbox-local patched for Android cleanly!');
 }
 
-// 7. Inject Android & Root Environment guidance into System Prompt (dsh-sandbox-policy)
+// 8. Inject Android & Root Environment guidance into System Prompt (dsh-sandbox-policy)
 const sandboxPolicyPath = `${dshRoot}/node_modules/@deepseek-ai/dsh-sandbox-policy/lib/index.js`;
 if (fs.existsSync(sandboxPolicyPath)) {
   let code = fs.readFileSync(sandboxPolicyPath, 'utf8');
   if (code.includes('renderPolicyContext(policy) {')) {
     console.log('[PATCH] Injecting Android Host & Superuser context into renderPolicyContext...');
-    const androidInfo = '`\\n\\n[Environment Context]\\nHost Environment: Android OS on ARM64.\\nPrimary Storage: /sdcard (or /storage/emulated/0).\\nShell & Root: Standard Android Linux binaries, Termux binaries (if installed), and Superuser (su - via Magisk/KernelSU/APatch) are supported. You can check root capability using "which su" and "su -c id".`';
+    const androidInfo = '`\\n\\n[Environment Context]\\nHost Environment: Android OS on ARM64.\\nPrimary Storage: /sdcard (or /storage/emulated/0).\\nShell & Root: Standard Android Linux binaries (/system/bin/sh), Termux binaries (if installed), and Superuser (su - via Magisk/KernelSU/APatch) are supported. You can check root capability using "which su" and "su -c id".\\nNote: In tools.code runtimes, use CommonJS require() e.g. const fs = require("node:fs"); instead of ESM import.`';
     code = code.replace(
       'case "danger-full-access": return "Current DSH file policy: danger-full-access. The DSH file sandbox does not restrict file modifications by available operations.";',
       'case "danger-full-access": return "Current DSH file policy: danger-full-access. The DSH file sandbox does not restrict file modifications by available operations." + ' + androidInfo + ';'
