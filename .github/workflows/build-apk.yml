@@ -96,7 +96,10 @@ jobs:
             cp -f $GITHUB_WORKSPACE/.github/scripts/cordis-hmr-adapter.js /tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/cordis-plugin-hmr/lib/index.js
           fi
 
-          # Safe Android Sandbox & Hardlink Patch (bypass bwrap/landlock crash and enable full root access)
+          # Install ripgrep linux-arm64 specifically for android-arm64 execution
+          npm install --prefix /tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh @vscode/ripgrep-linux-arm64@1.18.0 --no-audit --no-fund || true
+
+          # Safe Android Sandbox, Hardlink, Shell & Ripgrep Patch
           node $GITHUB_WORKSPACE/.github/scripts/patch-sandbox.js
 
           rm -rf /tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh/node_modules/node-pty/prebuilds/win32* || true
@@ -134,17 +137,18 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.5.7
-          name: "DSH Mobile v1.5.7 (Clean Syntax & Seamless Sandbox Passthrough)"
+          tag_name: v1.5.8
+          name: "DSH Mobile v1.5.8 (Fix Write Tool Hardlinks, Spawn Bash & Glob/Ripgrep)"
           body: |
-            ## 🚀 DSH Mobile Standalone Release v1.5.7
-            - 🛡️ **Fix SyntaxError: Identifier 'selected' has already been declared**:
-              - Memperbaiki parsing sintaks sandbox passthrough sehingga engine Node.js v24 boot 100% mulus tanpa crash loader.
-            - ⏳ **Smart Permission Gate**:
-              - Menunggu persetujuan izin storage dari user sebelum booting server.
+            ## 🚀 DSH Mobile Standalone Release v1.5.8
+            - ✍️ **Fix `tools.write` Atomic Link Error (EACCES)**:
+              - Mengganti pemanggilan `linkFile` pada modul `dsh-fs-local` dengan `rename`/`copyFile` sehingga agent dapat menulis file HTML, JS, CSS, Python, dll secara lancar baik di `/sdcard` maupun di penyimpanan aplikasi.
+            - 🐚 **Fix `tools.bash` (spawn bash EACCES)**:
+              - Menambahkan fallback shell ke `/system/bin/sh` bawaan Android dan biner Termux jika `/bin/bash` standar Linux tidak tersedia di host Android.
+            - 🔍 **Fix `tools.glob` & `tools.grep` (Ripgrep Launch Failed)**:
+              - Memasukkan biner ARM64 `@vscode/ripgrep-linux-arm64` dan fallback grep bawaan sistem sehingga pencarian file & konten berjalan 100% mulus.
             - 👑 **Tombol "👑 Root SU" di Toolbar**
-            - 🧠 **Android OS ARM64 & Root Environment System Prompt Context**
-            - 📂 **Default Root Internal Storage (`/sdcard`) Workspace**
+            - 🧠 **Android OS ARM64 System Prompt Awareness**
             - 🗜️ **Tersedia Versi ZIP Hemat Kuota**: `dsh-mobile-compressed.zip`
           files: |
             app/build/outputs/apk/debug/app-debug.apk
