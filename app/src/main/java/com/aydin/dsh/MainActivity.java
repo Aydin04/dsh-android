@@ -85,8 +85,8 @@ public class MainActivity extends AppCompatActivity {
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean isLoaded = false;
-    private int currentZoom = 60;
-    private boolean isDesktopMode = true;
+    private int currentZoom = 100;
+    private boolean isDesktopMode = false;
     private boolean isBarVisible = false;
     private final StringBuilder logAccumulator = new StringBuilder();
 
@@ -140,8 +140,8 @@ public class MainActivity extends AppCompatActivity {
         btnLogs = findViewById(R.id.btnLogs);
 
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        currentZoom = prefs.getInt(KEY_ZOOM_LEVEL, 60);
-        isDesktopMode = prefs.getBoolean(KEY_DESKTOP_MODE, true);
+        currentZoom = prefs.getInt(KEY_ZOOM_LEVEL, 100);
+        isDesktopMode = prefs.getBoolean(KEY_DESKTOP_MODE, false);
         isBarVisible = prefs.getBoolean(KEY_BAR_VISIBLE, false);
 
         setupButtons();
@@ -253,32 +253,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void adjustZoom(int delta) {
-        currentZoom = Math.max(30, Math.min(150, currentZoom + delta));
-        applyViewportAndZoom();
+        currentZoom = Math.max(50, Math.min(200, currentZoom + delta));
+        applyNativeZoom();
         getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .edit().putInt(KEY_ZOOM_LEVEL, currentZoom).apply();
     }
 
-    private void applyViewportAndZoom() {
-        double scaleFactor = currentZoom / 100.0;
-        int targetWidth = isDesktopMode ? 1280 : 400;
-
-        String js = "(() => {" +
-                "  let meta = document.querySelector('meta[name=\"viewport\"]');" +
-                "  if (!meta) {" +
-                "    meta = document.createElement('meta');" +
-                "    meta.name = 'viewport';" +
-                "    document.head.appendChild(meta);" +
-                "  }" +
-                "  meta.content = 'width=" + targetWidth + ", initial-scale=" + scaleFactor + ", minimum-scale=0.1, maximum-scale=3.0, user-scalable=yes';" +
-                "  document.documentElement.style.width = '" + targetWidth + "px';" +
-                "  document.body.style.width = '" + targetWidth + "px';" +
-                "  document.documentElement.style.minWidth = '" + targetWidth + "px';" +
-                "  document.body.style.minWidth = '" + targetWidth + "px';" +
-                "  document.documentElement.style.zoom = '" + scaleFactor + "';" +
-                "  document.body.style.zoom = '" + scaleFactor + "';" +
-                "})();";
-        webView.evaluateJavascript(js, null);
+    private void applyNativeZoom() {
+        WebSettings settings = webView.getSettings();
+        settings.setTextZoom(currentZoom);
         updateZoomDisplay();
     }
 
@@ -421,6 +404,7 @@ public class MainActivity extends AppCompatActivity {
         settings.setDisplayZoomControls(false);
 
         applyModeSettings();
+        applyNativeZoom();
 
         webView.addJavascriptInterface(new WebAppInterface(), "AndroidBridge");
 
@@ -434,7 +418,7 @@ public class MainActivity extends AppCompatActivity {
                     webView.setVisibility(View.VISIBLE);
                     floatingDraggableContainer.setVisibility(View.VISIBLE);
                     controlBarScroll.setVisibility(isBarVisible ? View.VISIBLE : View.GONE);
-                    applyViewportAndZoom();
+                    applyNativeZoom();
                 }
             }
 

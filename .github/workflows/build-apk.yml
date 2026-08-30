@@ -132,14 +132,16 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.4.9
-          name: "DSH Mobile v1.4.9 (Desktop Canvas Fix & Dedicated Close Button)"
+          tag_name: v1.5.0
+          name: "DSH Mobile v1.5.0 (Clean Natural Scaling & Perfect Minimize)"
           body: |
-            ## 🚀 DSH Mobile Standalone Release v1.4.9
-            - 🖥️ **Desktop Canvas True Layout Fix (1280px min-width)**:
-              - Memaksa canvas HTML & Body memiliki `min-width: 1280px` dan `width: 1280px` sehingga CSS grid dashboard DeepSeek Harness merender tampilan desktop asli (sidebar di kiri, chatbox luas di kanan) dan tidak memanjang ke bawah.
+            ## 🚀 DSH Mobile Standalone Release v1.5.0
+            - 📱 **Clean Natural Scaling**:
+              - Mengembalikan render natural WebView tanpa forced CSS zoom yang mengecilkan/membesarkan secara ekstrem.
+              - Tampilan mobile normal 100% dan mode desktop bekerja selayaknya desktop browser standar.
             - ✕ **Dedicated Close / Minimize Button**:
-              - Menambahkan tombol merah `✕` di toolbar dan tombol `ImageButton` floating bulat untuk membuka/menutup toolbar dengan instan dan pasti.
+              - Tombol merah `✕` di toolbar untuk menutup/meminimize toolbar dengan 1 klik pasti.
+              - Tombol floating bulat biru `⚙️` terpisah untuk membuka toolbar & bisa digeser (*drag*) bebas.
             - ✋ **Draggable Floating Control Bar**
             - 🔄 **Tombol Refresh Dashboard & Plugin Manager**
             - 🗜️ **Tersedia Versi ZIP Hemat Kuota**: `dsh-mobile-compressed.zip`
