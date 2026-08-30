@@ -216,7 +216,6 @@ public class LocalEngineService extends Service {
             );
             pb.directory(filesDir);
             pb.environment().put("HOME", filesDir.getAbsolutePath());
-            pb.environment().put("NODE_OPTIONS", "--expose-internals");
             pb.environment().put("LD_LIBRARY_PATH", libDir.getAbsolutePath());
             pb.environment().put("NODE_PATH", new File(dshDir, "node_modules").getAbsolutePath());
             pb.environment().put("PATH", binDir.getAbsolutePath() + ":/system/bin:/system/xbin");
