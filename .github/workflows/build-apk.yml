@@ -77,13 +77,16 @@ jobs:
           echo "2. Installing and Packaging Full DeepSeek Harness Core..."
           NODE_OPTIONS="--max-old-space-size=4096" npm install -g @deepseek-ai/dsh --omit=dev --no-audit --no-fund --prefix /tmp/global_dsh
           
-          echo "3. Cleaning unnecessary dev artifacts before packing..."
-          find /tmp/global_dsh -name "*.d.ts" -delete || true
-          find /tmp/global_dsh -name "*.map" -delete || true
-          find /tmp/global_dsh -name "*.md" -not -name "README.md" -delete || true
-          find /tmp/global_dsh -type d -name "test" -prune -exec rm -rf {} + || true
-          find /tmp/global_dsh -type d -name "tests" -prune -exec rm -rf {} + || true
-          find /tmp/global_dsh -type d -name "docs" -prune -exec rm -rf {} + || true
+          echo "3. Removing other platforms (win32, darwin, linux-x64) and dev artifacts..."
+          rm -rf /tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh/node_modules/node-pty/prebuilds/win32* || true
+          rm -rf /tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh/node_modules/node-pty/prebuilds/darwin* || true
+          rm -rf /tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh/node_modules/node-pty/prebuilds/linux-x64* || true
+          rm -rf /tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh/node_modules/@img/sharp-libvips-linux-x64 || true
+          rm -rf /tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh/node_modules/@koromix/koffi-linux-x64 || true
+          rm -rf /tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh/node_modules/koffi/build/koffi/linux_x64 || true
+
+          find /tmp/global_dsh -type f \( -name "*.d.ts" -o -name "*.map" -o -name "*.md" -o -name "LICENSE*" -o -name "CHANGELOG*" \) -delete || true
+          find /tmp/global_dsh -type d \( -name "test" -o -name "tests" -o -name "docs" -o -name "example" -o -name "examples" \) -prune -exec rm -rf {} + || true
           
           tar -czf $GITHUB_WORKSPACE/app/src/main/assets/engine/dsh-core.tar.gz -C /tmp/global_dsh/lib/node_modules/@deepseek-ai dsh
           
@@ -100,22 +103,26 @@ jobs:
         run: |
           gradle assembleDebug --no-build-cache --stacktrace
 
-      - name: Check APK contents and Verify Size
+      - name: Check APK contents and Compress ZIP
         run: |
           ls -lh app/build/outputs/apk/debug/app-debug.apk
-          unzip -l app/build/outputs/apk/debug/app-debug.apk | grep assets/engine/
+          cd app/build/outputs/apk/debug/
+          zip -9 dsh-mobile-compressed.zip app-debug.apk
+          ls -lh dsh-mobile-compressed.zip
 
       - name: Create Release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.3.6
-          name: "DSH Mobile v1.3.6 (Compressed ~100MB Bundle & Native Prebuild Fix)"
+          tag_name: v1.3.7
+          name: "DSH Mobile v1.3.7 (Ultra Slim Bundle + Compressed ZIP)"
           body: |
-            ## 🚀 DSH Mobile Standalone Release v1.3.6
-            - 📦 **High-Efficiency Gzip Packaging**: Ukuran APK berkurang dari 406MB menjadi ~100MB (hemat kuota 75%)
-            - ⚡ **Standalone Engine**: Auto-extract & auto-boot DeepSeek Harness on-device
-            - 🌐 **100% Official DeepSeek Harness Dashboard On-Device**
-          files: app/build/outputs/apk/debug/*.apk
+            ## 🚀 DSH Mobile Standalone Release v1.3.7
+            - 🗜️ **Tersedia Versi ZIP Super Hemat Kuota**: `dsh-mobile-compressed.zip`
+            - 📦 **Pruned Non-Android Modules**: Ukuran bundle dipangkas drastis (hanya modul ARM64 & Android)
+            - ⚡ **Auto Engine Boot**: Standalone DeepSeek Harness di Android
+          files: |
+            app/build/outputs/apk/debug/app-debug.apk
+            app/build/outputs/apk/debug/dsh-mobile-compressed.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

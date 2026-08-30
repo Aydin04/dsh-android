@@ -18,9 +18,6 @@ android {
         }
     }
 
-    androidResources {
-        noCompress 'gz', 'tar', 'tgz', 'xz'
-    }
 
     buildTypes {
         release {
