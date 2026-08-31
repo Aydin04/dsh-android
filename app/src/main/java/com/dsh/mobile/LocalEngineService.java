@@ -410,8 +410,6 @@ public class LocalEngineService extends Service {
             emitLog("[SERVER] DSH process spawned. Streaming logs:");
 
             // Spawn AtomicRouter if installed
-            File atomicDir = new File(filesDir, "atomic-router");
-            File atomicBin = new File(atomicDir, "bin/omniroute.mjs");
             if (atomicBin.exists()) {
                 emitLog("[ATOMIC] Launching AtomicRouter on port 20128...");
                 try {
