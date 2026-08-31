@@ -133,9 +133,6 @@ public class LocalEngineService extends Service {
                             out.write(buf, 0, len);
                         }
                     }
-                    shShimFile.setReadable(true, false);
-                    shShimFile.setExecutable(true, false);
-                    try { Runtime.getRuntime().exec("chmod 755 " + shShimFile.getAbsolutePath()).waitFor(); } catch (Exception ignored) {}
                     try (InputStream in = getAssets().open("sh_shim.sh");
                          OutputStream out = new FileOutputStream(bashShimFile)) {
                         byte[] buf = new byte[8192];
@@ -147,6 +144,18 @@ public class LocalEngineService extends Service {
                     bashShimFile.setReadable(true, false);
                     bashShimFile.setExecutable(true, false);
                     try { Runtime.getRuntime().exec("chmod 755 " + bashShimFile.getAbsolutePath()).waitFor(); } catch (Exception ignored) {}
+
+                    // Create universal pnpm wrapper script
+                    File pnpmShimFile = new File(binDir, "pnpm");
+                    try (FileWriter fw = new FileWriter(pnpmShimFile)) {
+                        fw.write("#!/system/bin/sh\n");
+                        fw.write("export HOME=\"" + filesDir.getAbsolutePath() + "\"\n");
+                        fw.write("export LD_LIBRARY_PATH=\"" + libDir.getAbsolutePath() + "\"\n");
+                        fw.write("exec \"" + nodeFile.getAbsolutePath() + "\" \"" + filesDir.getAbsolutePath() + "/dsh/node_modules/pnpm/bin/pnpm.cjs\" \"$@\"\n");
+                    } catch (Exception ignored) {}
+                    pnpmShimFile.setReadable(true, false);
+                    pnpmShimFile.setExecutable(true, false);
+                    try { Runtime.getRuntime().exec("chmod 755 " + pnpmShimFile.getAbsolutePath()).waitFor(); } catch (Exception ignored) {}
 
                     // Extract Alpine Rootfs if bundled
                     File rootfsDir = new File(filesDir, "rootfs");

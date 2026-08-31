@@ -96,8 +96,8 @@ jobs:
           tar -czf $GITHUB_WORKSPACE/app/src/main/assets/engine/engine-libs.tar.gz .
           
           cd $GITHUB_WORKSPACE
-          echo "2. Installing and Packaging Full DeepSeek Harness Core..."
-          NODE_OPTIONS="--max-old-space-size=4096" npm install -g @deepseek-ai/dsh --omit=dev --no-audit --no-fund --prefix /tmp/global_dsh
+          echo "2. Installing and Packaging Full DeepSeek Harness Core and pnpm package manager..."
+          NODE_OPTIONS="--max-old-space-size=4096" npm install -g @deepseek-ai/dsh pnpm --omit=dev --no-audit --no-fund --prefix /tmp/global_dsh
           
           echo "3. Removing other platforms (win32, darwin, linux-x64) and dev artifacts..."
           # Set up android-arm64 for node-pty
@@ -165,13 +165,16 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.9.1
-          name: "DSH Mobile v1.9.1 (Fix ESM Require Error in Agent Runtime & Universal Root Engine)"
+          tag_name: v1.9.2
+          name: "DSH Mobile v1.9.2 (Full Embedded PNPM Plugin Engine, GitHub Repo Installer & Multi-Root SU)"
           body: |
-            ## 🚀 DSH Mobile Release v1.9.1
-            - 🛠️ **Fix Agent Runtime Error (`require is not defined`)**:
-              - Mengganti pemanggilan `require("node:fs")` di modul ESM `dsh-bash-local` dan `dsh-bash-sandbox` dengan native ES module `import { existsSync } from "node:fs"` sehingga pemanggilan tool bash dan runtime worker tidak crash.
-            - 👑 **Universal Multi-Root SU**: Mendukung Magisk (`/product/bin/magisk`), KernelSU, KernelSU Next, APatch, dan fallback PRoot Alpine Linux.
+            ## 🚀 DSH Mobile Release v1.9.2
+            - 🔌 **Full Embedded PNPM Engine for Dynamic Plugins**:
+              - Mengintegrasikan CLI `pnpm` langsung di dalam package APK (`$APP_DIR/files/dsh/node_modules/pnpm`).
+              - Pemasangan plugin via Toolbar **`🔌 Plugin`** (misal `github:PerryLink/dsh-defend` atau `https://github.com/PerryLink/dsh-defend`) sekarang benar-benar mengunduh, mengompilasi, dan menyimpan plugin ke `.dsh/profiles/web/package.json` secara permanen.
+            - 🛠️ **Fix ESM Require Error in Agent Runtime Worker**:
+              - Menghilangkan exception `require is not defined` saat eksekusi tool perintah agent.
+            - 👑 **Universal Multi-Root SU**: Magisk (`/product/bin/magisk`), KernelSU, KernelSU Next, APatch, dan fallback PRoot Alpine Linux.
             - 🎨 **Aesthetic DeepSeek Splash**: Progress bar 0-100% dan rotating log.
             - 💬 **Chat Input (Enter = Newline)**: Tombol send untuk kirim.
             - 🌐 **Tombol Node di Toolbar (Remote VPS / Server DSH)**.

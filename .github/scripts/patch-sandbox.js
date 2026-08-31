@@ -250,3 +250,40 @@ if (fs.existsSync(webDistPath)) {
     console.log('[PATCH SUCCESS] dsh-web-frontend index.html patched for Enter-as-newline!');
   }
 }
+
+// 12. Patch dsh plugin runner to invoke pnpm via node with android-safe paths
+const dshLibDir = `${dshRoot}/lib`;
+if (fs.existsSync(dshLibDir)) {
+  const pluginFiles = fs.readdirSync(dshLibDir).filter(f => f.startsWith('plugin-') && f.endsWith('.js'));
+  for (const pFile of pluginFiles) {
+    const fullPath = `${dshLibDir}/${pFile}`;
+    let pCode = fs.readFileSync(fullPath, 'utf8');
+    if (pCode.includes('spawnSync("pnpm",')) {
+      console.log(`[PATCH] Patching pnpm spawn in ${pFile}...`);
+      const pnpmShim = `
+function __resolvePnpmArgs(args, cwd) {
+  const candidates = [
+    "/data/user/0/com.dsh.mobile/files/dsh/bin/pnpm.cjs",
+    "/data/data/com.dsh.mobile/files/dsh/bin/pnpm.cjs",
+    "/data/user/0/com.dsh.mobile/files/dsh/node_modules/pnpm/bin/pnpm.cjs",
+    "/data/data/com.dsh.mobile/files/dsh/node_modules/pnpm/bin/pnpm.cjs",
+    "/tmp/global_dsh/lib/node_modules/pnpm/bin/pnpm.cjs"
+  ];
+  for (const c of candidates) {
+    if (existsSync(c)) {
+      return { exe: process.execPath, args: [c, ...args] };
+    }
+  }
+  return { exe: "pnpm", args };
+}
+`;
+      pCode = pnpmShim + pCode;
+      pCode = pCode.replace(
+        'const result = spawnSync("pnpm", args.map((argument) => anchorPathSpec(argument, process.cwd())), {',
+        'const __p = __resolvePnpmArgs(args.map((argument) => anchorPathSpec(argument, process.cwd())), dir);\n\tconst result = spawnSync(__p.exe, __p.args, {'
+      );
+      fs.writeFileSync(fullPath, pCode, 'utf8');
+      console.log(`[PATCH SUCCESS] ${pFile} patched for Android pnpm!`);
+    }
+  }
+}
