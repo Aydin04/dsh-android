@@ -152,7 +152,9 @@ jobs:
             rm -rf node_modules/playwright || true
             find . -type f \( -name "*.map" -o -name "*.d.ts" -o -name "*.flow" \) -delete || true
             cd /tmp/atomic_pack
-            tar -czf $GITHUB_WORKSPACE/app/src/main/assets/engine/atomic-router.tar.gz atomic-router
+            tar -czf /tmp/atomic-router-full.tar.gz atomic-router
+            split -b 150M /tmp/atomic-router-full.tar.gz $GITHUB_WORKSPACE/app/src/main/assets/engine/atomic-router.part_
+            rm -f /tmp/atomic-router-full.tar.gz
           fi
           
           echo "=== ASSETS IN WORKSPACE ENGINE ==="

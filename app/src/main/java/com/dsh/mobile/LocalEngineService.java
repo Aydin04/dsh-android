@@ -318,49 +318,62 @@ public class LocalEngineService extends Service {
             File atomicDir = new File(filesDir, "atomic-router");
             File atomicBin = new File(atomicDir, "bin/omniroute.mjs");
             if (!atomicBin.exists() || isNewAppVersion) {
-                String atomicAsset = "engine/atomic-router.tar.gz";
-                boolean isAtomicGzip = true;
                 try {
                     String[] engineAssets = getAssets().list("engine");
-                    if (engineAssets != null) {
-                        List<String> assetList = Arrays.asList(engineAssets);
-                        if (assetList.contains("atomic-router.tar.gz")) {
-                            atomicAsset = "engine/atomic-router.tar.gz";
-                            isAtomicGzip = true;
-                        } else if (assetList.contains("atomic-router.tar")) {
-                            atomicAsset = "engine/atomic-router.tar";
-                            isAtomicGzip = false;
+                    List<String> assetList = engineAssets != null ? Arrays.asList(engineAssets) : Collections.emptyList();
+                    
+                    List<InputStream> parts = new ArrayList<>();
+                    boolean isGzip = true;
+                    
+                    // Check for multi-part chunks
+                    List<String> partNames = new ArrayList<>();
+                    for (String name : assetList) {
+                        if (name.startsWith("atomic-router.part_") || name.startsWith("atomic-part-")) {
+                            partNames.add(name);
                         }
                     }
-                } catch (Exception ignored) {}
+                    Collections.sort(partNames);
+                    
+                    if (!partNames.isEmpty()) {
+                        emitLog("[EXTRACT] Found " + partNames.size() + " split chunks for AtomicRouter. Combining streams...");
+                        for (String part : partNames) {
+                            parts.add(getAssets().open("engine/" + part));
+                        }
+                    } else if (assetList.contains("atomic-router.tar.gz")) {
+                        parts.add(getAssets().open("engine/atomic-router.tar.gz"));
+                    } else if (assetList.contains("atomic-router.tar")) {
+                        parts.add(getAssets().open("engine/atomic-router.tar"));
+                        isGzip = false;
+                    }
 
-                try (InputStream rawIn = getAssets().open(atomicAsset)) {
-                    emitLog("[EXTRACT] Extracting AtomicRouter engine from " + atomicAsset + "...");
-                    InputStream inStream = isAtomicGzip ? new GzipCompressorInputStream(new java.io.BufferedInputStream(rawIn)) : rawIn;
-                    try (TarArchiveInputStream tarIn = new TarArchiveInputStream(inStream)) {
-                        TarArchiveEntry entry;
-                        int aCount = 0;
-                        while ((entry = tarIn.getNextTarEntry()) != null) {
-                            File outputFile = new File(filesDir, entry.getName());
-                            if (entry.isDirectory()) {
-                                if (!outputFile.exists()) outputFile.mkdirs();
-                            } else {
-                                File parent = outputFile.getParentFile();
-                                if (parent != null && !parent.exists()) parent.mkdirs();
-                                try (OutputStream out = new FileOutputStream(outputFile)) {
-                                    byte[] buf = new byte[32768];
-                                    int len;
-                                    while ((len = tarIn.read(buf)) != -1) {
-                                        out.write(buf, 0, len);
+                    if (!parts.isEmpty()) {
+                        InputStream combinedIn = new SequenceInputStream(Collections.enumeration(parts));
+                        InputStream inStream = isGzip ? new GzipCompressorInputStream(new java.io.BufferedInputStream(combinedIn)) : combinedIn;
+                        try (TarArchiveInputStream tarIn = new TarArchiveInputStream(inStream)) {
+                            TarArchiveEntry entry;
+                            int aCount = 0;
+                            while ((entry = tarIn.getNextTarEntry()) != null) {
+                                File outputFile = new File(filesDir, entry.getName());
+                                if (entry.isDirectory()) {
+                                    if (!outputFile.exists()) outputFile.mkdirs();
+                                } else {
+                                    File parent = outputFile.getParentFile();
+                                    if (parent != null && !parent.exists()) parent.mkdirs();
+                                    try (OutputStream out = new FileOutputStream(outputFile)) {
+                                        byte[] buf = new byte[32768];
+                                        int len;
+                                        while ((len = tarIn.read(buf)) != -1) {
+                                            out.write(buf, 0, len);
+                                        }
                                     }
                                 }
+                                aCount++;
+                                if (aCount % 2000 == 0) {
+                                    emitLog("[EXTRACT ATOMIC] Unpacked " + aCount + " files...");
+                                }
                             }
-                            aCount++;
-                            if (aCount % 2000 == 0) {
-                                emitLog("[EXTRACT ATOMIC] Unpacked " + aCount + " files...");
-                            }
+                            emitLog("[EXTRACT SUCCESS] Extracted total " + aCount + " AtomicRouter files.");
                         }
-                        emitLog("[EXTRACT SUCCESS] Extracted total " + aCount + " AtomicRouter files.");
                     }
                 } catch (Exception err) {
                     emitLog("[ATOMIC EXTRACT ERROR] " + err.getClass().getSimpleName() + ": " + err.getMessage());
