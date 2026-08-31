@@ -148,36 +148,33 @@ jobs:
         run: |
           gradle assembleDebug --no-build-cache --stacktrace
 
-      - name: Check APK contents and Compress ZIP
+      - name: Check APK contents, Determine Release Tag, and Compress ZIP
+        id: release_info
         run: |
           ls -lh app/build/outputs/apk/debug/app-debug.apk
           cd app/build/outputs/apk/debug/
           zip -9 dsh-mobile-compressed.zip app-debug.apk
           ls -lh dsh-mobile-compressed.zip
 
+          # Extract DSH version from npm package
+          DSH_VER=$(node -p "try { require('/tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh/package.json').version } catch(e) { '1.9.0' }")
+          echo "dsh_version=$DSH_VER" >> $GITHUB_OUTPUT
+          echo "tag=v1.9.0-dsh-$DSH_VER" >> $GITHUB_OUTPUT
+
       - name: Create Release
-        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule'
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.9.0
-          name: "DSH Mobile v1.9.0 (Aesthetic Splash, Real-time Progress, Remote Node VPS & Chat Enter Fix)"
+          name: "DSH Mobile v1.9.0 (Upstream DSH Engine v${{ steps.release_info.outputs.dsh_version }})"
           body: |
-            ## 🚀 DSH Mobile Standalone Release v1.9.0
-            - 🎨 **Aesthetic DeepSeek Splash & Boot Screen**:
-              - Tampilan loading modern dengan logo resmi DeepSeek, progress bar 0-100% real-time yang halus, dan rotating log status 1-baris.
-              - Log mendalam dapat dibuka/disembunyikan kapan saja melalui tombol **📋 Detail Log**.
-            - 💬 **Chat Input Fix (Enter = Newline)**:
-              - Menekan tombol **Enter** di keyboard sekarang membuat baris baru (*newline*) di kolom chat textarea. Pesan hanya terkirim ketika tombol Kirim (Send) ditekan secara eksplisit.
-            - 🌐 **Tombol Node di Toolbar (Remote VPS / Multi-Node DSH)**:
-              - Tombol **`🌐 Node`** kini tersedia langsung di floating toolbar dan menu awal.
-              - Memungkinkan Anda menghubungkan aplikasi Android ke DeepSeek Harness yang berjalan di VPS / Server Remote (atau fallback instan ke Local HP `127.0.0.1:3080`).
+            ## 🚀 DSH Mobile Release v1.9.0
+            - 🤖 **Bundled Upstream Core Engine**: `@deepseek-ai/dsh@${{ steps.release_info.outputs.dsh_version }}`
+            - 🎨 **Aesthetic DeepSeek Splash & Boot Screen** (Progress 0-100% real-time & clean rotating log).
+            - 💬 **Chat Input Fix (Enter = Newline)** (Send button untuk kirim).
+            - 🌐 **Tombol Node di Toolbar (Remote VPS / Server DSH)**.
             - 👑 **Universal Multi-Root SU Candidate Matrix** (Magisk, KernelSU, KernelSU Next, APatch, `/product/bin/magisk`).
-            - 🐧 **Full PRoot + Alpine Linux Fallback** untuk mode non-root.
-            - 🗜️ **Tersedia Versi ZIP Hemat Kuota**: `dsh-mobile-compressed.zip`
-            - 💾 **Root State & Toolbar Persistence** (tersimpan permanen).
-            - 🐧 **Full Embedded PRoot + Alpine Linux Environment (`apk add`)**
-            - 📝 **Native In-App Configuration Editor (`📝 Config`)**
-            - 🛡️ **Full Permissions & Direct `/sdcard` Workspace**
+            - 🐧 **Full PRoot + Alpine Linux Fallback** untuk non-root.
             - 🗜️ **Tersedia Versi ZIP Hemat Kuota**: `dsh-mobile-compressed.zip`
           files: |
             app/build/outputs/apk/debug/app-debug.apk
