@@ -166,15 +166,15 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.9.6
-          name: "DSH Mobile v1.9.6 (Bundled PNPM in Core Package & Live Plugin Installer Terminal)"
+          tag_name: v1.9.7
+          name: "DSH Mobile v1.9.7 (Fix Cordis ESM Module Loader for Dynamic Profile Plugins)"
           body: |
-            ## 🚀 DSH Mobile Release v1.9.6
-            - 📦 **Fix Missing PNPM Package in Core Archive**:
-              - Mengintegrasikan package `pnpm` langsung ke dalam dependensi core DSH (`/files/dsh/node_modules/pnpm`) di dalam tarball `dsh-core.tar.gz`.
-              - Menyelesaikan error `Cannot find module .../node_modules/pnpm/bin/pnpm.cjs` saat instalasi plugin via toolbar.
+            ## 🚀 DSH Mobile Release v1.9.7
+            - 🛠️ **Fix Cordis ESM Module Resolution for Dynamic Plugins**:
+              - Mem-patch `@deepseek-ai/cordis-plugin-loader` agar saat memuat plugin di profil web (`dsh-defend`, dll.), jika resolver standar Node.js gagal mengenali bare import, loader otomatis me-resolve path modul langsung dari `.dsh/profiles/web/node_modules/<plugin>/lib/index.js`.
+              - Menyelesaikan error `Cannot find package 'dsh-defend' imported from cordis-plugin-loader`.
+            - 📦 **Embedded PNPM Engine**: `pnpm` terintegrasi langsung di dalam archive APK.
             - 📺 **Live Interactive Plugin Terminal**: Output instalasi dan compile logs tampil secara real-time.
-            - 🔌 **Dynamic NODE_PATH Plugin Resolution**: Memuat `.dsh/profiles/web/node_modules`.
             - 🔄 **Auto-Migration on Upgrade (Tanpa Perlu Fresh Install)**.
             - 👑 **Universal Multi-Root SU**: Magisk (`/product/bin/magisk`), KernelSU, KernelSU Next, APatch.
             - 🎨 **Aesthetic DeepSeek Splash**: Progress bar 0-100% dan rotating log.

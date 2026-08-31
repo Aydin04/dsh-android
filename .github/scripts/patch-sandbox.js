@@ -287,3 +287,39 @@ function __resolvePnpmArgs(args, cwd) {
     }
   }
 }
+
+// 13. Patch cordis-plugin-loader to resolve plugins from .dsh/profiles/web/node_modules
+const cordisLoaderPath = `${dshRoot}/node_modules/@deepseek-ai/cordis-plugin-loader/lib/index.js`;
+if (fs.existsSync(cordisLoaderPath)) {
+  let cCode = fs.readFileSync(cordisLoaderPath, 'utf8');
+  if (cCode.includes('import(name, getOuterStack) {')) {
+    console.log('[PATCH] Patching cordis-plugin-loader import resolution for Android profiles...');
+    const resolverPatch = `
+\t\t\telse {
+\t\t\t\ttry {
+\t\t\t\t\treturn await import(__rewriteRelativeImportExtension(name));
+\t\t\t\t} catch (err) {
+\t\t\t\t\tconst homeDir = process.env.HOME || "/data/user/0/com.dsh.mobile/files";
+\t\t\t\t\tconst candidates = [
+\t\t\t\t\t\t\`\${homeDir}/.dsh/profiles/web/node_modules/\${name}/lib/index.js\`,
+\t\t\t\t\t\t\`\${homeDir}/.dsh/profiles/web/node_modules/\${name}/index.js\`,
+\t\t\t\t\t\t\`\${homeDir}/.dsh/profiles/web/node_modules/\${name}/dist/index.js\`,
+\t\t\t\t\t\t\`/data/user/0/com.dsh.mobile/files/.dsh/profiles/web/node_modules/\${name}/lib/index.js\`,
+\t\t\t\t\t\t\`/data/data/com.dsh.mobile/files/.dsh/profiles/web/node_modules/\${name}/lib/index.js\`
+\t\t\t\t\t];
+\t\t\t\t\tfor (const c of candidates) {
+\t\t\t\t\t\tif (existsSync(c)) {
+\t\t\t\t\t\t\treturn await import("file://" + c);
+\t\t\t\t\t\t}
+\t\t\t\t\t}
+\t\t\t\t\tthrow err;
+\t\t\t\t}
+\t\t\t}`;
+    cCode = cCode.replace(
+      'else return await import(__rewriteRelativeImportExtension(\n\t\t\t\t/* @vite-ignore */\n\t\t\t\tname\n\t\t\t));',
+      resolverPatch
+    );
+    fs.writeFileSync(cordisLoaderPath, cCode, 'utf8');
+    console.log('[PATCH SUCCESS] cordis-plugin-loader patched for profile plugins!');
+  }
+}
