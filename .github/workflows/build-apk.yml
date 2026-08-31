@@ -142,14 +142,15 @@ jobs:
           curl -s -L "https://github.com/Aydin04/atomic-router/releases/download/v3.8.50/atomic-router-linux-x64.tar.gz" | tar -xz -C /tmp/atomic_pack/atomic-router || true
           if [ -f "/tmp/atomic_pack/atomic-router/server.js" ]; then
             cd /tmp/atomic_pack/atomic-router
-            # Prune non-runtime dev/test tools
+            # Prune non-runtime dev/test tools and heavy multi-platform modules
             rm -rf docs tests images changelog.d contrib docker examples .git || true
             rm -rf node_modules/promptfoo node_modules/@tensorflow node_modules/@oven node_modules/bun node_modules/wordnet-db node_modules/playwright node_modules/playwright-core || true
             rm -rf node_modules/typescript node_modules/prettier node_modules/eslint node_modules/@eslint node_modules/vitest node_modules/c8 node_modules/knip node_modules/@typescript* node_modules/fumadocs* .build/next/node_modules/typescript* 2>/dev/null || true
             
-            # Prune non-ARM64 / non-Linux native binaries
+            # Prune non-ARM64 / non-Linux native binaries and wasm chunks
             find . -type f \( -name "*.dll" -o -name "*.dylib" -o -name "*.exe" \) -delete || true
             find node_modules -type d \( -name "win32" -o -name "darwin" -o -name "x64" -o -name "ia32" -o -name "arm" \) -not -path "*/arm64/*" -exec rm -rf {} + 2>/dev/null || true
+            find node_modules -type f -name "*.node" | grep -v "arm64" | xargs rm -f 2>/dev/null || true
             
             find . -type f \( -name "*.map" -o -name "*.d.ts" -o -name "*.flow" -o -name "LICENSE*" -o -name "CHANGELOG*" \) -delete || true
             cd /tmp/atomic_pack
@@ -187,16 +188,15 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.1.1
-          name: "DSH Mobile v3.1.1 (Slim Lightweight Standalone AtomicRouter + DSH Dual-Engine)"
+          tag_name: v3.1.2
+          name: "DSH Mobile v3.1.2 (Ultra-Slim Dual-Engine APK)"
           body: |
-            ## 🚀 DSH Mobile Release v3.1.1
-            - 🗜️ **Deep-Slimmed Size (~200MB APK)**:
-              - Menghapus compiler dev/test binaries non-runtime (TypeScript, Vitest, Prettier, ESLint).
-              - Menghapus native binaries cross-platform (Windows DLL, macOS dylib, x86_64) dan hanya mempertahankan ARM64 untuk Android.
-              - Mengaktifkan kembali APK deflation standard.
+            ## 🚀 DSH Mobile Release v3.1.2
+            - 🗜️ **Ultra-Slimmed Native Binaries**:
+              - Menghapus seluruh native `.node` compiled binaries untuk macOS/Windows/x86_64.
+              - Mengoptimalkan chunk aset `atomic-router` khusus arsitektur Android `arm64-v8a`.
             - 🔀 **Full Standalone AtomicRouter Engine (Port 20128)**:
-              - Seluruh fitur dashboard AtomicRouter, SQLite storage, API key management, combos, dan live inspector WebSocket aktif 100%.
+              - Menjalankan dashboard UI dan API multi-model routing SQLite secara offline di perangkat.
             - 💾 **Dual Database Backup & Restore**: Backup data DSH (`.dsh/`) dan AtomicRouter (`.atomic-router/`) ke `/sdcard/DSH_Backups/`.
             - ✨ **Comprehensive 1-Click Feature Presets Library**: Preset Multi-Agent Swarm, Full-Power Autonomous, Web Search, dan Context Auto-Pruner.
             - 📝 **Visual File Selector**: Navigasi mudah antara `cordis.patch.yml`, `package.json`, dan `cordis.yml`.
