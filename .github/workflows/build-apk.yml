@@ -97,7 +97,8 @@ jobs:
           
           cd $GITHUB_WORKSPACE
           echo "2. Installing and Packaging Full DeepSeek Harness Core and pnpm package manager..."
-          NODE_OPTIONS="--max-old-space-size=4096" npm install -g @deepseek-ai/dsh pnpm --omit=dev --no-audit --no-fund --prefix /tmp/global_dsh
+          NODE_OPTIONS="--max-old-space-size=4096" npm install -g @deepseek-ai/dsh --omit=dev --no-audit --no-fund --prefix /tmp/global_dsh
+          npm install --prefix /tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh pnpm@10.5.2 --no-audit --no-fund || true
           
           echo "3. Removing other platforms (win32, darwin, linux-x64) and dev artifacts..."
           # Set up android-arm64 for node-pty
@@ -165,13 +166,14 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.9.5
-          name: "DSH Mobile v1.9.5 (Live In-App Plugin Terminal Output & Transparent Progress Logs)"
+          tag_name: v1.9.6
+          name: "DSH Mobile v1.9.6 (Bundled PNPM in Core Package & Live Plugin Installer Terminal)"
           body: |
-            ## 🚀 DSH Mobile Release v1.9.5
-            - 📺 **Live Plugin Installation Console / Terminal**:
-              - Menambahkan pop-up terminal interaktif saat memasang plugin via Toolbar **`🔌 Plugin`**.
-              - Output command pnpm/npm, download package, compile logs, dan exit code ditampilkan baris demi baris secara *real-time* langsung di layar tanpa membuat user bingung/buta proses.
+            ## 🚀 DSH Mobile Release v1.9.6
+            - 📦 **Fix Missing PNPM Package in Core Archive**:
+              - Mengintegrasikan package `pnpm` langsung ke dalam dependensi core DSH (`/files/dsh/node_modules/pnpm`) di dalam tarball `dsh-core.tar.gz`.
+              - Menyelesaikan error `Cannot find module .../node_modules/pnpm/bin/pnpm.cjs` saat instalasi plugin via toolbar.
+            - 📺 **Live Interactive Plugin Terminal**: Output instalasi dan compile logs tampil secara real-time.
             - 🔌 **Dynamic NODE_PATH Plugin Resolution**: Memuat `.dsh/profiles/web/node_modules`.
             - 🔄 **Auto-Migration on Upgrade (Tanpa Perlu Fresh Install)**.
             - 👑 **Universal Multi-Root SU**: Magisk (`/product/bin/magisk`), KernelSU, KernelSU Next, APatch.

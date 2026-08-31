@@ -263,10 +263,10 @@ if (fs.existsSync(dshLibDir)) {
       const pnpmShim = `
 function __resolvePnpmArgs(args, cwd) {
   const candidates = [
-    "/data/user/0/com.dsh.mobile/files/dsh/bin/pnpm.cjs",
-    "/data/data/com.dsh.mobile/files/dsh/bin/pnpm.cjs",
     "/data/user/0/com.dsh.mobile/files/dsh/node_modules/pnpm/bin/pnpm.cjs",
     "/data/data/com.dsh.mobile/files/dsh/node_modules/pnpm/bin/pnpm.cjs",
+    "/data/user/0/com.dsh.mobile/files/dsh/bin/pnpm.cjs",
+    "/data/data/com.dsh.mobile/files/dsh/bin/pnpm.cjs",
     "/tmp/global_dsh/lib/node_modules/pnpm/bin/pnpm.cjs"
   ];
   for (const c of candidates) {
