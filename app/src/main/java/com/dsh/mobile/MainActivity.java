@@ -435,12 +435,12 @@ public class MainActivity extends AppCompatActivity {
 
     private void showPluginManagerDialog() {
         final EditText input = new EditText(this);
-        input.setHint("contoh: github:ben7am1n/dsh-telegram");
+        input.setHint("contoh: dsh-defend atau github:user/repo");
         input.setSingleLine(true);
 
         new AlertDialog.Builder(this)
                 .setTitle("🔌 DSH Plugin Manager")
-                .setMessage("Tambahkan Plugin Cordis / DeepSeek Harness:\n(Aplikasi akan otomatis mengunduh & restart engine)")
+                .setMessage("Masukkan nama package plugin yang ingin dipasang:\n(Contoh: 'dsh-defend' atau 'github:user/repo')\n\nCatatan: Engine akan otomatis menginstal ke profil web dan me-restart server.")
                 .setView(input)
                 .setPositiveButton("Pasang Plugin", (dialog, which) -> {
                     String pluginName = input.getText().toString().trim();
@@ -453,9 +453,17 @@ public class MainActivity extends AppCompatActivity {
                 .show();
     }
 
-    private void installPlugin(String pluginName) {
-        appendLog("\n>>> [PLUGIN] Menginstall plugin: " + pluginName + "...");
-        Toast.makeText(this, "Sedang memasang plugin: " + pluginName, Toast.LENGTH_LONG).show();
+    private void installPlugin(String rawInput) {
+        // Sanitize input if user pasted the full command like "dsh plugin --profile web add dsh-defend"
+        String pluginName = rawInput.trim();
+        if (pluginName.contains(" ")) {
+            String[] parts = pluginName.split("\\s+");
+            pluginName = parts[parts.length - 1]; // take the last argument (package name)
+        }
+
+        final String targetPlugin = pluginName;
+        appendLog("\n>>> [PLUGIN] Menginstall plugin: " + targetPlugin + "...");
+        Toast.makeText(this, "Sedang memasang plugin: " + targetPlugin, Toast.LENGTH_LONG).show();
 
         new Thread(() -> {
             try {
@@ -465,19 +473,25 @@ public class MainActivity extends AppCompatActivity {
                 File dshDir = new File(filesDir, "dsh");
                 File dshBin = new File(dshDir, "lib/bin.js");
 
+                // Ensure .dsh/profiles/web directory exists
+                File webProfileDir = new File(filesDir, ".dsh/profiles/web");
+                if (!webProfileDir.exists()) {
+                    webProfileDir.mkdirs();
+                }
+
                 ProcessBuilder pb = new ProcessBuilder(
                         nodeFile.getAbsolutePath(),
                         dshBin.getAbsolutePath(),
                         "plugin",
                         "--profile", "web",
                         "add",
-                        pluginName
+                        targetPlugin
                 );
                 pb.directory(filesDir);
                 pb.environment().put("HOME", filesDir.getAbsolutePath());
                 pb.environment().put("LD_LIBRARY_PATH", libDir.getAbsolutePath());
                 pb.environment().put("NODE_PATH", new File(dshDir, "node_modules").getAbsolutePath());
-                pb.environment().put("PATH", new File(filesDir, "bin").getAbsolutePath() + ":/system/bin");
+                pb.environment().put("PATH", new File(filesDir, "bin").getAbsolutePath() + ":/system/bin:/data/data/com.termux/files/usr/bin");
                 pb.redirectErrorStream(true);
 
                 Process proc = pb.start();
@@ -491,7 +505,11 @@ public class MainActivity extends AppCompatActivity {
                 appendLog("[PLUGIN] Selesai dengan kode: " + exitCode);
 
                 handler.post(() -> {
-                    Toast.makeText(this, "Plugin selesai dipasang! Me-restart server...", Toast.LENGTH_SHORT).show();
+                    if (exitCode == 0) {
+                        Toast.makeText(this, "Plugin " + targetPlugin + " berhasil dipasang! Me-restart engine...", Toast.LENGTH_LONG).show();
+                    } else {
+                        Toast.makeText(this, "Plugin selesai dengan exit code: " + exitCode + ". Memuat ulang engine...", Toast.LENGTH_LONG).show();
+                    }
                     stopService(new Intent(this, LocalEngineService.class));
                     startEngineService();
                 });
@@ -503,11 +521,28 @@ public class MainActivity extends AppCompatActivity {
 
     private void listInstalledPlugins() {
         File filesDir = getFilesDir();
-        File pluginsDir = new File(filesDir, ".dsh/profiles/web/cordis.yml");
-        String info = pluginsDir.exists() ? "File konfigurasi aktif: .dsh/profiles/web/cordis.yml" : "Belum ada plugin eksternal terpasang.";
+        File profilePackageJson = new File(filesDir, ".dsh/profiles/web/package.json");
+        File cordisYml = new File(filesDir, ".dsh/profiles/web/cordis.yml");
+        File cordisPatchYml = new File(filesDir, ".dsh/profiles/web/cordis.patch.yml");
+
+        StringBuilder info = new StringBuilder();
+        if (profilePackageJson.exists()) {
+            info.append("=== Web Profile Dependencies (.dsh/profiles/web/package.json) ===\n");
+            try (BufferedReader br = new BufferedReader(new FileReader(profilePackageJson))) {
+                String line;
+                while ((line = br.readLine()) != null) {
+                    info.append(line).append("\n");
+                }
+            } catch (Exception e) {
+                info.append("Error membaca package.json: ").append(e.getMessage()).append("\n");
+            }
+        } else {
+            info.append("Belum ada plugin eksternal terpasang di profile web.\n\nDefault Built-in Plugins aktif:\n• @deepseek-ai/dsh-base\n• @deepseek-ai/dsh-web-app\n• @deepseek-ai/dsh-host-plugin-inventory\n• @deepseek-ai/dsh-cordis-host-runner");
+        }
+
         new AlertDialog.Builder(this)
-                .setTitle("Status Plugin Web Profile")
-                .setMessage(info)
+                .setTitle("🔌 Daftar Plugin Web Profile")
+                .setMessage(info.toString())
                 .setPositiveButton("Tutup", null)
                 .show();
     }
