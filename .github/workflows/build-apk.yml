@@ -159,15 +159,15 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.8.4
-          name: "DSH Mobile v1.8.4 (Full Native Root SU Sandbox Bypass & Alpine PRoot Fix)"
+          tag_name: v1.8.5
+          name: "DSH Mobile v1.8.5 (Comprehensive Multi-Root SU: Magisk, KernelSU, KernelSU Next, APatch)"
           body: |
-            ## 🚀 DSH Mobile Standalone Release v1.8.4
-            - 👑 **Full Native Root SU Sandbox Bypass (`dsh-bash-sandbox`)**:
-              - Memperbaiki `confine()` pada eksekutor sandbox utama DSH sehingga perintah interaktif Agent langsung berjalan di bawah **`su -mm -c "<command>"`** (UID 0 / Root Host) tanpa terlempar ke non-root shell.
-            - 🐧 **Full PRoot + Alpine Linux Environment (`apk add`)** untuk perangkat non-root.
-            - 🔄 **In-App Upgrade / Non-Fresh-Install Compatibility**
-            - 🛡️ **Full Permissions & Direct `/sdcard` Workspace**
+            ## 🚀 DSH Mobile Standalone Release v1.8.5
+            - 👑 **Universal Multi-Root SU Candidate Matrix**:
+              - Mendukung semua jenis root manager Android: **Magisk, Magisk Alpha/Canary (`/product/bin/magisk`, `/system/bin/magisk`), KernelSU, KernelSU Next (`/data/adb/ksud`, `/data/adb/ksu/bin/su`), APatch (`/data/adb/ap/bin/su`), SuperSU, Lineage SU**, dan custom mount paths.
+              - Eksekusi otomatis memilih `su -mm` (*Mount Master Namespace*) sehingga seluruh filesystem Android host (`/data/data`, `/system`, `/sdcard`) dapat diakses penuh tanpa batasan SELinux namespace.
+            - 🐧 **Full PRoot + Alpine Linux Fallback** untuk perangkat non-root.
+            - 🔄 **In-App Upgrade Compatibility**
             - 🗜️ **Tersedia Versi ZIP Hemat Kuota**: `dsh-mobile-compressed.zip`
             - 💾 **Root State & Toolbar Persistence** (tersimpan permanen).
             - 🐧 **Full Embedded PRoot + Alpine Linux Environment (`apk add`)**

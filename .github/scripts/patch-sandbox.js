@@ -42,15 +42,17 @@ if (fs.existsSync(terminalBashPath)) {
     const shellResolver = `
 import { existsSync as __termExistsSync } from "node:fs";
 function __getAndroidTerminalShell() {
+  for (const sh of ["/data/user/0/com.dsh.mobile/files/bin/bash", "/data/user/0/com.dsh.mobile/files/bin/sh", "/data/data/com.dsh.mobile/files/bin/bash", "/data/data/com.dsh.mobile/files/bin/sh", "/data/user/0/com.aydin.dsh/files/bin/bash", "/data/data/com.aydin.dsh/files/bin/bash"]) {
+    if (__termExistsSync(sh)) return sh;
+  }
   const isRoot = __termExistsSync("/data/user/0/com.dsh.mobile/files/root_enabled.flag") || 
                  __termExistsSync("/data/data/com.dsh.mobile/files/root_enabled.flag") || 
                  __termExistsSync("/data/user/0/com.aydin.dsh/files/root_enabled.flag") ||
                  __termExistsSync("/data/data/com.aydin.dsh/files/root_enabled.flag");
   if (isRoot) {
-    return "su";
-  }
-  for (const sh of ["/data/user/0/com.dsh.mobile/files/bin/sh", "/data/data/com.dsh.mobile/files/bin/sh", "/data/user/0/com.aydin.dsh/files/bin/sh", "/data/data/com.aydin.dsh/files/bin/sh"]) {
-    if (__termExistsSync(sh)) return sh;
+    for (const su of ["/product/bin/magisk", "/system/bin/magisk", "/data/adb/magisk/magisk", "/data/adb/ksu/bin/su", "/data/adb/ksud", "/data/adb/ap/bin/su", "/data/adb/magisk/su", "su", "/system/bin/su", "/system/xbin/su"]) {
+      if (__termExistsSync(su) || su === "su") return su;
+    }
   }
   return "/system/bin/sh";
 }
@@ -68,12 +70,22 @@ const bashSandboxPath = `${dshRoot}/node_modules/@deepseek-ai/dsh-bash-sandbox/l
 
 const hybridResolver = `
 function __resolveAndroidShellArgv(command) {
-  for (const sh of ["/data/user/0/com.dsh.mobile/files/bin/sh", "/data/data/com.dsh.mobile/files/bin/sh", "/data/user/0/com.aydin.dsh/files/bin/sh", "/data/data/com.aydin.dsh/files/bin/sh"]) {
+  for (const sh of ["/data/user/0/com.dsh.mobile/files/bin/bash", "/data/user/0/com.dsh.mobile/files/bin/sh", "/data/data/com.dsh.mobile/files/bin/bash", "/data/data/com.dsh.mobile/files/bin/sh", "/data/user/0/com.aydin.dsh/files/bin/bash", "/data/data/com.aydin.dsh/files/bin/bash"]) {
     try {
       if (require("node:fs").existsSync(sh)) {
         return [sh, "-c", command];
       }
     } catch (_) {}
+  }
+  const isRoot = require("node:fs").existsSync("/data/user/0/com.dsh.mobile/files/root_enabled.flag") ||
+                 require("node:fs").existsSync("/data/data/com.dsh.mobile/files/root_enabled.flag");
+  if (isRoot) {
+    for (const su of ["/product/bin/magisk", "/system/bin/magisk", "/data/adb/magisk/magisk", "/data/adb/ksu/bin/su", "/data/adb/ksud", "/data/adb/ap/bin/su", "/data/adb/magisk/su", "su"]) {
+      if (su.endsWith("magisk")) {
+        return [su, "su", "-mm", "-c", command];
+      }
+      return [su, "-mm", "-c", command];
+    }
   }
   return ["su", "-mm", "-c", command];
 }

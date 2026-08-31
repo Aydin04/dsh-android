@@ -271,11 +271,18 @@ public class MainActivity extends AppCompatActivity {
             boolean granted = false;
             String output = "";
             String[] suCheckCommands = new String[]{
-                "/system/bin/su",
-                "/system/xbin/su",
+                "/product/bin/magisk",
+                "/system/bin/magisk",
+                "/system/xbin/magisk",
+                "/data/adb/magisk/magisk",
                 "/data/adb/ksu/bin/su",
+                "/data/adb/ksud",
                 "/data/adb/ap/bin/su",
                 "/data/adb/magisk/su",
+                "/system/bin/su",
+                "/system/xbin/su",
+                "/vendor/bin/su",
+                "/sbin/su",
                 "su"
             };
 

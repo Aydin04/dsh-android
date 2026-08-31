@@ -9,16 +9,31 @@ ROOTFS="/data/user/0/com.dsh.mobile/files/rootfs"
 PROOT="/data/user/0/com.dsh.mobile/files/bin/proot"
 [ ! -f "$PROOT" ] && PROOT="/data/data/com.dsh.mobile/files/bin/proot"
 
-# 1. Native Root SU: Check root flag or test su availability directly
-if [ -f "$ROOT_FLAG_FILE" ] || [ -f "$ROOT_FLAG_ALT" ] || [ "$(id -u 2>/dev/null)" = "0" ] || command -v su >/dev/null 2>&1; then
-    for su_bin in su /system/bin/su /system/xbin/su /data/adb/ksu/bin/su /data/adb/ap/bin/su /data/adb/magisk/su; do
-        if command -v "$su_bin" >/dev/null 2>&1 || [ -x "$su_bin" ]; then
-            if [ "$1" = "-c" ]; then
-                shift
-                exec "$su_bin" -mm -c "$*" 2>/dev/null || exec "$su_bin" -c "$*"
-            else
-                exec "$su_bin" -mm -c "$*" 2>/dev/null || exec "$su_bin" -c "$*"
-            fi
+# 1. Native Root SU: Comprehensive Multi-Root Provider Candidates
+# Supports: Magisk, Magisk Alpha/Canary, KernelSU, KernelSU Next, APatch, SuperSU, Lineage SU, system/product/vendor mounts
+SU_CANDIDATES="/product/bin/magisk /system/bin/magisk /system/xbin/magisk /data/adb/magisk/magisk /data/adb/ksu/bin/su /data/adb/ksud /data/adb/ap/bin/su /data/adb/magisk/su /system/bin/su /system/xbin/su /vendor/bin/su /sbin/su su"
+
+if [ -f "$ROOT_FLAG_FILE" ] || [ -f "$ROOT_FLAG_ALT" ] || [ "$(id -u 2>/dev/null)" = "0" ] || command -v su >/dev/null 2>&1 || [ -x /product/bin/magisk ] || [ -x /data/adb/ksu/bin/su ] || [ -x /data/adb/ap/bin/su ]; then
+    for su_bin in $SU_CANDIDATES; do
+        if [ -x "$su_bin" ] || command -v "$su_bin" >/dev/null 2>&1; then
+            case "$su_bin" in
+                *magisk)
+                    if [ "$1" = "-c" ]; then
+                        shift
+                        exec "$su_bin" su -mm -c "$*" 2>/dev/null || exec "$su_bin" su -c "$*"
+                    else
+                        exec "$su_bin" su -mm -c "$*" 2>/dev/null || exec "$su_bin" su -c "$*"
+                    fi
+                    ;;
+                *)
+                    if [ "$1" = "-c" ]; then
+                        shift
+                        exec "$su_bin" -mm -c "$*" 2>/dev/null || exec "$su_bin" -c "$*"
+                    else
+                        exec "$su_bin" -mm -c "$*" 2>/dev/null || exec "$su_bin" -c "$*"
+                    fi
+                    ;;
+            esac
         fi
     done
 fi
