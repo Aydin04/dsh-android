@@ -64,6 +64,15 @@ public class LocalEngineService extends Service {
             if (!binDir.exists()) binDir.mkdirs();
             if (!libDir.exists()) libDir.mkdirs();
 
+            // Check if app was updated to force fresh extraction of core packages
+            int currentVersionCode = BuildConfig.VERSION_CODE;
+            android.content.SharedPreferences prefs = getSharedPreferences("DSH_ENGINE_STATE", Context.MODE_PRIVATE);
+            int lastExtractedVersion = prefs.getInt("EXTRACTED_VERSION", 0);
+            boolean isNewAppVersion = (currentVersionCode != lastExtractedVersion);
+            if (isNewAppVersion) {
+                emitLog("[UPDATE] Detected new app version (" + currentVersionCode + "). Updating engine bundles...");
+            }
+
             // 1. Extract Node.js binary
             File nodeFile = new File(binDir, "node");
             if (!nodeFile.exists() || nodeFile.length() == 0) {
@@ -244,7 +253,7 @@ public class LocalEngineService extends Service {
             File dshDir = new File(filesDir, "dsh");
             File dshBin = new File(dshDir, "lib/bin.js");
 
-            if (!dshBin.exists()) {
+            if (!dshBin.exists() || isNewAppVersion) {
                 String dshAsset = "engine/dsh-core.tar.gz";
                 boolean isGzip = true;
                 try {
@@ -289,6 +298,7 @@ public class LocalEngineService extends Service {
                             }
                         }
                         emitLog("[EXTRACT] Extracted total " + count + " DSH package files successfully.");
+                        prefs.edit().putInt("EXTRACTED_VERSION", currentVersionCode).apply();
                     }
                 }
             } else {

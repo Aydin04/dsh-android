@@ -247,11 +247,7 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "Logs copied to clipboard!", Toast.LENGTH_SHORT).show();
         });
 
-        btnRetry.setOnClickListener(v -> {
-            appendLog("\n=== [RESTART] Restarting Engine Service ===");
-            stopService(new Intent(this, LocalEngineService.class));
-            startEngineService();
-        });
+        btnRetry.setOnClickListener(v -> restartEngine());
 
         btnCloseLogs.setOnClickListener(v -> {
             if (isLoaded) {
@@ -517,8 +513,7 @@ public class MainActivity extends AppCompatActivity {
                     } else {
                         Toast.makeText(this, "Plugin selesai dengan exit code: " + exitCode + ". Memuat ulang engine...", Toast.LENGTH_LONG).show();
                     }
-                    stopService(new Intent(this, LocalEngineService.class));
-                    startEngineService();
+                    restartEngine();
                 });
             } catch (Exception e) {
                 appendLog("[PLUGIN ERROR] " + e.getMessage());
@@ -552,6 +547,14 @@ public class MainActivity extends AppCompatActivity {
                 .setMessage(info.toString())
                 .setPositiveButton("Tutup", null)
                 .show();
+    }
+
+    private void restartEngine() {
+        appendLog("\n=== [RESTART] Restarting Engine Service ===");
+        engineServiceStarted = false;
+        isLoaded = false;
+        stopService(new Intent(this, LocalEngineService.class));
+        handler.postDelayed(this::startEngineService, 1000);
     }
 
     private void startEngineService() {
