@@ -69,16 +69,17 @@ const bashLocalPath = `${dshRoot}/node_modules/@deepseek-ai/dsh-bash-local/lib/i
 const bashSandboxPath = `${dshRoot}/node_modules/@deepseek-ai/dsh-bash-sandbox/lib/index.js`;
 
 const hybridResolver = `
+import { existsSync as __fsExistsSync } from "node:fs";
 function __resolveAndroidShellArgv(command) {
   for (const sh of ["/data/user/0/com.dsh.mobile/files/bin/bash", "/data/user/0/com.dsh.mobile/files/bin/sh", "/data/data/com.dsh.mobile/files/bin/bash", "/data/data/com.dsh.mobile/files/bin/sh", "/data/user/0/com.aydin.dsh/files/bin/bash", "/data/data/com.aydin.dsh/files/bin/bash"]) {
     try {
-      if (require("node:fs").existsSync(sh)) {
+      if (__fsExistsSync(sh)) {
         return [sh, "-c", command];
       }
     } catch (_) {}
   }
-  const isRoot = require("node:fs").existsSync("/data/user/0/com.dsh.mobile/files/root_enabled.flag") ||
-                 require("node:fs").existsSync("/data/data/com.dsh.mobile/files/root_enabled.flag");
+  const isRoot = __fsExistsSync("/data/user/0/com.dsh.mobile/files/root_enabled.flag") ||
+                 __fsExistsSync("/data/data/com.dsh.mobile/files/root_enabled.flag");
   if (isRoot) {
     for (const su of ["/product/bin/magisk", "/system/bin/magisk", "/data/adb/magisk/magisk", "/data/adb/ksu/bin/su", "/data/adb/ksud", "/data/adb/ap/bin/su", "/data/adb/magisk/su", "su"]) {
       if (su.endsWith("magisk")) {
@@ -135,7 +136,7 @@ if (fs.existsSync(workerThreadPath)) {
     );
     code = code.replace(
       ')(...namespaces, ...errorClassValues, consoleShim)',
-      ')(...namespaces, ...errorClassValues, consoleShim, require, require("node:fs"), require("node:path"), process)'
+      ')(...namespaces, ...errorClassValues, consoleShim, typeof require !== "undefined" ? require : () => {}, typeof require !== "undefined" ? require("node:fs") : {}, typeof require !== "undefined" ? require("node:path") : {}, typeof process !== "undefined" ? process : {})'
     );
     fs.writeFileSync(workerThreadPath, code, 'utf8');
     console.log('[PATCH SUCCESS] dsh-code-runtime-worker-thread globals injected!');
