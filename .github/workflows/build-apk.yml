@@ -165,14 +165,13 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.9.3
-          name: "DSH Mobile v1.9.3 (Auto-Migration on In-App Upgrade & Embedded PNPM Plugin Engine)"
+          tag_name: v1.9.4
+          name: "DSH Mobile v1.9.4 (Dynamic NODE_PATH Plugin Resolution & Auto-Migration)"
           body: |
-            ## 🚀 DSH Mobile Release v1.9.3
-            - 🔄 **Auto-Migration on Upgrade (Tidak Perlu Fresh Install)**:
-              - Aplikasi sekarang mendeteksi pembaruan APK (`versionCode`) secara otomatis dan mengekstrak bundle engine DSH & library terbaru tanpa perlu menghapus instalasi lama (*fresh install*).
-            - 🔌 **Full Embedded PNPM Plugin Engine**:
-              - Mendukung instalasi plugin via toolbar (misal `github:PerryLink/dsh-defend` atau `https://github.com/PerryLink/dsh-defend`) langsung dari dalam aplikasi.
+            ## 🚀 DSH Mobile Release v1.9.4
+            - 🔌 **Dynamic NODE_PATH Plugin Resolution**:
+              - Menambahkan direktori profil web (`.dsh/profiles/web/node_modules`) ke `NODE_PATH` server secara dinamis sehingga modul plugin yang baru dipasang (seperti `dsh-defend`) langsung terdeteksi dan dimuat oleh Cordis loader.
+            - 🔄 **Auto-Migration on Upgrade (Tanpa Perlu Fresh Install)**.
             - 👑 **Universal Multi-Root SU**: Magisk (`/product/bin/magisk`), KernelSU, KernelSU Next, APatch.
             - 🎨 **Aesthetic DeepSeek Splash**: Progress bar 0-100% dan rotating log.
             - 💬 **Chat Input (Enter = Newline)**: Tombol send untuk kirim.

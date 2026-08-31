@@ -482,6 +482,10 @@ public class MainActivity extends AppCompatActivity {
                     webProfileDir.mkdirs();
                 }
 
+                String nodePath = new File(dshDir, "node_modules").getAbsolutePath() + 
+                        ":" + new File(filesDir, ".dsh/profiles/web/node_modules").getAbsolutePath() +
+                        ":" + new File(filesDir, "node_modules").getAbsolutePath();
+
                 ProcessBuilder pb = new ProcessBuilder(
                         nodeFile.getAbsolutePath(),
                         dshBin.getAbsolutePath(),
@@ -493,7 +497,7 @@ public class MainActivity extends AppCompatActivity {
                 pb.directory(filesDir);
                 pb.environment().put("HOME", filesDir.getAbsolutePath());
                 pb.environment().put("LD_LIBRARY_PATH", libDir.getAbsolutePath());
-                pb.environment().put("NODE_PATH", new File(dshDir, "node_modules").getAbsolutePath());
+                pb.environment().put("NODE_PATH", nodePath);
                 pb.environment().put("PATH", new File(filesDir, "bin").getAbsolutePath() + ":/system/bin:/data/data/com.termux/files/usr/bin");
                 pb.redirectErrorStream(true);
 

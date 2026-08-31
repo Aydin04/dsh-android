@@ -343,6 +343,11 @@ public class LocalEngineService extends Service {
                     ":/system/xbin" + 
                     ":/data/data/com.termux/files/usr/bin";
 
+            // Configure NODE_PATH to resolve both core global packages and profile installed plugins
+            String nodePath = new File(dshDir, "node_modules").getAbsolutePath() + 
+                    ":" + new File(filesDir, ".dsh/profiles/web/node_modules").getAbsolutePath() +
+                    ":" + new File(filesDir, "node_modules").getAbsolutePath();
+
             ProcessBuilder pb = new ProcessBuilder(
                     nodeFile.getAbsolutePath(),
                     dshBin.getAbsolutePath(),
@@ -354,7 +359,7 @@ public class LocalEngineService extends Service {
             pb.environment().put("HOME", filesDir.getAbsolutePath());
             pb.environment().put("DSH_EXTERNAL_STORAGE", workspaceDir.getAbsolutePath());
             pb.environment().put("LD_LIBRARY_PATH", libDir.getAbsolutePath());
-            pb.environment().put("NODE_PATH", new File(dshDir, "node_modules").getAbsolutePath());
+            pb.environment().put("NODE_PATH", nodePath);
             pb.environment().put("PATH", enrichedPath);
             pb.environment().put("DSH_PERMISSION_MODE", "danger-full-access");
             pb.environment().put("TMPDIR", filesDir.getAbsolutePath());
