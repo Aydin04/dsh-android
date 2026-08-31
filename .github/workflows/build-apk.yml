@@ -165,12 +165,14 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.9.4
-          name: "DSH Mobile v1.9.4 (Dynamic NODE_PATH Plugin Resolution & Auto-Migration)"
+          tag_name: v1.9.5
+          name: "DSH Mobile v1.9.5 (Live In-App Plugin Terminal Output & Transparent Progress Logs)"
           body: |
-            ## 🚀 DSH Mobile Release v1.9.4
-            - 🔌 **Dynamic NODE_PATH Plugin Resolution**:
-              - Menambahkan direktori profil web (`.dsh/profiles/web/node_modules`) ke `NODE_PATH` server secara dinamis sehingga modul plugin yang baru dipasang (seperti `dsh-defend`) langsung terdeteksi dan dimuat oleh Cordis loader.
+            ## 🚀 DSH Mobile Release v1.9.5
+            - 📺 **Live Plugin Installation Console / Terminal**:
+              - Menambahkan pop-up terminal interaktif saat memasang plugin via Toolbar **`🔌 Plugin`**.
+              - Output command pnpm/npm, download package, compile logs, dan exit code ditampilkan baris demi baris secara *real-time* langsung di layar tanpa membuat user bingung/buta proses.
+            - 🔌 **Dynamic NODE_PATH Plugin Resolution**: Memuat `.dsh/profiles/web/node_modules`.
             - 🔄 **Auto-Migration on Upgrade (Tanpa Perlu Fresh Install)**.
             - 👑 **Universal Multi-Root SU**: Magisk (`/product/bin/magisk`), KernelSU, KernelSU Next, APatch.
             - 🎨 **Aesthetic DeepSeek Splash**: Progress bar 0-100% dan rotating log.

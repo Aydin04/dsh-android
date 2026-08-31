@@ -465,8 +465,27 @@ public class MainActivity extends AppCompatActivity {
         }
 
         final String targetPlugin = pluginName;
-        appendLog("\n>>> [PLUGIN] Menginstall plugin: " + targetPlugin + "...");
-        Toast.makeText(this, "Sedang memasang plugin: " + targetPlugin, Toast.LENGTH_LONG).show();
+
+        // Create live progress dialog for plugin installation
+        final TextView logView = new TextView(this);
+        logView.setTypeface(android.graphics.Typeface.MONOSPACE);
+        logView.setTextSize(11);
+        logView.setTextColor(0xFF3FB950);
+        logView.setBackgroundColor(0xFF0D1117);
+        logView.setPadding(24, 24, 24, 24);
+        logView.setText("[PLUGIN] Memulai instalasi " + targetPlugin + "...\n");
+
+        final ScrollView logScroll = new ScrollView(this);
+        logScroll.addView(logView);
+
+        AlertDialog progressDialog = new AlertDialog.Builder(this)
+                .setTitle("📦 Menginstall Plugin (" + targetPlugin + ")")
+                .setView(logScroll)
+                .setCancelable(false)
+                .setPositiveButton("Tutup & Restart Engine", null)
+                .create();
+        progressDialog.show();
+        progressDialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
 
         new Thread(() -> {
             try {
@@ -486,14 +505,35 @@ public class MainActivity extends AppCompatActivity {
                         ":" + new File(filesDir, ".dsh/profiles/web/node_modules").getAbsolutePath() +
                         ":" + new File(filesDir, "node_modules").getAbsolutePath();
 
-                ProcessBuilder pb = new ProcessBuilder(
-                        nodeFile.getAbsolutePath(),
-                        dshBin.getAbsolutePath(),
-                        "plugin",
-                        "--profile", "web",
-                        "add",
-                        targetPlugin
-                );
+                String pnpmBinPath = new File(dshDir, "node_modules/pnpm/bin/pnpm.cjs").getAbsolutePath();
+                File pnpmBinFile = new File(pnpmBinPath);
+                
+                ProcessBuilder pb;
+                if (!pnpmBinFile.exists()) {
+                    // Fallback to npm if pnpm is not extracted
+                    handler.post(() -> {
+                        logView.append("[WARN] pnpm tidak ditemukan, mencoba npm fallback...\n");
+                        logScroll.fullScroll(View.FOCUS_DOWN);
+                    });
+                    pb = new ProcessBuilder(
+                            nodeFile.getAbsolutePath(),
+                            dshBin.getAbsolutePath(),
+                            "plugin",
+                            "--profile", "web",
+                            "add",
+                            targetPlugin
+                    );
+                } else {
+                    pb = new ProcessBuilder(
+                            nodeFile.getAbsolutePath(),
+                            dshBin.getAbsolutePath(),
+                            "plugin",
+                            "--profile", "web",
+                            "add",
+                            targetPlugin
+                    );
+                }
+
                 pb.directory(filesDir);
                 pb.environment().put("HOME", filesDir.getAbsolutePath());
                 pb.environment().put("LD_LIBRARY_PATH", libDir.getAbsolutePath());
@@ -505,7 +545,12 @@ public class MainActivity extends AppCompatActivity {
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()))) {
                     String line;
                     while ((line = reader.readLine()) != null) {
-                        appendLog("[PLUGIN LOG] " + line);
+                        final String outLine = line;
+                        appendLog("[PLUGIN LOG] " + outLine);
+                        handler.post(() -> {
+                            logView.append(outLine + "\n");
+                            logScroll.post(() -> logScroll.fullScroll(View.FOCUS_DOWN));
+                        });
                     }
                 }
                 int exitCode = proc.waitFor();
@@ -513,14 +558,28 @@ public class MainActivity extends AppCompatActivity {
 
                 handler.post(() -> {
                     if (exitCode == 0) {
-                        Toast.makeText(this, "Plugin " + targetPlugin + " berhasil dipasang! Me-restart engine...", Toast.LENGTH_LONG).show();
+                        logView.append("\n✅ [BERHASIL] Plugin " + targetPlugin + " sukses terpasang!\nSilakan klik tombol di bawah untuk restart engine.");
                     } else {
-                        Toast.makeText(this, "Plugin selesai dengan exit code: " + exitCode + ". Memuat ulang engine...", Toast.LENGTH_LONG).show();
+                        logView.append("\n❌ [GAGAL] Instalasi selesai dengan exit code: " + exitCode + ".\nPeriksa koneksi internet atau nama package.");
                     }
-                    restartEngine();
+                    logScroll.post(() -> logScroll.fullScroll(View.FOCUS_DOWN));
+                    Button btn = progressDialog.getButton(AlertDialog.BUTTON_POSITIVE);
+                    btn.setEnabled(true);
+                    btn.setText("Restart Engine Sekarang");
+                    btn.setOnClickListener(v -> {
+                        progressDialog.dismiss();
+                        restartEngine();
+                    });
                 });
             } catch (Exception e) {
                 appendLog("[PLUGIN ERROR] " + e.getMessage());
+                handler.post(() -> {
+                    logView.append("\n[FATAL ERROR] " + e.getMessage() + "\n");
+                    Button btn = progressDialog.getButton(AlertDialog.BUTTON_POSITIVE);
+                    btn.setEnabled(true);
+                    btn.setText("Tutup");
+                    btn.setOnClickListener(v -> progressDialog.dismiss());
+                });
             }
         }).start();
     }
