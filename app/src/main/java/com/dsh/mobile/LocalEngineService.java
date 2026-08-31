@@ -428,20 +428,30 @@ public class LocalEngineService extends Service {
             emitLog("[SERVER] DSH process spawned. Streaming logs:");
 
             // Spawn AtomicRouter if installed
-            if (atomicBin.exists()) {
+            File atomicServerJs = new File(atomicDir, "server.js");
+            if (atomicServerJs.exists() || atomicBin.exists()) {
                 emitLog("[ATOMIC] Launching AtomicRouter on port 20128...");
                 try {
-                    ProcessBuilder atomicPb = new ProcessBuilder(
-                            nodeFile.getAbsolutePath(),
-                            atomicBin.getAbsolutePath(),
-                            "serve",
-                            "--port", "20128",
-                            "--no-open"
-                    );
+                    ProcessBuilder atomicPb;
+                    if (atomicServerJs.exists()) {
+                        atomicPb = new ProcessBuilder(
+                                nodeFile.getAbsolutePath(),
+                                atomicServerJs.getAbsolutePath()
+                        );
+                    } else {
+                        atomicPb = new ProcessBuilder(
+                                nodeFile.getAbsolutePath(),
+                                atomicBin.getAbsolutePath(),
+                                "serve",
+                                "--port", "20128",
+                                "--no-open"
+                        );
+                    }
                     atomicPb.directory(atomicDir);
                     atomicPb.environment().put("HOME", filesDir.getAbsolutePath());
                     atomicPb.environment().put("DATA_DIR", new File(filesDir, ".atomic-router").getAbsolutePath());
                     atomicPb.environment().put("PORT", "20128");
+                    atomicPb.environment().put("HOSTNAME", "127.0.0.1");
                     atomicPb.environment().put("LD_LIBRARY_PATH", libDir.getAbsolutePath());
                     atomicPb.environment().put("NODE_PATH", new File(atomicDir, "node_modules").getAbsolutePath() + ":" + nodePath);
                     atomicPb.environment().put("PATH", enrichedPath);
