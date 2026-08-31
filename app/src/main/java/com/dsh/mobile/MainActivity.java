@@ -38,6 +38,14 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.InputStreamReader;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -78,6 +86,7 @@ public class MainActivity extends AppCompatActivity {
     private Button btnRootToggle;
     private Button btnDesktopMode;
     private Button btnPlugins;
+    private Button btnBackup;
     private Button btnLogs;
     private Button btnConfigDoc;
 
@@ -157,6 +166,7 @@ public class MainActivity extends AppCompatActivity {
         btnRootToggle = findViewById(R.id.btnRootToggle);
         btnDesktopMode = findViewById(R.id.btnDesktopMode);
         btnPlugins = findViewById(R.id.btnPlugins);
+        btnBackup = findViewById(R.id.btnBackup);
         btnLogs = findViewById(R.id.btnLogs);
         btnConfigDoc = findViewById(R.id.btnConfigDoc);
         btnNode = findViewById(R.id.btnNode);
@@ -301,6 +311,8 @@ public class MainActivity extends AppCompatActivity {
         btnDesktopMode.setOnClickListener(v -> toggleDesktopMode());
 
         btnPlugins.setOnClickListener(v -> showPluginManagerDialog());
+
+        btnBackup.setOnClickListener(v -> showBackupRestoreDialog());
 
         updateZoomDisplay();
     }
@@ -1176,6 +1188,177 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception err) {
             Toast.makeText(this, "Error: " + err.getMessage(), Toast.LENGTH_SHORT).show();
         }
+    }
+
+    private void showBackupRestoreDialog() {
+        File filesDir = getFilesDir();
+        File dshDataDir = new File(filesDir, ".dsh");
+        File externalStorage = Environment.getExternalStorageDirectory();
+        File backupRootDir = new File(externalStorage != null ? externalStorage : new File("/sdcard"), "DSH_Backups");
+        if (!backupRootDir.exists()) backupRootDir.mkdirs();
+
+        String[] options = new String[]{
+            "💾 1. Backup Seluruh Data DSH Sekarang (Sesi, Storage, Konfig)",
+            "📂 2. Restore / Pulihkan Data dari File Backup (.tar.gz)",
+            "📋 3. Informasi Lokasi Database & Direktori Penyimpanan"
+        };
+
+        new AlertDialog.Builder(this)
+                .setTitle("💾 Backup & Restore Data DSH")
+                .setItems(options, (dialog, which) -> {
+                    if (which == 0) {
+                        performDshBackup(backupRootDir, dshDataDir);
+                    } else if (which == 1) {
+                        showRestoreListDialog(backupRootDir, dshDataDir);
+                    } else {
+                        showStorageLocationsInfo(dshDataDir, backupRootDir);
+                    }
+                })
+                .setNegativeButton("Tutup", null)
+                .show();
+    }
+
+    private void performDshBackup(File backupRootDir, File dshDataDir) {
+        String timestamp = new java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US).format(new java.util.Date());
+        File targetBackupFile = new File(backupRootDir, "dsh_backup_" + timestamp + ".tar.gz");
+
+        Toast.makeText(this, "Membuat backup ke /sdcard/DSH_Backups/...", Toast.LENGTH_SHORT).show();
+        new Thread(() -> {
+            try {
+                if (!dshDataDir.exists()) {
+                    handler.post(() -> Toast.makeText(this, "Belum ada direktori .dsh untuk dibackup.", Toast.LENGTH_SHORT).show());
+                    return;
+                }
+
+                try (FileOutputStream fos = new FileOutputStream(targetBackupFile);
+                     java.util.zip.GZIPOutputStream gos = new java.util.zip.GZIPOutputStream(fos);
+                     org.apache.commons.compress.archivers.tar.TarArchiveOutputStream tos = new org.apache.commons.compress.archivers.tar.TarArchiveOutputStream(gos)) {
+                    tos.setLongFileMode(org.apache.commons.compress.archivers.tar.TarArchiveOutputStream.LONGFILE_POSIX);
+                    addDirectoryToTar(tos, dshDataDir, "");
+                }
+
+                handler.post(() -> {
+                    new AlertDialog.Builder(this)
+                            .setTitle("✅ Backup Berhasil!")
+                            .setMessage("Seluruh database sesi, riwayat chat, dan konfigurasi profil DSH telah tersimpan aman di:\n\n📁 " + targetBackupFile.getAbsolutePath() + "\nUkuran: " + (targetBackupFile.length() / 1024) + " KB")
+                            .setPositiveButton("Bagus", null)
+                            .show();
+                });
+            } catch (Exception e) {
+                handler.post(() -> Toast.makeText(this, "Gagal membuat backup: " + e.getMessage(), Toast.LENGTH_LONG).show());
+            }
+        }).start();
+    }
+
+    private void addDirectoryToTar(org.apache.commons.compress.archivers.tar.TarArchiveOutputStream tos, File dir, String basePath) throws Exception {
+        File[] files = dir.listFiles();
+        if (files == null) return;
+        for (File f : files) {
+            String entryName = basePath.isEmpty() ? f.getName() : basePath + "/" + f.getName();
+            if (f.isDirectory()) {
+                if (entryName.contains("node_modules")) continue; // skip heavy node_modules for ultra-fast light backup
+                org.apache.commons.compress.archivers.tar.TarArchiveEntry entry = new org.apache.commons.compress.archivers.tar.TarArchiveEntry(f, entryName + "/");
+                tos.putArchiveEntry(entry);
+                tos.closeArchiveEntry();
+                addDirectoryToTar(tos, f, entryName);
+            } else {
+                org.apache.commons.compress.archivers.tar.TarArchiveEntry entry = new org.apache.commons.compress.archivers.tar.TarArchiveEntry(f, entryName);
+                entry.setSize(f.length());
+                tos.putArchiveEntry(entry);
+                try (FileInputStream fis = new FileInputStream(f)) {
+                    byte[] buf = new byte[16384];
+                    int len;
+                    while ((len = fis.read(buf)) != -1) {
+                        tos.write(buf, 0, len);
+                    }
+                }
+                tos.closeArchiveEntry();
+            }
+        }
+    }
+
+    private void showRestoreListDialog(File backupRootDir, File dshDataDir) {
+        File[] backups = backupRootDir.listFiles((dir, name) -> name.endsWith(".tar.gz") && name.startsWith("dsh_backup_"));
+        if (backups == null || backups.length == 0) {
+            Toast.makeText(this, "Tidak ada file backup di /sdcard/DSH_Backups/", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        String[] backupItems = new String[backups.length];
+        for (int i = 0; i < backups.length; i++) {
+            backupItems[i] = "📦 " + backups[i].getName() + " (" + (backups[i].length() / 1024) + " KB)";
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle("Pilih File Backup untuk Dipulihkan")
+                .setItems(backupItems, (dialog, which) -> {
+                    File selectedBackup = backups[which];
+                    new AlertDialog.Builder(this)
+                            .setTitle("Konfirmasi Restore Data")
+                            .setMessage("Apakah Anda yakin ingin memulihkan data dari " + selectedBackup.getName() + "?\nData konfigurasi dan sesi saat ini akan ditimpa.")
+                            .setPositiveButton("Ya, Pulihkan & Restart", (d, w) -> performRestore(selectedBackup, dshDataDir))
+                            .setNegativeButton("Batal", null)
+                            .show();
+                })
+                .setNegativeButton("Batal", null)
+                .show();
+    }
+
+    private void performRestore(File backupFile, File dshDataDir) {
+        Toast.makeText(this, "Sedang memulihkan data...", Toast.LENGTH_SHORT).show();
+        new Thread(() -> {
+            try {
+                if (!dshDataDir.exists()) dshDataDir.mkdirs();
+
+                try (FileInputStream fis = new FileInputStream(backupFile);
+                     java.util.zip.GZIPInputStream gis = new java.util.zip.GZIPInputStream(fis);
+                     org.apache.commons.compress.archivers.tar.TarArchiveInputStream tis = new org.apache.commons.compress.archivers.tar.TarArchiveInputStream(gis)) {
+                    org.apache.commons.compress.archivers.tar.TarArchiveEntry entry;
+                    while ((entry = tis.getNextTarEntry()) != null) {
+                        File target = new File(dshDataDir, entry.getName());
+                        if (entry.isDirectory()) {
+                            target.mkdirs();
+                        } else {
+                            File parent = target.getParentFile();
+                            if (parent != null && !parent.exists()) parent.mkdirs();
+                            try (FileOutputStream fos = new FileOutputStream(target)) {
+                                byte[] buf = new byte[16384];
+                                int len;
+                                while ((len = tis.read(buf)) != -1) {
+                                    fos.write(buf, 0, len);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                handler.post(() -> {
+                    Toast.makeText(this, "Data berhasil dipulihkan! Me-restart server DSH...", Toast.LENGTH_LONG).show();
+                    restartEngine();
+                });
+            } catch (Exception e) {
+                handler.post(() -> Toast.makeText(this, "Gagal restore: " + e.getMessage(), Toast.LENGTH_LONG).show(););
+            }
+        }).start();
+    }
+
+    private void showStorageLocationsInfo(File dshDataDir, File backupRootDir) {
+        String info = 
+            "📂 Lokasi Database & Penyimpanan Internal DSH:\n\n" +
+            "1. Database Sessions / Riwayat Chat:\n" +
+            "   " + dshDataDir.getAbsolutePath() + "/storages/sessions/\n\n" +
+            "2. Profile Web & Konfigurasi Plugin:\n" +
+            "   " + dshDataDir.getAbsolutePath() + "/profiles/web/\n\n" +
+            "3. Lokasi Penyimpanan Backup Eksternal:\n" +
+            "   " + backupRootDir.getAbsolutePath() + "/\n\n" +
+            "4. Primary Workspace User:\n" +
+            "   /sdcard (Penyimpanan Internal Utama HP)";
+
+        new AlertDialog.Builder(this)
+                .setTitle("ℹ️ Lokasi Database & Storage")
+                .setMessage(info)
+                .setPositiveButton("Tutup", null)
+                .show();
     }
 
     @Override

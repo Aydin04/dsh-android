@@ -158,6 +158,15 @@
                     android:textSize="11sp" />
 
                 <Button
+                    android:id="@+id/btnBackup"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:background="?attr/selectableItemBackground"
+                    android:text="💾 Backup"
+                    android:textColor="#58a6ff"
+                    android:textSize="11sp" />
+
+                <Button
                     android:id="@+id/btnLogs"
                     android:layout_width="wrap_content"
                     android:layout_height="36dp"
