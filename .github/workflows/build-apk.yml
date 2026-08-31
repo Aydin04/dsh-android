@@ -159,15 +159,16 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.8.3
-          name: "DSH Mobile v1.8.3 (Direct Node-Level SU Dispatcher & In-App Upgrade Compatibility)"
+          tag_name: v1.8.4
+          name: "DSH Mobile v1.8.4 (Full Native Root SU Sandbox Bypass & Alpine PRoot Fix)"
           body: |
-            ## 🚀 DSH Mobile Standalone Release v1.8.3
-            - 👑 **Direct Node-Level Superuser (`su`) Dispatcher**:
-              - Eksekutor shell `dsh-bash-local` dan `dsh-terminal-bash` kini langsung mem-bypass shim dan mengarahkan argv perintah terminal ke **`/system/bin/su -c "<command>"`** secara native jika mode root aktif.
-              - Tidak ada lagi kendala permission denied atau ptrace block pada Magisk / KernelSU / APatch.
-            - 🔄 **In-App Upgrade / Non-Fresh-Install Compatibility**:
-              - Menambahkan kompatibilitas dual package ID (`com.dsh.mobile` & `com.aydin.dsh`) sehingga upgrade tanpa uninstall (dirty install) tetap mendeteksi flag root, binari, dan konfigurasi dengan sempurna.
+            ## 🚀 DSH Mobile Standalone Release v1.8.4
+            - 👑 **Full Native Root SU Sandbox Bypass (`dsh-bash-sandbox`)**:
+              - Memperbaiki `confine()` pada eksekutor sandbox utama DSH sehingga perintah interaktif Agent langsung berjalan di bawah **`su -mm -c "<command>"`** (UID 0 / Root Host) tanpa terlempar ke non-root shell.
+            - 🐧 **Full PRoot + Alpine Linux Environment (`apk add`)** untuk perangkat non-root.
+            - 🔄 **In-App Upgrade / Non-Fresh-Install Compatibility**
+            - 🛡️ **Full Permissions & Direct `/sdcard` Workspace**
+            - 🗜️ **Tersedia Versi ZIP Hemat Kuota**: `dsh-mobile-compressed.zip`
             - 💾 **Root State & Toolbar Persistence** (tersimpan permanen).
             - 🐧 **Full Embedded PRoot + Alpine Linux Environment (`apk add`)**
             - 📝 **Native In-App Configuration Editor (`📝 Config`)**
