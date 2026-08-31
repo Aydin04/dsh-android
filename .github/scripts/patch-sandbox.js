@@ -223,3 +223,29 @@ if (fs.existsSync(sandboxPolicyPath)) {
     console.log('[PATCH SUCCESS] dsh-sandbox-policy injected with complete environment context!');
   }
 }
+
+// 11. Patch dsh-web-frontend to make Enter key insert newline and send only via Send button
+const webDistPath = `${dshRoot}/node_modules/@deepseek-ai/dsh-web-frontend/dist/index.html`;
+if (fs.existsSync(webDistPath)) {
+  let html = fs.readFileSync(webDistPath, 'utf8');
+  console.log('[PATCH] Injecting Enter newline script into dsh-web-frontend index.html...');
+  const enterPatchScript = `
+<script>
+(function() {
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
+      const active = document.activeElement;
+      if (active && (active.tagName === 'TEXTAREA' || active.isContentEditable || active.getAttribute('role') === 'textbox')) {
+        e.stopPropagation();
+      }
+    }
+  }, true);
+})();
+</script>
+`;
+  if (!html.includes('e.key === \'Enter\' && !e.shiftKey')) {
+    html = html.replace('</head>', `${enterPatchScript}\n</head>`);
+    fs.writeFileSync(webDistPath, html, 'utf8');
+    console.log('[PATCH SUCCESS] dsh-web-frontend index.html patched for Enter-as-newline!');
+  }
+}

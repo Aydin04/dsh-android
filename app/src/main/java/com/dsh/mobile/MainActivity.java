@@ -79,6 +79,13 @@ public class MainActivity extends AppCompatActivity {
     private Button btnLogs;
     private Button btnConfigDoc;
 
+    private ProgressBar progressBarPercent;
+    private TextView tvProgressPercent;
+    private TextView tvCurrentLogLine;
+    private Button btnShowAllLogs;
+    private LinearLayout logActionsLayout;
+    private Button btnNode;
+
     private static final int PERMISSION_REQ_CODE = 101;
     private static final int MANAGE_STORAGE_REQ_CODE = 102;
     private static final String PREFS_NAME = "DSH_PREFS";
@@ -97,6 +104,7 @@ public class MainActivity extends AppCompatActivity {
     private boolean isDesktopMode = false;
     private boolean isBarVisible = false;
     private final StringBuilder logAccumulator = new StringBuilder();
+    private int simulatedProgress = 10;
 
     // Drag variables for moving the floating toolbar
     private float startX, startY;
@@ -112,6 +120,7 @@ public class MainActivity extends AppCompatActivity {
                 String msg = intent.getStringExtra(LocalEngineService.EXTRA_MESSAGE);
                 appendLog(msg);
             } else if (LocalEngineService.ACTION_READY.equals(action)) {
+                updateProgress(100, "Dashboard Siap! Menghubungkan...");
                 appendLog(">>> [EVENT] Engine reported READY. Connecting WebView...");
                 connectToLocalDashboard();
             }
@@ -148,6 +157,13 @@ public class MainActivity extends AppCompatActivity {
         btnPlugins = findViewById(R.id.btnPlugins);
         btnLogs = findViewById(R.id.btnLogs);
         btnConfigDoc = findViewById(R.id.btnConfigDoc);
+        btnNode = findViewById(R.id.btnNode);
+
+        progressBarPercent = findViewById(R.id.progressBarPercent);
+        tvProgressPercent = findViewById(R.id.tvProgressPercent);
+        tvCurrentLogLine = findViewById(R.id.tvCurrentLogLine);
+        btnShowAllLogs = findViewById(R.id.btnShowAllLogs);
+        logActionsLayout = findViewById(R.id.logActionsLayout);
 
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         currentZoom = prefs.getInt(KEY_ZOOM_LEVEL, 100);
@@ -177,6 +193,15 @@ public class MainActivity extends AppCompatActivity {
         }
 
         checkAndRequestPermissions();
+    }
+
+    private void updateProgress(int targetPercent, String status) {
+        handler.post(() -> {
+            simulatedProgress = Math.max(simulatedProgress, targetPercent);
+            if (progressBarPercent != null) progressBarPercent.setProgress(simulatedProgress);
+            if (tvProgressPercent != null) tvProgressPercent.setText(simulatedProgress + "%");
+            if (tvCurrentLogLine != null && status != null) tvCurrentLogLine.setText(status);
+        });
     }
 
     private void setupDraggableFloatingBar() {
@@ -227,14 +252,28 @@ public class MainActivity extends AppCompatActivity {
         });
 
         btnCloseLogs.setOnClickListener(v -> {
-            loadingLayout.setVisibility(View.GONE);
-            webView.setVisibility(View.VISIBLE);
-            floatingDraggableContainer.setVisibility(View.VISIBLE);
-            controlBarScroll.setVisibility(isBarVisible ? View.VISIBLE : View.GONE);
+            if (isLoaded) {
+                loadingLayout.setVisibility(View.GONE);
+                webView.setVisibility(View.VISIBLE);
+                floatingDraggableContainer.setVisibility(View.VISIBLE);
+                controlBarScroll.setVisibility(isBarVisible ? View.VISIBLE : View.GONE);
+            } else {
+                logScrollView.setVisibility(View.GONE);
+                logActionsLayout.setVisibility(View.GONE);
+            }
+        });
+
+        btnShowAllLogs.setOnClickListener(v -> {
+            boolean isVisible = logScrollView.getVisibility() == View.VISIBLE;
+            logScrollView.setVisibility(isVisible ? View.GONE : View.VISIBLE);
+            logActionsLayout.setVisibility(isVisible ? View.GONE : View.VISIBLE);
+            btnShowAllLogs.setText(isVisible ? "📋 Detail Log" : "Sembunyikan Log");
         });
 
         btnLogs.setOnClickListener(v -> {
             loadingLayout.setVisibility(View.VISIBLE);
+            logScrollView.setVisibility(View.VISIBLE);
+            logActionsLayout.setVisibility(View.VISIBLE);
             btnCloseLogs.setVisibility(View.VISIBLE);
         });
 
@@ -246,6 +285,9 @@ public class MainActivity extends AppCompatActivity {
         });
 
         btnConfig.setOnClickListener(v -> showServerConfigDialog(null));
+        if (btnNode != null) {
+            btnNode.setOnClickListener(v -> showServerConfigDialog(null));
+        }
         btnConfigDoc.setOnClickListener(v -> showConfigFileViewerDialog(null));
 
         btnZoomIn.setOnClickListener(v -> adjustZoom(10));
@@ -486,6 +528,34 @@ public class MainActivity extends AppCompatActivity {
             logAccumulator.append(message).append("\n");
             debugLogs.setText(logAccumulator.toString());
             logScrollView.post(() -> logScrollView.fullScroll(View.FOCUS_DOWN));
+
+            // Clean log preview for single line status
+            String cleanMsg = message.replaceAll("\\[[0-9;]*m", "").trim();
+            if (!cleanMsg.isEmpty()) {
+                if (cleanMsg.contains("[INIT]")) {
+                    updateProgress(15, "Inisialisasi lingkungan perangkat...");
+                } else if (cleanMsg.contains("Node.js binary")) {
+                    updateProgress(30, "Mengekstrak binary Node.js ARM64...");
+                } else if (cleanMsg.contains("Ripgrep")) {
+                    updateProgress(40, "Menyiapkan Ripgrep search engine...");
+                } else if (cleanMsg.contains("PRoot binary")) {
+                    updateProgress(50, "Menyiapkan PRoot sandbox engine...");
+                } else if (cleanMsg.contains("Alpine Linux")) {
+                    updateProgress(65, "Mengekstrak Alpine Linux rootfs...");
+                } else if (cleanMsg.contains("shared libraries")) {
+                    updateProgress(75, "Menyiapkan native shared libraries...");
+                } else if (cleanMsg.contains("DeepSeek Harness")) {
+                    updateProgress(85, "Memuat modul core DeepSeek Harness...");
+                } else if (cleanMsg.contains("Launching dsh")) {
+                    updateProgress(92, "Menjalankan DeepSeek Harness server...");
+                } else if (cleanMsg.contains("HTTP 200 OK") || cleanMsg.contains("[READY]")) {
+                    updateProgress(100, "Dashboard Siap! Menghubungkan...");
+                } else {
+                    if (tvCurrentLogLine != null) {
+                        tvCurrentLogLine.setText(cleanMsg);
+                    }
+                }
+            }
         });
     }
 
@@ -521,6 +591,9 @@ public class MainActivity extends AppCompatActivity {
                     floatingDraggableContainer.setVisibility(View.VISIBLE);
                     controlBarScroll.setVisibility(isBarVisible ? View.VISIBLE : View.GONE);
                     applyWholeElementZoom();
+
+                    // Inject custom script: Enter makes newline, submit only on Send button click
+                    injectChatEnterKeyHandler(view);
                 }
             }
 
@@ -556,19 +629,37 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private void injectChatEnterKeyHandler(WebView view) {
+        String js = "(function() {" +
+                "  if (window.__dshEnterPatched) return;" +
+                "  window.__dshEnterPatched = true;" +
+                "  document.addEventListener('keydown', function(e) {" +
+                "    if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {" +
+                "      var target = e.target;" +
+                "      if (target && (target.tagName === 'TEXTAREA' || target.isContentEditable || target.getAttribute('role') === 'textbox')) {" +
+                "        e.stopPropagation();" +
+                "      }" +
+                "    }" +
+                "  }, true);" +
+                "})();";
+        view.evaluateJavascript(js, null);
+    }
+
     private void showServerConfigDialog(String errorMessage) {
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         String currentUrl = prefs.getString(KEY_SERVER_URL, LOCAL_URL);
 
         final EditText input = new EditText(this);
         input.setText(currentUrl);
-        input.setHint("http://127.0.0.1:3080 atau http://IP-VPS:3080");
+        input.setHint("http://127.0.0.1:3080 atau http://IP_VPS:3080");
         input.setSingleLine(true);
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this)
-                .setTitle("Pengaturan Node DSH")
+                .setTitle("🌐 Pengaturan Node / Server DSH")
                 .setMessage((errorMessage != null ? errorMessage + "\n\n" : "") +
-                        "Pilih mode server DeepSeek Harness:")
+                        "Pilih backend DeepSeek Harness yang ingin digunakan:\n\n" +
+                        "• Lokal HP: http://127.0.0.1:3080\n" +
+                        "• Remote VPS / Node Server: Masukkan URL server eksternal (misal: http://192.168.1.50:3080 atau http://vps-anda.com:3080)")
                 .setView(input)
                 .setCancelable(true)
                 .setPositiveButton("Hubungkan", (dialog, which) -> {
@@ -578,11 +669,13 @@ public class MainActivity extends AppCompatActivity {
                             url = "http://" + url;
                         }
                         prefs.edit().putString(KEY_SERVER_URL, url).apply();
+                        Toast.makeText(this, "Menghubungkan ke: " + url, Toast.LENGTH_SHORT).show();
                         webView.loadUrl(url);
                     }
                 })
-                .setNegativeButton("Lokal HP (127.0.0.1:3080)", (dialog, which) -> {
+                .setNegativeButton("Lokal HP (Default)", (dialog, which) -> {
                     prefs.edit().putString(KEY_SERVER_URL, LOCAL_URL).apply();
+                    Toast.makeText(this, "Beralih ke Engine Lokal HP", Toast.LENGTH_SHORT).show();
                     webView.loadUrl(LOCAL_URL);
                 });
 

@@ -159,15 +159,20 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.8.5
-          name: "DSH Mobile v1.8.5 (Comprehensive Multi-Root SU: Magisk, KernelSU, KernelSU Next, APatch)"
+          tag_name: v1.9.0
+          name: "DSH Mobile v1.9.0 (Aesthetic Splash, Real-time Progress, Remote Node VPS & Chat Enter Fix)"
           body: |
-            ## 🚀 DSH Mobile Standalone Release v1.8.5
-            - 👑 **Universal Multi-Root SU Candidate Matrix**:
-              - Mendukung semua jenis root manager Android: **Magisk, Magisk Alpha/Canary (`/product/bin/magisk`, `/system/bin/magisk`), KernelSU, KernelSU Next (`/data/adb/ksud`, `/data/adb/ksu/bin/su`), APatch (`/data/adb/ap/bin/su`), SuperSU, Lineage SU**, dan custom mount paths.
-              - Eksekusi otomatis memilih `su -mm` (*Mount Master Namespace*) sehingga seluruh filesystem Android host (`/data/data`, `/system`, `/sdcard`) dapat diakses penuh tanpa batasan SELinux namespace.
-            - 🐧 **Full PRoot + Alpine Linux Fallback** untuk perangkat non-root.
-            - 🔄 **In-App Upgrade Compatibility**
+            ## 🚀 DSH Mobile Standalone Release v1.9.0
+            - 🎨 **Aesthetic DeepSeek Splash & Boot Screen**:
+              - Tampilan loading modern dengan logo resmi DeepSeek, progress bar 0-100% real-time yang halus, dan rotating log status 1-baris.
+              - Log mendalam dapat dibuka/disembunyikan kapan saja melalui tombol **📋 Detail Log**.
+            - 💬 **Chat Input Fix (Enter = Newline)**:
+              - Menekan tombol **Enter** di keyboard sekarang membuat baris baru (*newline*) di kolom chat textarea. Pesan hanya terkirim ketika tombol Kirim (Send) ditekan secara eksplisit.
+            - 🌐 **Tombol Node di Toolbar (Remote VPS / Multi-Node DSH)**:
+              - Tombol **`🌐 Node`** kini tersedia langsung di floating toolbar dan menu awal.
+              - Memungkinkan Anda menghubungkan aplikasi Android ke DeepSeek Harness yang berjalan di VPS / Server Remote (atau fallback instan ke Local HP `127.0.0.1:3080`).
+            - 👑 **Universal Multi-Root SU Candidate Matrix** (Magisk, KernelSU, KernelSU Next, APatch, `/product/bin/magisk`).
+            - 🐧 **Full PRoot + Alpine Linux Fallback** untuk mode non-root.
             - 🗜️ **Tersedia Versi ZIP Hemat Kuota**: `dsh-mobile-compressed.zip`
             - 💾 **Root State & Toolbar Persistence** (tersimpan permanen).
             - 🐧 **Full Embedded PRoot + Alpine Linux Environment (`apk add`)**
