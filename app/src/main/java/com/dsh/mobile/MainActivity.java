@@ -980,56 +980,105 @@ public class MainActivity extends AppCompatActivity {
 
     private void showConfigFileViewerDialog(String filePath) {
         try {
-            File file = (filePath != null && !filePath.isEmpty()) ? new File(filePath) : new File(getFilesDir(), ".dsh/profiles/web/cordis.yml");
-            if (!file.exists()) {
-                File alt = new File(getFilesDir(), ".dsh/config.yml");
-                if (alt.exists()) file = alt;
+            File profileDir = new File(getFilesDir(), ".dsh/profiles/web");
+            if (!profileDir.exists()) profileDir.mkdirs();
+
+            File cordisPatchFile = new File(profileDir, "cordis.patch.yml");
+            File packageJsonFile = new File(profileDir, "package.json");
+
+            File targetFile = (filePath != null && !filePath.isEmpty()) ? new File(filePath) : cordisPatchFile;
+            if (!targetFile.exists()) {
+                try {
+                    targetFile.createNewFile();
+                    try (FileWriter fw = new FileWriter(targetFile)) {
+                        fw.write("[]\n");
+                    }
+                } catch (Exception ignored) {}
             }
 
             StringBuilder content = new StringBuilder();
-            if (file.exists()) {
-                try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+            if (targetFile.exists()) {
+                try (BufferedReader br = new BufferedReader(new FileReader(targetFile))) {
                     String l;
                     while ((l = br.readLine()) != null) {
                         content.append(l).append("\n");
                     }
                 }
-            } else {
-                content.append("# DeepSeek Harness Configuration\n# File: ").append(file.getAbsolutePath()).append("\n\n");
             }
 
-            final File targetFile = file;
+            final File activeFile = targetFile;
             final EditText editor = new EditText(this);
             editor.setText(content.toString());
             editor.setTypeface(android.graphics.Typeface.MONOSPACE);
             editor.setTextSize(12);
-            editor.setHorizontallyScrolling(true);
+            editor.setTextColor(0xFFE6EDF3);
+            editor.setBackgroundColor(0xFF0D1117);
+            editor.setPadding(24, 24, 24, 24);
+
+            LinearLayout container = new LinearLayout(this);
+            container.setOrientation(LinearLayout.VERTICAL);
+            container.setPadding(16, 16, 16, 16);
+
+            // Quick multi-agent toggle preset banner
+            Button btnEnableMultiAgent = new Button(this);
+            btnEnableMultiAgent.setText("⚡ Aktifkan Multi-Agent & Subagent Preset");
+            btnEnableMultiAgent.setTextColor(0xFF58A6FF);
+            btnEnableMultiAgent.setTextSize(11);
+            btnEnableMultiAgent.setOnClickListener(v -> {
+                String multiAgentConfig = 
+                    "# Multi-Agent & Subagent Swarm Configuration\n" +
+                    "- id: tool-subagent\n" +
+                    "  disabled: false\n" +
+                    "  config:\n" +
+                    "    provider: spawn\n" +
+                    "    toolName: subagent\n" +
+                    "    backgroundMode: continuable\n\n" +
+                    "- id: tool-subagent-fork\n" +
+                    "  disabled: false\n" +
+                    "  config:\n" +
+                    "    provider: fork\n" +
+                    "    toolName: subagent_fork\n" +
+                    "    backgroundMode: one-shot\n\n" +
+                    "- id: tool-subagent-control\n" +
+                    "  disabled: false\n\n" +
+                    "- id: tool-subagent-list-agents\n" +
+                    "  disabled: false\n";
+                editor.setText(multiAgentConfig);
+                Toast.makeText(this, "Preset Multi-Agent dimuat! Klik 'Simpan & Restart'.", Toast.LENGTH_SHORT).show();
+            });
+
+            container.addView(btnEnableMultiAgent);
 
             ScrollView scroll = new ScrollView(this);
             scroll.addView(editor);
+            container.addView(scroll);
 
             new AlertDialog.Builder(this)
-                    .setTitle("⚙️ File Konfigurasi (" + targetFile.getName() + ")")
-                    .setView(scroll)
+                    .setTitle("⚙️ Konfigurasi (" + activeFile.getName() + ")")
+                    .setView(container)
                     .setPositiveButton("Simpan & Restart", (dialog, which) -> {
-                        try (FileWriter fw = new FileWriter(targetFile)) {
+                        try (FileWriter fw = new FileWriter(activeFile)) {
                             fw.write(editor.getText().toString());
                             Toast.makeText(this, "Konfigurasi disimpan! Merestart server...", Toast.LENGTH_SHORT).show();
-                            stopService(new Intent(this, LocalEngineService.class));
-                            startEngineService();
+                            restartEngine();
                         } catch (Exception e) {
                             Toast.makeText(this, "Gagal menyimpan: " + e.getMessage(), Toast.LENGTH_LONG).show();
                         }
                     })
-                    .setNeutralButton("Buka di Editor Eksternal", (dialog, which) -> {
-                        try {
-                            Intent intent = new Intent(Intent.ACTION_VIEW);
-                            intent.setDataAndType(Uri.fromFile(targetFile), "text/*");
-                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                            startActivity(Intent.createChooser(intent, "Buka dengan..."));
-                        } catch (Exception e) {
-                            Toast.makeText(this, "Tidak ada aplikasi editor teks: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                        }
+                    .setNeutralButton("Pilih File Lain", (dialog, which) -> {
+                        String[] configChoices = new String[]{
+                            "1. cordis.patch.yml (Profil Web Overrides & Multi-Agent)",
+                            "2. package.json (Daftar Dependensi & Bundle Plugin)",
+                            "3. cordis.yml (Profile Root)"
+                        };
+                        new AlertDialog.Builder(this)
+                                .setTitle("Pilih File Konfigurasi")
+                                .setItems(configChoices, (d, w) -> {
+                                    if (w == 0) showConfigFileViewerDialog(cordisPatchFile.getAbsolutePath());
+                                    else if (w == 1) showConfigFileViewerDialog(packageJsonFile.getAbsolutePath());
+                                    else showConfigFileViewerDialog(new File(profileDir, "cordis.yml").getAbsolutePath());
+                                })
+                                .show();
                     })
                     .setNegativeButton("Tutup", null)
                     .show();

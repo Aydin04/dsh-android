@@ -166,13 +166,15 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.9.9
-          name: "DSH Mobile v1.9.9 (Interactive In-App Plugin Uninstaller & Manager)"
+          tag_name: v2.0.0
+          name: "DSH Mobile v2.0.0 (1-Click Multi-Agent Swarm Preset & Visual Config Editor)"
           body: |
-            ## 🚀 DSH Mobile Release v1.9.9
-            - 🗑️ **Interactive Plugin Uninstaller / Removal Tool**:
-              - Tombol **`Lihat Daftar Plugin`** kini interaktif: menampilkan daftar plugin yang terpasang (`dsh-defend`, dll.) dan memungkinkan user mengklik salah satu plugin untuk langsung **Menghapus Plugin** (`🗑️ Hapus Plugin`).
-              - Proses uninstalasi menampilkan output terminal pnpm secara real-time dan otomatis membersihkan dependensi dari `.dsh/profiles/web/package.json`.
+            ## 🚀 DSH Mobile Release v2.0.0
+            - ⚡ **1-Click Multi-Agent & Subagent Swarm Preset**:
+              - Menambahkan tombol instan `⚡ Aktifkan Multi-Agent & Subagent Preset` di menu toolbar **`📝 Config`**.
+              - Pengguna tidak perlu mengetik konfigurasi YAML secara manual di Android: cukup 1 klik tombol lalu *"Simpan & Restart"*, engine DSH akan langsung mengaktifkan `subagent`, `subagent_fork`, `subagent-control`, dan `list-agents`.
+            - 📝 **Visual File Selector**: Navigasi mudah antara `cordis.patch.yml`, `package.json`, dan `cordis.yml`.
+            - 🗑️ **Interactive Plugin Uninstaller / Manager**: Pasang dan hapus plugin via GUI.
             - 🛠️ **Fix Cordis ESM Module Loader**: Memperbaiki `existsSync` loader saat plugin terpasang.
             - 📦 **Embedded PNPM Engine**: `pnpm` terintegrasi langsung di dalam archive APK.
             - 📺 **Live Interactive Plugin Terminal**: Output instalasi dan compile logs tampil secara real-time.
