@@ -850,12 +850,13 @@ public class MainActivity extends AppCompatActivity {
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
                 super.onReceivedError(view, request, error);
                 String errDesc = error.getDescription().toString();
-                appendLog("[WebView Error] " + errDesc + " on " + request.getUrl());
+                String failedUrl = request.getUrl().toString();
+                appendLog("[WebView Error] " + errDesc + " on " + failedUrl);
 
                 if (request.isForMainFrame() && (errDesc.contains("ERR_CONNECTION_RESET") || errDesc.contains("ERR_CONNECTION_REFUSED") || errDesc.contains("net::ERR_"))) {
                     handler.postDelayed(() -> {
-                        appendLog("[WebView Retry] Retrying connection to dashboard...");
-                        view.loadUrl(LOCAL_URL);
+                        appendLog("[WebView Retry] Retrying connection to " + failedUrl + "...");
+                        view.loadUrl(failedUrl);
                     }, 1500);
                 }
             }

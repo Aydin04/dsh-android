@@ -318,10 +318,26 @@ public class LocalEngineService extends Service {
             File atomicDir = new File(filesDir, "atomic-router");
             File atomicBin = new File(atomicDir, "bin/omniroute.mjs");
             if (!atomicBin.exists() || isNewAppVersion) {
-                try (InputStream rawIn = getAssets().open("engine/atomic-router.tar.gz")) {
-                    emitLog("[EXTRACT] Extracting AtomicRouter engine from engine/atomic-router.tar.gz...");
-                    try (InputStream inStream = new GzipCompressorInputStream(rawIn);
-                         TarArchiveInputStream tarIn = new TarArchiveInputStream(inStream)) {
+                String atomicAsset = "engine/atomic-router.tar.gz";
+                boolean isAtomicGzip = true;
+                try {
+                    String[] engineAssets = getAssets().list("engine");
+                    if (engineAssets != null) {
+                        List<String> assetList = Arrays.asList(engineAssets);
+                        if (assetList.contains("atomic-router.tar.gz")) {
+                            atomicAsset = "engine/atomic-router.tar.gz";
+                            isAtomicGzip = true;
+                        } else if (assetList.contains("atomic-router.tar")) {
+                            atomicAsset = "engine/atomic-router.tar";
+                            isAtomicGzip = false;
+                        }
+                    }
+                } catch (Exception ignored) {}
+
+                try (InputStream rawIn = getAssets().open(atomicAsset)) {
+                    emitLog("[EXTRACT] Extracting AtomicRouter engine from " + atomicAsset + "...");
+                    InputStream inStream = isAtomicGzip ? new GzipCompressorInputStream(new java.io.BufferedInputStream(rawIn)) : rawIn;
+                    try (TarArchiveInputStream tarIn = new TarArchiveInputStream(inStream)) {
                         TarArchiveEntry entry;
                         int aCount = 0;
                         while ((entry = tarIn.getNextTarEntry()) != null) {
@@ -340,11 +356,14 @@ public class LocalEngineService extends Service {
                                 }
                             }
                             aCount++;
+                            if (aCount % 2000 == 0) {
+                                emitLog("[EXTRACT ATOMIC] Unpacked " + aCount + " files...");
+                            }
                         }
-                        emitLog("[EXTRACT SUCCESS] Extracted " + aCount + " AtomicRouter files.");
+                        emitLog("[EXTRACT SUCCESS] Extracted total " + aCount + " AtomicRouter files.");
                     }
                 } catch (Exception err) {
-                    emitLog("[ATOMIC EXTRACT INFO] " + err.getMessage());
+                    emitLog("[ATOMIC EXTRACT ERROR] " + err.getClass().getSimpleName() + ": " + err.getMessage());
                 }
             } else {
                 emitLog("[EXTRACT] AtomicRouter cached at " + atomicDir.getAbsolutePath());
