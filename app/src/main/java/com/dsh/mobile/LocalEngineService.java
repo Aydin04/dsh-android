@@ -326,9 +326,9 @@ public class LocalEngineService extends Service {
                     List<String> assetList = engineAssets != null ? Arrays.asList(engineAssets) : Collections.emptyList();
                     
                     List<InputStream> parts = new ArrayList<>();
-                    boolean isGzip = true;
+                    String compType = "gzip"; // "gzip", "zstd", "raw"
                     
-                    // Check for multi-part chunks
+                    // Check for multi-part chunks or single compressed assets
                     List<String> partNames = new ArrayList<>();
                     for (String name : assetList) {
                         if (name.startsWith("atomic-router.part_") || name.startsWith("atomic-part-")) {
@@ -342,16 +342,30 @@ public class LocalEngineService extends Service {
                         for (String part : partNames) {
                             parts.add(getAssets().open("engine/" + part));
                         }
+                        if (partNames.get(0).endsWith(".zst")) {
+                            compType = "zstd";
+                        }
+                    } else if (assetList.contains("atomic-router.tar.zst")) {
+                        parts.add(getAssets().open("engine/atomic-router.tar.zst"));
+                        compType = "zstd";
                     } else if (assetList.contains("atomic-router.tar.gz")) {
                         parts.add(getAssets().open("engine/atomic-router.tar.gz"));
+                        compType = "gzip";
                     } else if (assetList.contains("atomic-router.tar")) {
                         parts.add(getAssets().open("engine/atomic-router.tar"));
-                        isGzip = false;
+                        compType = "raw";
                     }
 
                     if (!parts.isEmpty()) {
                         InputStream combinedIn = new SequenceInputStream(Collections.enumeration(parts));
-                        InputStream inStream = isGzip ? new GzipCompressorInputStream(new java.io.BufferedInputStream(combinedIn)) : combinedIn;
+                        InputStream inStream;
+                        if ("zstd".equals(compType)) {
+                            inStream = new com.github.luben.zstd.ZstdInputStreamNoFinalizer(new java.io.BufferedInputStream(combinedIn));
+                        } else if ("gzip".equals(compType)) {
+                            inStream = new GzipCompressorInputStream(new java.io.BufferedInputStream(combinedIn));
+                        } else {
+                            inStream = combinedIn;
+                        }
                         try (TarArchiveInputStream tarIn = new TarArchiveInputStream(inStream)) {
                             TarArchiveEntry entry;
                             int aCount = 0;
