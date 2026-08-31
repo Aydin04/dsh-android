@@ -10,8 +10,8 @@ android {
         applicationId "com.dsh.mobile"
         minSdk 24
         targetSdk 28
-        versionCode 27
-        versionName "3.1.0"
+        versionCode 28
+        versionName "3.1.1"
 
         ndk {
             abiFilters 'arm64-v8a'
@@ -40,10 +40,6 @@ android {
         resources {
             excludes += ['META-INF/**']
         }
-    }
-
-    androidResources {
-        noCompress 'tar', 'gz', 'tar.gz', 'tgz', 'zip'
     }
 }
 

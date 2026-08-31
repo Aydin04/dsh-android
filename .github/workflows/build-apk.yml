@@ -142,18 +142,19 @@ jobs:
           curl -s -L "https://github.com/Aydin04/atomic-router/releases/download/v3.8.50/atomic-router-linux-x64.tar.gz" | tar -xz -C /tmp/atomic_pack/atomic-router || true
           if [ -f "/tmp/atomic_pack/atomic-router/server.js" ]; then
             cd /tmp/atomic_pack/atomic-router
-            # Prune non-runtime multi-platform & test packages
+            # Prune non-runtime dev/test tools
             rm -rf docs tests images changelog.d contrib docker examples .git || true
-            rm -rf node_modules/promptfoo || true
-            rm -rf node_modules/@tensorflow || true
-            rm -rf node_modules/@oven || true
-            rm -rf node_modules/bun || true
-            rm -rf node_modules/wordnet-db || true
-            rm -rf node_modules/playwright || true
-            find . -type f \( -name "*.map" -o -name "*.d.ts" -o -name "*.flow" \) -delete || true
+            rm -rf node_modules/promptfoo node_modules/@tensorflow node_modules/@oven node_modules/bun node_modules/wordnet-db node_modules/playwright node_modules/playwright-core || true
+            rm -rf node_modules/typescript node_modules/prettier node_modules/eslint node_modules/@eslint node_modules/vitest node_modules/c8 node_modules/knip node_modules/@typescript* node_modules/fumadocs* .build/next/node_modules/typescript* 2>/dev/null || true
+            
+            # Prune non-ARM64 / non-Linux native binaries
+            find . -type f \( -name "*.dll" -o -name "*.dylib" -o -name "*.exe" \) -delete || true
+            find node_modules -type d \( -name "win32" -o -name "darwin" -o -name "x64" -o -name "ia32" -o -name "arm" \) -not -path "*/arm64/*" -exec rm -rf {} + 2>/dev/null || true
+            
+            find . -type f \( -name "*.map" -o -name "*.d.ts" -o -name "*.flow" -o -name "LICENSE*" -o -name "CHANGELOG*" \) -delete || true
             cd /tmp/atomic_pack
             tar -czf /tmp/atomic-router-full.tar.gz atomic-router
-            split -b 150M /tmp/atomic-router-full.tar.gz $GITHUB_WORKSPACE/app/src/main/assets/engine/atomic-router.part_
+            split -b 80M /tmp/atomic-router-full.tar.gz $GITHUB_WORKSPACE/app/src/main/assets/engine/atomic-router.part_
             rm -f /tmp/atomic-router-full.tar.gz
           fi
           
@@ -186,14 +187,16 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.1.0
-          name: "DSH Mobile v3.1.0 (Full Standalone AtomicRouter + DSH Dual-Engine Tested & Verified)"
+          tag_name: v3.1.1
+          name: "DSH Mobile v3.1.1 (Slim Lightweight Standalone AtomicRouter + DSH Dual-Engine)"
           body: |
-            ## 🚀 DSH Mobile Release v3.1.0
-            - 🔀 **Full Standalone Precompiled AtomicRouter Engine**:
-              - Mengintegrasikan build produksi resmi yang mencakup `.build/next/`, `server.js`, dan WebSocket proxy.
-              - Terverifikasi 100% aktif dan melayani dashboard pada `http://127.0.0.1:20128/`.
-              - Tombol toolbar **`🔀 AtomicRoute`** membuka dashboard AtomicRouter langsung di dalam aplikasi Android.
+            ## 🚀 DSH Mobile Release v3.1.1
+            - 🗜️ **Deep-Slimmed Size (~200MB APK)**:
+              - Menghapus compiler dev/test binaries non-runtime (TypeScript, Vitest, Prettier, ESLint).
+              - Menghapus native binaries cross-platform (Windows DLL, macOS dylib, x86_64) dan hanya mempertahankan ARM64 untuk Android.
+              - Mengaktifkan kembali APK deflation standard.
+            - 🔀 **Full Standalone AtomicRouter Engine (Port 20128)**:
+              - Seluruh fitur dashboard AtomicRouter, SQLite storage, API key management, combos, dan live inspector WebSocket aktif 100%.
             - 💾 **Dual Database Backup & Restore**: Backup data DSH (`.dsh/`) dan AtomicRouter (`.atomic-router/`) ke `/sdcard/DSH_Backups/`.
             - ✨ **Comprehensive 1-Click Feature Presets Library**: Preset Multi-Agent Swarm, Full-Power Autonomous, Web Search, dan Context Auto-Pruner.
             - 📝 **Visual File Selector**: Navigasi mudah antara `cordis.patch.yml`, `package.json`, dan `cordis.yml`.
