@@ -454,11 +454,18 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void installPlugin(String rawInput) {
-        // Sanitize input if user pasted the full command like "dsh plugin --profile web add dsh-defend"
         String pluginName = rawInput.trim();
         if (pluginName.contains(" ")) {
             String[] parts = pluginName.split("\\s+");
-            pluginName = parts[parts.length - 1]; // take the last argument (package name)
+            pluginName = parts[parts.length - 1]; // take the last argument
+        }
+
+        // Support direct GitHub URLs: https://github.com/PerryLink/dsh-defend -> github:PerryLink/dsh-defend
+        if (pluginName.startsWith("https://github.com/") || pluginName.startsWith("http://github.com/")) {
+            pluginName = pluginName.replaceFirst("https?://github.com/", "github:");
+            if (pluginName.endsWith(".git")) {
+                pluginName = pluginName.substring(0, pluginName.length() - 4);
+            }
         }
 
         final String targetPlugin = pluginName;
