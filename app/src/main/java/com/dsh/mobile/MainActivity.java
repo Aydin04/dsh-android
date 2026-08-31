@@ -584,31 +584,147 @@ public class MainActivity extends AppCompatActivity {
         }).start();
     }
 
+    private void removePlugin(String pluginName) {
+        final String targetPlugin = pluginName.trim();
+        final TextView logView = new TextView(this);
+        logView.setTypeface(android.graphics.Typeface.MONOSPACE);
+        logView.setTextSize(11);
+        logView.setTextColor(0xFFF85149);
+        logView.setBackgroundColor(0xFF0D1117);
+        logView.setPadding(24, 24, 24, 24);
+        logView.setText("[PLUGIN] Menghapus plugin " + targetPlugin + "...\n");
+
+        final ScrollView logScroll = new ScrollView(this);
+        logScroll.addView(logView);
+
+        AlertDialog progressDialog = new AlertDialog.Builder(this)
+                .setTitle("🗑️ Menghapus Plugin (" + targetPlugin + ")")
+                .setView(logScroll)
+                .setCancelable(false)
+                .setPositiveButton("Tutup & Restart Engine", null)
+                .create();
+        progressDialog.show();
+        progressDialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
+
+        new Thread(() -> {
+            try {
+                File filesDir = getFilesDir();
+                File nodeFile = new File(filesDir, "bin/node");
+                File libDir = new File(filesDir, "lib");
+                File dshDir = new File(filesDir, "dsh");
+                File dshBin = new File(dshDir, "lib/bin.js");
+
+                String nodePath = new File(dshDir, "node_modules").getAbsolutePath() + 
+                        ":" + new File(filesDir, ".dsh/profiles/web/node_modules").getAbsolutePath() +
+                        ":" + new File(filesDir, "node_modules").getAbsolutePath();
+
+                ProcessBuilder pb = new ProcessBuilder(
+                        nodeFile.getAbsolutePath(),
+                        dshBin.getAbsolutePath(),
+                        "plugin",
+                        "--profile", "web",
+                        "remove",
+                        targetPlugin
+                );
+                pb.directory(filesDir);
+                pb.environment().put("HOME", filesDir.getAbsolutePath());
+                pb.environment().put("LD_LIBRARY_PATH", libDir.getAbsolutePath());
+                pb.environment().put("NODE_PATH", nodePath);
+                pb.environment().put("PATH", new File(filesDir, "bin").getAbsolutePath() + ":/system/bin:/data/data/com.termux/files/usr/bin");
+                pb.redirectErrorStream(true);
+
+                Process proc = pb.start();
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(proc.getInputStream()))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        final String outLine = line;
+                        appendLog("[PLUGIN REMOVE] " + outLine);
+                        handler.post(() -> {
+                            logView.append(outLine + "\n");
+                            logScroll.post(() -> logScroll.fullScroll(View.FOCUS_DOWN));
+                        });
+                    }
+                }
+                int exitCode = proc.waitFor();
+                appendLog("[PLUGIN REMOVE] Selesai dengan kode: " + exitCode);
+
+                handler.post(() -> {
+                    if (exitCode == 0) {
+                        logView.append("\n✅ [BERHASIL] Plugin " + targetPlugin + " sukses dihapus dari profil web!\nSilakan klik tombol di bawah untuk restart engine.");
+                    } else {
+                        logView.append("\n⚠️ Proses hapus selesai dengan exit code: " + exitCode + ".");
+                    }
+                    logScroll.post(() -> logScroll.fullScroll(View.FOCUS_DOWN));
+                    Button btn = progressDialog.getButton(AlertDialog.BUTTON_POSITIVE);
+                    btn.setEnabled(true);
+                    btn.setText("Restart Engine Sekarang");
+                    btn.setOnClickListener(v -> {
+                        progressDialog.dismiss();
+                        restartEngine();
+                    });
+                });
+            } catch (Exception e) {
+                appendLog("[PLUGIN REMOVE ERROR] " + e.getMessage());
+                handler.post(() -> {
+                    logView.append("\n[FATAL ERROR] " + e.getMessage() + "\n");
+                    Button btn = progressDialog.getButton(AlertDialog.BUTTON_POSITIVE);
+                    btn.setEnabled(true);
+                    btn.setText("Tutup");
+                    btn.setOnClickListener(v -> progressDialog.dismiss());
+                });
+            }
+        }).start();
+    }
+
     private void listInstalledPlugins() {
         File filesDir = getFilesDir();
         File profilePackageJson = new File(filesDir, ".dsh/profiles/web/package.json");
-        File cordisYml = new File(filesDir, ".dsh/profiles/web/cordis.yml");
-        File cordisPatchYml = new File(filesDir, ".dsh/profiles/web/cordis.patch.yml");
 
-        StringBuilder info = new StringBuilder();
+        final java.util.List<String> installedPluginNames = new java.util.ArrayList<>();
         if (profilePackageJson.exists()) {
-            info.append("=== Web Profile Dependencies (.dsh/profiles/web/package.json) ===\n");
-            try (BufferedReader br = new BufferedReader(new FileReader(profilePackageJson))) {
-                String line;
-                while ((line = br.readLine()) != null) {
-                    info.append(line).append("\n");
+            try {
+                StringBuilder sb = new StringBuilder();
+                try (BufferedReader br = new BufferedReader(new FileReader(profilePackageJson))) {
+                    String line;
+                    while ((line = br.readLine()) != null) sb.append(line);
                 }
-            } catch (Exception e) {
-                info.append("Error membaca package.json: ").append(e.getMessage()).append("\n");
-            }
-        } else {
-            info.append("Belum ada plugin eksternal terpasang di profile web.\n\nDefault Built-in Plugins aktif:\n• @deepseek-ai/dsh-base\n• @deepseek-ai/dsh-web-app\n• @deepseek-ai/dsh-host-plugin-inventory\n• @deepseek-ai/dsh-cordis-host-runner");
+                org.json.JSONObject obj = new org.json.JSONObject(sb.toString());
+                if (obj.has("dependencies")) {
+                    org.json.JSONObject deps = obj.getJSONObject("dependencies");
+                    java.util.Iterator<String> keys = deps.keys();
+                    while (keys.hasNext()) {
+                        installedPluginNames.add(keys.next());
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+
+        if (installedPluginNames.isEmpty()) {
+            new AlertDialog.Builder(this)
+                    .setTitle("🔌 Daftar Plugin Web Profile")
+                    .setMessage("Belum ada plugin tambahan yang terpasang di profile web.\n\nDefault Built-in Plugins aktif:\n• @deepseek-ai/dsh-base\n• @deepseek-ai/dsh-web-app\n• @deepseek-ai/dsh-host-plugin-inventory\n• @deepseek-ai/dsh-cordis-host-runner")
+                    .setPositiveButton("Tutup", null)
+                    .show();
+            return;
+        }
+
+        String[] items = new String[installedPluginNames.size()];
+        for (int i = 0; i < installedPluginNames.size(); i++) {
+            items[i] = "📦 " + installedPluginNames.get(i);
         }
 
         new AlertDialog.Builder(this)
-                .setTitle("🔌 Daftar Plugin Web Profile")
-                .setMessage(info.toString())
-                .setPositiveButton("Tutup", null)
+                .setTitle("🔌 Plugin Terpasang (" + installedPluginNames.size() + ")")
+                .setItems(items, (dialog, which) -> {
+                    String selectedPlugin = installedPluginNames.get(which);
+                    new AlertDialog.Builder(this)
+                            .setTitle("Kelola: " + selectedPlugin)
+                            .setMessage("Pilih tindakan untuk plugin '" + selectedPlugin + "':")
+                            .setPositiveButton("🗑️ Hapus Plugin", (d, w) -> removePlugin(selectedPlugin))
+                            .setNegativeButton("Batal", null)
+                            .show();
+                })
+                .setNegativeButton("Tutup", null)
                 .show();
     }
 

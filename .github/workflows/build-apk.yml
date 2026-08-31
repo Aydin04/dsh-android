@@ -166,12 +166,14 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.9.8
-          name: "DSH Mobile v1.9.8 (Fix existsSync Import in Cordis ESM Plugin Loader)"
+          tag_name: v1.9.9
+          name: "DSH Mobile v1.9.9 (Interactive In-App Plugin Uninstaller & Manager)"
           body: |
-            ## 🚀 DSH Mobile Release v1.9.8
-            - 🛠️ **Fix `existsSync is not defined` in Cordis Plugin Loader**:
-              - Menambahkan import `import { existsSync as __fsExistsSync } from "node:fs"` di `@deepseek-ai/cordis-plugin-loader` sehingga proses dynamic resolution profil plugin berjalan mulus tanpa error `ReferenceError`.
+            ## 🚀 DSH Mobile Release v1.9.9
+            - 🗑️ **Interactive Plugin Uninstaller / Removal Tool**:
+              - Tombol **`Lihat Daftar Plugin`** kini interaktif: menampilkan daftar plugin yang terpasang (`dsh-defend`, dll.) dan memungkinkan user mengklik salah satu plugin untuk langsung **Menghapus Plugin** (`🗑️ Hapus Plugin`).
+              - Proses uninstalasi menampilkan output terminal pnpm secara real-time dan otomatis membersihkan dependensi dari `.dsh/profiles/web/package.json`.
+            - 🛠️ **Fix Cordis ESM Module Loader**: Memperbaiki `existsSync` loader saat plugin terpasang.
             - 📦 **Embedded PNPM Engine**: `pnpm` terintegrasi langsung di dalam archive APK.
             - 📺 **Live Interactive Plugin Terminal**: Output instalasi dan compile logs tampil secara real-time.
             - 🔄 **Auto-Migration on Upgrade (Tanpa Perlu Fresh Install)**.
