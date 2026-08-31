@@ -65,7 +65,11 @@ public class LocalEngineService extends Service {
             if (!libDir.exists()) libDir.mkdirs();
 
             // Check if app was updated to force fresh extraction of core packages
-            int currentVersionCode = BuildConfig.VERSION_CODE;
+            int currentVersionCode = 14;
+            try {
+                currentVersionCode = getPackageManager().getPackageInfo(getPackageName(), 0).versionCode;
+            } catch (Exception ignored) {}
+
             android.content.SharedPreferences prefs = getSharedPreferences("DSH_ENGINE_STATE", Context.MODE_PRIVATE);
             int lastExtractedVersion = prefs.getInt("EXTRACTED_VERSION", 0);
             boolean isNewAppVersion = (currentVersionCode != lastExtractedVersion);
