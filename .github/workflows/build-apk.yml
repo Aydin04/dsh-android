@@ -159,7 +159,7 @@ jobs:
 
       - name: Build Debug APK
         run: |
-          gradle assembleDebug --no-build-cache --stacktrace
+          gradle assembleDebug --no-build-cache --info --stacktrace
 
       - name: Check APK contents, Determine Release Tag, and Compress ZIP
         id: release_info
