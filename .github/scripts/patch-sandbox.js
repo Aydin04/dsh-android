@@ -292,6 +292,9 @@ function __resolvePnpmArgs(args, cwd) {
 const cordisLoaderPath = `${dshRoot}/node_modules/@deepseek-ai/cordis-plugin-loader/lib/index.js`;
 if (fs.existsSync(cordisLoaderPath)) {
   let cCode = fs.readFileSync(cordisLoaderPath, 'utf8');
+  if (!cCode.includes('import { existsSync as __fsExistsSync } from "node:fs";')) {
+    cCode = 'import { existsSync as __fsExistsSync } from "node:fs";\n' + cCode;
+  }
   if (cCode.includes('import(name, getOuterStack) {')) {
     console.log('[PATCH] Patching cordis-plugin-loader import resolution for Android profiles...');
     const resolverPatch = `
@@ -308,7 +311,7 @@ if (fs.existsSync(cordisLoaderPath)) {
 \t\t\t\t\t\t\`/data/data/com.dsh.mobile/files/.dsh/profiles/web/node_modules/\${name}/lib/index.js\`
 \t\t\t\t\t];
 \t\t\t\t\tfor (const c of candidates) {
-\t\t\t\t\t\tif (existsSync(c)) {
+\t\t\t\t\t\tif (__fsExistsSync(c)) {
 \t\t\t\t\t\t\treturn await import("file://" + c);
 \t\t\t\t\t\t}
 \t\t\t\t\t}
@@ -320,6 +323,6 @@ if (fs.existsSync(cordisLoaderPath)) {
       resolverPatch
     );
     fs.writeFileSync(cordisLoaderPath, cCode, 'utf8');
-    console.log('[PATCH SUCCESS] cordis-plugin-loader patched for profile plugins!');
+    console.log('[PATCH SUCCESS] cordis-plugin-loader patched for profile plugins with __fsExistsSync!');
   }
 }

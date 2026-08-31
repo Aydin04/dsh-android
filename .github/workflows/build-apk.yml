@@ -166,13 +166,12 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.9.7
-          name: "DSH Mobile v1.9.7 (Fix Cordis ESM Module Loader for Dynamic Profile Plugins)"
+          tag_name: v1.9.8
+          name: "DSH Mobile v1.9.8 (Fix existsSync Import in Cordis ESM Plugin Loader)"
           body: |
-            ## 🚀 DSH Mobile Release v1.9.7
-            - 🛠️ **Fix Cordis ESM Module Resolution for Dynamic Plugins**:
-              - Mem-patch `@deepseek-ai/cordis-plugin-loader` agar saat memuat plugin di profil web (`dsh-defend`, dll.), jika resolver standar Node.js gagal mengenali bare import, loader otomatis me-resolve path modul langsung dari `.dsh/profiles/web/node_modules/<plugin>/lib/index.js`.
-              - Menyelesaikan error `Cannot find package 'dsh-defend' imported from cordis-plugin-loader`.
+            ## 🚀 DSH Mobile Release v1.9.8
+            - 🛠️ **Fix `existsSync is not defined` in Cordis Plugin Loader**:
+              - Menambahkan import `import { existsSync as __fsExistsSync } from "node:fs"` di `@deepseek-ai/cordis-plugin-loader` sehingga proses dynamic resolution profil plugin berjalan mulus tanpa error `ReferenceError`.
             - 📦 **Embedded PNPM Engine**: `pnpm` terintegrasi langsung di dalam archive APK.
             - 📺 **Live Interactive Plugin Terminal**: Output instalasi dan compile logs tampil secara real-time.
             - 🔄 **Auto-Migration on Upgrade (Tanpa Perlu Fresh Install)**.
