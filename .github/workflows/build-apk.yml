@@ -142,9 +142,19 @@ jobs:
           git clone --depth 1 https://github.com/Aydin04/atomic-router.git /tmp/atomic_pack/atomic-router || true
           if [ -d "/tmp/atomic_pack/atomic-router" ]; then
             cd /tmp/atomic_pack/atomic-router
-            npm install --omit=dev --no-audit --no-fund || true
+            npm install --omit=dev --no-audit --no-fund --ignore-scripts || true
+            # Remove heavy non-runtime artifacts (benchmarks, heavy binary models, dev suites)
+            rm -rf docs tests images changelog.d contrib docker examples .git || true
+            rm -rf node_modules/promptfoo || true
+            rm -rf node_modules/onnxruntime-node/bin/napi-v3/win32 || true
+            rm -rf node_modules/onnxruntime-node/bin/napi-v3/darwin || true
+            rm -rf node_modules/onnxruntime-node/bin/napi-v3/linux/x64 || true
+            rm -rf node_modules/@tensorflow || true
+            rm -rf node_modules/@oven || true
+            rm -rf node_modules/bun || true
+            rm -rf node_modules/wordnet-db || true
             find . -type f \( -name "*.d.ts" -o -name "*.map" -o -name "*.md" -o -name "LICENSE*" -o -name "CHANGELOG*" \) -delete || true
-            find . -type d \( -name "test" -o -name "tests" -o -name "docs" -o -name "example" -o -name "examples" -o -name ".git" \) -prune -exec rm -rf {} + || true
+            find . -type d \( -name "test" -o -name "tests" -o -name "docs" -o -name "example" -o -name "examples" \) -prune -exec rm -rf {} + || true
             cd /tmp/atomic_pack
             tar -czf $GITHUB_WORKSPACE/app/src/main/assets/engine/atomic-router.tar.gz atomic-router
           fi
