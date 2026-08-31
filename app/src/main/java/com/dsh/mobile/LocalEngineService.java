@@ -308,7 +308,6 @@ public class LocalEngineService extends Service {
                             }
                         }
                         emitLog("[EXTRACT] Extracted total " + count + " DSH package files successfully.");
-                        prefs.edit().putInt("EXTRACTED_VERSION", currentVersionCode).apply();
                     }
                 }
             } else {
@@ -318,40 +317,40 @@ public class LocalEngineService extends Service {
             // 3b. Extract AtomicRouter engine if bundled in assets
             File atomicDir = new File(filesDir, "atomic-router");
             File atomicBin = new File(atomicDir, "bin/omniroute.mjs");
-            try {
-                String[] engineAssets = getAssets().list("engine");
-                if (engineAssets != null && Arrays.asList(engineAssets).contains("atomic-router.tar.gz")) {
-                    if (!atomicBin.exists() || isNewAppVersion) {
-                        emitLog("[EXTRACT] Extracting AtomicRouter engine from engine/atomic-router.tar.gz...");
-                        try (InputStream rawIn = getAssets().open("engine/atomic-router.tar.gz");
-                             InputStream inStream = new GzipCompressorInputStream(rawIn);
-                             TarArchiveInputStream tarIn = new TarArchiveInputStream(inStream)) {
-                            TarArchiveEntry entry;
-                            int aCount = 0;
-                            while ((entry = tarIn.getNextTarEntry()) != null) {
-                                File outputFile = new File(filesDir, entry.getName());
-                                if (entry.isDirectory()) {
-                                    if (!outputFile.exists()) outputFile.mkdirs();
-                                } else {
-                                    File parent = outputFile.getParentFile();
-                                    if (parent != null && !parent.exists()) parent.mkdirs();
-                                    try (OutputStream out = new FileOutputStream(outputFile)) {
-                                        byte[] buf = new byte[32768];
-                                        int len;
-                                        while ((len = tarIn.read(buf)) != -1) {
-                                            out.write(buf, 0, len);
-                                        }
+            if (!atomicBin.exists() || isNewAppVersion) {
+                try (InputStream rawIn = getAssets().open("engine/atomic-router.tar.gz")) {
+                    emitLog("[EXTRACT] Extracting AtomicRouter engine from engine/atomic-router.tar.gz...");
+                    try (InputStream inStream = new GzipCompressorInputStream(rawIn);
+                         TarArchiveInputStream tarIn = new TarArchiveInputStream(inStream)) {
+                        TarArchiveEntry entry;
+                        int aCount = 0;
+                        while ((entry = tarIn.getNextTarEntry()) != null) {
+                            File outputFile = new File(filesDir, entry.getName());
+                            if (entry.isDirectory()) {
+                                if (!outputFile.exists()) outputFile.mkdirs();
+                            } else {
+                                File parent = outputFile.getParentFile();
+                                if (parent != null && !parent.exists()) parent.mkdirs();
+                                try (OutputStream out = new FileOutputStream(outputFile)) {
+                                    byte[] buf = new byte[32768];
+                                    int len;
+                                    while ((len = tarIn.read(buf)) != -1) {
+                                        out.write(buf, 0, len);
                                     }
                                 }
-                                aCount++;
                             }
-                            emitLog("[EXTRACT SUCCESS] Extracted " + aCount + " AtomicRouter files.");
+                            aCount++;
                         }
+                        emitLog("[EXTRACT SUCCESS] Extracted " + aCount + " AtomicRouter files.");
                     }
+                } catch (Exception err) {
+                    emitLog("[ATOMIC EXTRACT INFO] " + err.getMessage());
                 }
-            } catch (Exception err) {
-                emitLog("[ATOMIC EXTRACT ERROR] " + err.getMessage());
+            } else {
+                emitLog("[EXTRACT] AtomicRouter cached at " + atomicDir.getAbsolutePath());
             }
+
+            prefs.edit().putInt("EXTRACTED_VERSION", currentVersionCode).apply();
 
             // 4. Test executing node --version with RPATH and LD_LIBRARY_PATH
             emitLog("[TEST] Testing Node execution: " + nodeFile.getAbsolutePath() + " -v");
@@ -416,7 +415,9 @@ public class LocalEngineService extends Service {
                     ProcessBuilder atomicPb = new ProcessBuilder(
                             nodeFile.getAbsolutePath(),
                             atomicBin.getAbsolutePath(),
-                            "--port", "20128"
+                            "serve",
+                            "--port", "20128",
+                            "--no-open"
                     );
                     atomicPb.directory(atomicDir);
                     atomicPb.environment().put("HOME", filesDir.getAbsolutePath());

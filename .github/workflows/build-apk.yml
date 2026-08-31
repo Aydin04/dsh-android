@@ -194,16 +194,15 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.0.0
-          name: "DSH Mobile v3.0.0 (Dual-Engine: Full AtomicRouter + DeepSeek Harness All-in-One)"
+          tag_name: v3.0.1
+          name: "DSH Mobile v3.0.1 (AtomicRouter Direct Asset Extraction & Port 20128 Fix)"
           body: |
-            ## 🚀 DSH Mobile Major Release v3.0.0
-            - 🔀 **Full 100% AtomicRouter Engine Embedded**:
-              - Mengintegrasikan engine lengkap AtomicRouter (Port 20128) langsung ke dalam 1 APK Android di samping DeepSeek Harness (Port 3080).
-              - Menambahkan tombol toolbar **`🔀 AtomicRoute`** untuk beralih instan antara **DSH Agent Chat** dan **Full Dashboard AtomicRouter (API Manager, Combos, Context Compression, Analytics, MCP)** tanpa kehilangan satu pun fitur!
-            - 💾 **Dual-Database Backup & Restore**:
-              - Tombol **`💾 Backup`** kini otomatis mencadangkan database DSH (`.dsh/`) dan database AtomicRouter (`.atomic-router/`) ke `/sdcard/DSH_Backups/`.
-            - ⚡ **Anti-OOM & Offline-First**: Tidak lagi bergantung pada VPS yang sering kehabisan RAM.
+            ## 🚀 DSH Mobile Release v3.0.1
+            - 🔀 **Fixed AtomicRouter Engine Extraction**:
+              - Mengatasi issue asset engine extraction AtomicRouter saat inisialisasi awal.
+              - Memperbaiki command runner dengan argumen `serve --port 20128 --no-open` sehingga dashboard port 20128 langsung aktif dan dapat diakses via tombol **`🔀 AtomicRoute`**.
+            - 💾 **Dual Database Backup**: Support backup `.dsh/` dan `.atomic-router/` ke `/sdcard/DSH_Backups/`.
+            - 🗜️ **Optimized Clean Size**: Ukuran APK & ZIP sekarang terkompresi ~200MB.
             - ✨ **Comprehensive 1-Click Feature Presets Library**: Preset Multi-Agent Swarm, Full-Power Autonomous, Web Search, dan Context Auto-Pruner.
             - 📝 **Visual File Selector**: Navigasi mudah antara `cordis.patch.yml`, `package.json`, dan `cordis.yml`.
             - 🗑️ **Interactive Plugin Uninstaller / Manager**: Pasang dan hapus plugin via GUI.
