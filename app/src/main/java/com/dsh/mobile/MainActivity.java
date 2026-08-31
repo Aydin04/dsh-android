@@ -1019,35 +1019,126 @@ public class MainActivity extends AppCompatActivity {
             container.setOrientation(LinearLayout.VERTICAL);
             container.setPadding(16, 16, 16, 16);
 
-            // Quick multi-agent toggle preset banner
-            Button btnEnableMultiAgent = new Button(this);
-            btnEnableMultiAgent.setText("⚡ Aktifkan Multi-Agent & Subagent Preset");
-            btnEnableMultiAgent.setTextColor(0xFF58A6FF);
-            btnEnableMultiAgent.setTextSize(11);
-            btnEnableMultiAgent.setOnClickListener(v -> {
-                String multiAgentConfig = 
-                    "# Multi-Agent & Subagent Swarm Configuration\n" +
-                    "- id: tool-subagent\n" +
-                    "  disabled: false\n" +
-                    "  config:\n" +
-                    "    provider: spawn\n" +
-                    "    toolName: subagent\n" +
-                    "    backgroundMode: continuable\n\n" +
-                    "- id: tool-subagent-fork\n" +
-                    "  disabled: false\n" +
-                    "  config:\n" +
-                    "    provider: fork\n" +
-                    "    toolName: subagent_fork\n" +
-                    "    backgroundMode: one-shot\n\n" +
-                    "- id: tool-subagent-control\n" +
-                    "  disabled: false\n\n" +
-                    "- id: tool-subagent-list-agents\n" +
-                    "  disabled: false\n";
-                editor.setText(multiAgentConfig);
-                Toast.makeText(this, "Preset Multi-Agent dimuat! Klik 'Simpan & Restart'.", Toast.LENGTH_SHORT).show();
+            // Preset selector button
+            Button btnPresetLibrary = new Button(this);
+            btnPresetLibrary.setText("✨ Pilih Preset Fitur Cepat (Multi-Agent, Workflow, Web, dll.)");
+            btnPresetLibrary.setTextColor(0xFF58A6FF);
+            btnPresetLibrary.setTextSize(12);
+            btnPresetLibrary.setOnClickListener(v -> {
+                String[] presetNames = new String[]{
+                    "⚡ 1. Multi-Agent & Subagent Swarm (Spawn, Fork, Control)",
+                    "🚀 2. Full-Power Autonomous (Multi-Agent + Workflows + Ralph Loop + Todo)",
+                    "🌐 3. Web Tools & Search Integration (Fetch, Search, Web Mode)",
+                    "🧹 4. Context Optimization & Auto-Pruner (Hemat Token & Compact)",
+                    "👑 5. Maximum Danger / Full Access Environment Context",
+                    "🔄 6. Reset Konfigurasi ke Default Kosong"
+                };
+
+                new AlertDialog.Builder(this)
+                        .setTitle("✨ Preset Fitur DSH")
+                        .setItems(presetNames, (d, which) -> {
+                            if (which == 0) {
+                                editor.setText(
+                                    "# Multi-Agent & Subagent Swarm Configuration\n" +
+                                    "- id: tool-subagent\n" +
+                                    "  disabled: false\n" +
+                                    "  config:\n" +
+                                    "    provider: spawn\n" +
+                                    "    toolName: subagent\n" +
+                                    "    backgroundMode: continuable\n\n" +
+                                    "- id: tool-subagent-fork\n" +
+                                    "  disabled: false\n" +
+                                    "  config:\n" +
+                                    "    provider: fork\n" +
+                                    "    toolName: subagent_fork\n" +
+                                    "    backgroundMode: one-shot\n\n" +
+                                    "- id: tool-subagent-control\n" +
+                                    "  disabled: false\n\n" +
+                                    "- id: tool-subagent-list-agents\n" +
+                                    "  disabled: false\n"
+                                );
+                            } else if (which == 1) {
+                                editor.setText(
+                                    "# Full-Power Autonomous Agent Configuration\n" +
+                                    "- id: tool-subagent\n" +
+                                    "  disabled: false\n" +
+                                    "  config:\n" +
+                                    "    provider: spawn\n" +
+                                    "    toolName: subagent\n" +
+                                    "    backgroundMode: continuable\n\n" +
+                                    "- id: tool-subagent-fork\n" +
+                                    "  disabled: false\n" +
+                                    "  config:\n" +
+                                    "    provider: fork\n" +
+                                    "    toolName: subagent_fork\n" +
+                                    "    backgroundMode: one-shot\n\n" +
+                                    "- id: tool-subagent-control\n" +
+                                    "  disabled: false\n\n" +
+                                    "- id: tool-subagent-list-agents\n" +
+                                    "  disabled: false\n\n" +
+                                    "- id: workflow-worker-thread\n" +
+                                    "  disabled: false\n" +
+                                    "  config:\n" +
+                                    "    provider: spawn\n\n" +
+                                    "- id: tool-workflow\n" +
+                                    "  disabled: false\n\n" +
+                                    "- id: tool-ralph\n" +
+                                    "  disabled: false\n" +
+                                    "  config:\n" +
+                                    "    subagentProvider: spawn\n" +
+                                    "    maxRounds: 64\n\n" +
+                                    "- id: tool-todo\n" +
+                                    "  disabled: false\n" +
+                                    "  config:\n" +
+                                    "    allowParallelInProgress: true\n\n" +
+                                    "- id: tool-goal\n" +
+                                    "  disabled: false\n"
+                                );
+                            } else if (which == 2) {
+                                editor.setText(
+                                    "# Web Tools & Search Integration\n" +
+                                    "- id: tool-web\n" +
+                                    "  disabled: false\n" +
+                                    "  config:\n" +
+                                    "    fetch: true\n" +
+                                    "    searchTimeoutMs: 60000\n\n" +
+                                    "- id: web\n" +
+                                    "  config:\n" +
+                                    "    searchProvider: deepseek-official\n"
+                                );
+                            } else if (which == 3) {
+                                editor.setText(
+                                    "# Context Optimization & Compaction\n" +
+                                    "- id: tool-result-pruner\n" +
+                                    "  disabled: false\n" +
+                                    "  config:\n" +
+                                    "    thresholdChars: 8192\n" +
+                                    "    headChars: 4096\n" +
+                                    "    tailChars: 1024\n\n" +
+                                    "- id: spill-policy\n" +
+                                    "  config:\n" +
+                                    "    maxInlineBytes: 30000\n"
+                                );
+                            } else if (which == 4) {
+                                editor.setText(
+                                    "# Maximum Power & Direct System Access\n" +
+                                    "- id: tools\n" +
+                                    "  config:\n" +
+                                    "    mode: native\n\n" +
+                                    "- id: tool-str-replace-editor\n" +
+                                    "  disabled: false\n" +
+                                    "  config:\n" +
+                                    "    maxOutputChars: 32000\n"
+                                );
+                            } else {
+                                editor.setText("[]\n");
+                            }
+                            Toast.makeText(this, "Preset diterapkan ke editor! Klik 'Simpan & Restart'.", Toast.LENGTH_SHORT).show();
+                        })
+                        .show();
             });
 
-            container.addView(btnEnableMultiAgent);
+            container.addView(btnPresetLibrary);
 
             ScrollView scroll = new ScrollView(this);
             scroll.addView(editor);
