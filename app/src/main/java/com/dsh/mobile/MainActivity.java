@@ -1354,7 +1354,7 @@ public class MainActivity extends AppCompatActivity {
                     restartEngine();
                 });
             } catch (Exception e) {
-                handler.post(() -> Toast.makeText(this, "Gagal restore: " + e.getMessage(), Toast.LENGTH_LONG).show(););
+                handler.post(() -> Toast.makeText(this, "Gagal restore: " + e.getMessage(), Toast.LENGTH_LONG).show());
             }
         }).start();
     }
