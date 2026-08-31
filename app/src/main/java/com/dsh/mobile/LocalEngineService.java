@@ -40,12 +40,18 @@ public class LocalEngineService extends Service {
     private static final String CHANNEL_ID = "DSH_LOCAL_ENGINE";
     public static boolean isEngineReady = false;
     private Process nodeProcess;
+    private Process atomicProcess;
 
     private void emitLog(String msg) {
         Log.i(TAG, msg);
         Intent intent = new Intent(ACTION_LOG);
         intent.putExtra(EXTRA_MESSAGE, msg);
         sendBroadcast(intent);
+    }
+
+    private void emitReady() {
+        isEngineReady = true;
+        sendBroadcast(new Intent(ACTION_READY));
     }
 
     @Override
@@ -309,6 +315,44 @@ public class LocalEngineService extends Service {
                 emitLog("[EXTRACT] DSH packages cached at " + dshDir.getAbsolutePath());
             }
 
+            // 3b. Extract AtomicRouter engine if bundled in assets
+            File atomicDir = new File(filesDir, "atomic-router");
+            File atomicBin = new File(atomicDir, "bin/omniroute.mjs");
+            try {
+                String[] engineAssets = getAssets().list("engine");
+                if (engineAssets != null && Arrays.asList(engineAssets).contains("atomic-router.tar.gz")) {
+                    if (!atomicBin.exists() || isNewAppVersion) {
+                        emitLog("[EXTRACT] Extracting AtomicRouter engine from engine/atomic-router.tar.gz...");
+                        try (InputStream rawIn = getAssets().open("engine/atomic-router.tar.gz");
+                             InputStream inStream = new GzipCompressorInputStream(rawIn);
+                             TarArchiveInputStream tarIn = new TarArchiveInputStream(inStream)) {
+                            TarArchiveEntry entry;
+                            int aCount = 0;
+                            while ((entry = tarIn.getNextTarEntry()) != null) {
+                                File outputFile = new File(filesDir, entry.getName());
+                                if (entry.isDirectory()) {
+                                    if (!outputFile.exists()) outputFile.mkdirs();
+                                } else {
+                                    File parent = outputFile.getParentFile();
+                                    if (parent != null && !parent.exists()) parent.mkdirs();
+                                    try (OutputStream out = new FileOutputStream(outputFile)) {
+                                        byte[] buf = new byte[32768];
+                                        int len;
+                                        while ((len = tarIn.read(buf)) != -1) {
+                                            out.write(buf, 0, len);
+                                        }
+                                    }
+                                }
+                                aCount++;
+                            }
+                            emitLog("[EXTRACT SUCCESS] Extracted " + aCount + " AtomicRouter files.");
+                        }
+                    }
+                }
+            } catch (Exception err) {
+                emitLog("[ATOMIC EXTRACT ERROR] " + err.getMessage());
+            }
+
             // 4. Test executing node --version with RPATH and LD_LIBRARY_PATH
             emitLog("[TEST] Testing Node execution: " + nodeFile.getAbsolutePath() + " -v");
             try {
@@ -325,15 +369,13 @@ public class LocalEngineService extends Service {
                 emitLog("[TEST ERROR] Node.js test failed: " + err.getMessage());
             }
 
-            // 5. Launch On-Device DSH Server
-            // Set workspace working directory directly to root of internal storage (/sdcard)
+            // 5. Launch On-Device DSH Server & AtomicRouter Server
             File externalDir = Environment.getExternalStorageDirectory();
             File workspaceDir = (externalDir != null && externalDir.exists()) ? externalDir : new File("/sdcard");
 
             emitLog("[SERVER] Launching dsh --profile web --port 3080 ...");
             emitLog("[SERVER] Primary Workspace Directory: " + workspaceDir.getAbsolutePath());
             
-            // Build rich PATH including standard Android bins, Termux bins, and Magisk/KSU/APatch root su bins
             String enrichedPath = binDir.getAbsolutePath() + 
                     ":/data/adb/ksu/bin" + 
                     ":/data/adb/ap/bin" + 
@@ -343,7 +385,6 @@ public class LocalEngineService extends Service {
                     ":/system/xbin" + 
                     ":/data/data/com.termux/files/usr/bin";
 
-            // Configure NODE_PATH to resolve both core global packages and profile installed plugins
             String nodePath = new File(dshDir, "node_modules").getAbsolutePath() + 
                     ":" + new File(filesDir, ".dsh/profiles/web/node_modules").getAbsolutePath() +
                     ":" + new File(filesDir, "node_modules").getAbsolutePath();
@@ -366,9 +407,43 @@ public class LocalEngineService extends Service {
             pb.redirectErrorStream(true);
 
             nodeProcess = pb.start();
-            emitLog("[SERVER] Process spawned PID active. Streaming stdout & stderr:");
+            emitLog("[SERVER] DSH process spawned. Streaming logs:");
 
-            // Stream real-time node logs directly to UI
+            // Spawn AtomicRouter if installed
+            File atomicDir = new File(filesDir, "atomic-router");
+            File atomicBin = new File(atomicDir, "bin/omniroute.mjs");
+            if (atomicBin.exists()) {
+                emitLog("[ATOMIC] Launching AtomicRouter on port 20128...");
+                try {
+                    ProcessBuilder atomicPb = new ProcessBuilder(
+                            nodeFile.getAbsolutePath(),
+                            atomicBin.getAbsolutePath(),
+                            "--port", "20128"
+                    );
+                    atomicPb.directory(atomicDir);
+                    atomicPb.environment().put("HOME", filesDir.getAbsolutePath());
+                    atomicPb.environment().put("DATA_DIR", new File(filesDir, ".atomic-router").getAbsolutePath());
+                    atomicPb.environment().put("PORT", "20128");
+                    atomicPb.environment().put("LD_LIBRARY_PATH", libDir.getAbsolutePath());
+                    atomicPb.environment().put("NODE_PATH", new File(atomicDir, "node_modules").getAbsolutePath() + ":" + nodePath);
+                    atomicPb.environment().put("PATH", enrichedPath);
+                    atomicPb.redirectErrorStream(true);
+
+                    atomicProcess = atomicPb.start();
+                    new Thread(() -> {
+                        try (BufferedReader r = new BufferedReader(new InputStreamReader(atomicProcess.getInputStream()))) {
+                            String l;
+                            while ((l = r.readLine()) != null) {
+                                emitLog("[ATOMIC LOG] " + l);
+                            }
+                        } catch (Exception ignored) {}
+                    }).start();
+                } catch (Exception e) {
+                    emitLog("[ATOMIC ERROR] Failed to start AtomicRouter: " + e.getMessage());
+                }
+            }
+
+            // Stream Node Process output
             new Thread(() -> {
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(nodeProcess.getInputStream()))) {
                     String line;
@@ -376,25 +451,24 @@ public class LocalEngineService extends Service {
                         emitLog("[DSH Output] " + line);
                     }
                 } catch (Exception e) {
-                    emitLog("[SERVER ERROR] Error reading log stream: " + e.getMessage());
+                    emitLog("[SERVER STREAM ERROR] " + e.getMessage());
                 }
             }).start();
 
-            // 6. Poll port 3080 readiness (require 2 consecutive successful pings)
+            // 6. Monitor port readiness for 3080
             int consecutiveSuccess = 0;
             for (int i = 1; i <= 60; i++) {
                 try {
                     URL url = new URL("http://127.0.0.1:3080/");
                     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                    conn.setConnectTimeout(1500);
-                    conn.setReadTimeout(1500);
+                    conn.setConnectTimeout(1000);
+                    conn.setReadTimeout(1000);
                     int code = conn.getResponseCode();
                     if (code == 200) {
                         consecutiveSuccess++;
                         if (consecutiveSuccess >= 2) {
-                            emitLog("[READY] HTTP 200 OK confirmed! DeepSeek Harness dashboard ready.");
-                            isEngineReady = true;
-                            sendBroadcast(new Intent(ACTION_READY));
+                            emitLog("[READY] DeepSeek Harness Engine ready on port 3080!");
+                            emitReady();
                             break;
                         }
                     } else {
@@ -417,8 +491,8 @@ public class LocalEngineService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle("DSH Engine Running On-Device")
-                .setContentText("Local DeepSeek Harness server active on port 3000")
+                .setContentTitle("DSH & AtomicRouter Engine Active")
+                .setContentText("Local AI Gateway running on port 3080 & 20128")
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
                 .build();
 
@@ -444,6 +518,9 @@ public class LocalEngineService extends Service {
     public void onDestroy() {
         if (nodeProcess != null) {
             nodeProcess.destroy();
+        }
+        if (atomicProcess != null) {
+            atomicProcess.destroy();
         }
         super.onDestroy();
     }

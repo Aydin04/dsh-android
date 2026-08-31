@@ -149,6 +149,15 @@
                     android:textSize="11sp" />
 
                 <Button
+                    android:id="@+id/btnAtomicRoute"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:background="?attr/selectableItemBackground"
+                    android:text="🔀 AtomicRoute"
+                    android:textColor="#f778ba"
+                    android:textSize="11sp" />
+
+                <Button
                     android:id="@+id/btnPlugins"
                     android:layout_width="wrap_content"
                     android:layout_height="36dp"

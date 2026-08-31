@@ -85,6 +85,7 @@ public class MainActivity extends AppCompatActivity {
     private Button btnRefreshWeb;
     private Button btnRootToggle;
     private Button btnDesktopMode;
+    private Button btnAtomicRoute;
     private Button btnPlugins;
     private Button btnBackup;
     private Button btnLogs;
@@ -165,6 +166,7 @@ public class MainActivity extends AppCompatActivity {
         btnRefreshWeb = findViewById(R.id.btnRefreshWeb);
         btnRootToggle = findViewById(R.id.btnRootToggle);
         btnDesktopMode = findViewById(R.id.btnDesktopMode);
+        btnAtomicRoute = findViewById(R.id.btnAtomicRoute);
         btnPlugins = findViewById(R.id.btnPlugins);
         btnBackup = findViewById(R.id.btnBackup);
         btnLogs = findViewById(R.id.btnLogs);
@@ -309,6 +311,21 @@ public class MainActivity extends AppCompatActivity {
         btnRootToggle.setOnClickListener(v -> requestRootSuperuserAccess());
 
         btnDesktopMode.setOnClickListener(v -> toggleDesktopMode());
+
+        btnAtomicRoute.setOnClickListener(v -> {
+            String currentUrl = webView.getUrl();
+            if (currentUrl != null && currentUrl.contains("20128")) {
+                Toast.makeText(this, "Beralih ke DSH Chat Dashboard...", Toast.LENGTH_SHORT).show();
+                btnAtomicRoute.setText("🔀 AtomicRoute");
+                btnAtomicRoute.setTextColor(0xFFF778BA);
+                webView.loadUrl(LOCAL_URL);
+            } else {
+                Toast.makeText(this, "Membuka Full Dashboard AtomicRoute (Port 20128)...", Toast.LENGTH_SHORT).show();
+                btnAtomicRoute.setText("🤖 DSH Chat");
+                btnAtomicRoute.setTextColor(0xFF58A6FF);
+                webView.loadUrl("http://127.0.0.1:20128");
+            }
+        });
 
         btnPlugins.setOnClickListener(v -> showPluginManagerDialog());
 
@@ -1221,12 +1238,13 @@ public class MainActivity extends AppCompatActivity {
     private void performDshBackup(File backupRootDir, File dshDataDir) {
         String timestamp = new java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US).format(new java.util.Date());
         File targetBackupFile = new File(backupRootDir, "dsh_backup_" + timestamp + ".tar.gz");
+        File atomicDataDir = new File(getFilesDir(), ".atomic-router");
 
         Toast.makeText(this, "Membuat backup ke /sdcard/DSH_Backups/...", Toast.LENGTH_SHORT).show();
         new Thread(() -> {
             try {
-                if (!dshDataDir.exists()) {
-                    handler.post(() -> Toast.makeText(this, "Belum ada direktori .dsh untuk dibackup.", Toast.LENGTH_SHORT).show());
+                if (!dshDataDir.exists() && !atomicDataDir.exists()) {
+                    handler.post(() -> Toast.makeText(this, "Belum ada data DSH / AtomicRouter untuk dibackup.", Toast.LENGTH_SHORT).show());
                     return;
                 }
 
@@ -1234,13 +1252,14 @@ public class MainActivity extends AppCompatActivity {
                      java.util.zip.GZIPOutputStream gos = new java.util.zip.GZIPOutputStream(fos);
                      org.apache.commons.compress.archivers.tar.TarArchiveOutputStream tos = new org.apache.commons.compress.archivers.tar.TarArchiveOutputStream(gos)) {
                     tos.setLongFileMode(org.apache.commons.compress.archivers.tar.TarArchiveOutputStream.LONGFILE_POSIX);
-                    addDirectoryToTar(tos, dshDataDir, "");
+                    if (dshDataDir.exists()) addDirectoryToTar(tos, dshDataDir, ".dsh");
+                    if (atomicDataDir.exists()) addDirectoryToTar(tos, atomicDataDir, ".atomic-router");
                 }
 
                 handler.post(() -> {
                     new AlertDialog.Builder(this)
                             .setTitle("✅ Backup Berhasil!")
-                            .setMessage("Seluruh database sesi, riwayat chat, dan konfigurasi profil DSH telah tersimpan aman di:\n\n📁 " + targetBackupFile.getAbsolutePath() + "\nUkuran: " + (targetBackupFile.length() / 1024) + " KB")
+                            .setMessage("Seluruh database DSH (sesi & config) dan database AtomicRouter (API keys & accounts) telah tersimpan aman di:\n\n📁 " + targetBackupFile.getAbsolutePath() + "\nUkuran: " + (targetBackupFile.length() / 1024) + " KB")
                             .setPositiveButton("Bagus", null)
                             .show();
                 });
@@ -1295,8 +1314,8 @@ public class MainActivity extends AppCompatActivity {
                     File selectedBackup = backups[which];
                     new AlertDialog.Builder(this)
                             .setTitle("Konfirmasi Restore Data")
-                            .setMessage("Apakah Anda yakin ingin memulihkan data dari " + selectedBackup.getName() + "?\nData konfigurasi dan sesi saat ini akan ditimpa.")
-                            .setPositiveButton("Ya, Pulihkan & Restart", (d, w) -> performRestore(selectedBackup, dshDataDir))
+                            .setMessage("Apakah Anda yakin ingin memulihkan data dari " + selectedBackup.getName() + "?\nData konfigurasi, sesi, dan database akun AtomicRouter akan ditimpa.")
+                            .setPositiveButton("Ya, Pulihkan & Restart", (d, w) -> performRestore(selectedBackup, getFilesDir()))
                             .setNegativeButton("Batal", null)
                             .show();
                 })
@@ -1304,18 +1323,16 @@ public class MainActivity extends AppCompatActivity {
                 .show();
     }
 
-    private void performRestore(File backupFile, File dshDataDir) {
+    private void performRestore(File backupFile, File targetBaseDir) {
         Toast.makeText(this, "Sedang memulihkan data...", Toast.LENGTH_SHORT).show();
         new Thread(() -> {
             try {
-                if (!dshDataDir.exists()) dshDataDir.mkdirs();
-
                 try (FileInputStream fis = new FileInputStream(backupFile);
                      java.util.zip.GZIPInputStream gis = new java.util.zip.GZIPInputStream(fis);
                      org.apache.commons.compress.archivers.tar.TarArchiveInputStream tis = new org.apache.commons.compress.archivers.tar.TarArchiveInputStream(gis)) {
                     org.apache.commons.compress.archivers.tar.TarArchiveEntry entry;
                     while ((entry = tis.getNextTarEntry()) != null) {
-                        File target = new File(dshDataDir, entry.getName());
+                        File target = new File(targetBaseDir, entry.getName());
                         if (entry.isDirectory()) {
                             target.mkdirs();
                         } else {
@@ -1333,7 +1350,7 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 handler.post(() -> {
-                    Toast.makeText(this, "Data berhasil dipulihkan! Me-restart server DSH...", Toast.LENGTH_LONG).show();
+                    Toast.makeText(this, "Data DSH & AtomicRouter berhasil dipulihkan! Me-restart server...", Toast.LENGTH_LONG).show();
                     restartEngine();
                 });
             } catch (Exception e) {
@@ -1343,15 +1360,18 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showStorageLocationsInfo(File dshDataDir, File backupRootDir) {
+        File atomicDataDir = new File(getFilesDir(), ".atomic-router");
         String info = 
-            "📂 Lokasi Database & Penyimpanan Internal DSH:\n\n" +
-            "1. Database Sessions / Riwayat Chat:\n" +
+            "📂 Lokasi Database & Penyimpanan Internal:\n\n" +
+            "1. Database Sessions / Riwayat Chat DSH:\n" +
             "   " + dshDataDir.getAbsolutePath() + "/storages/sessions/\n\n" +
-            "2. Profile Web & Konfigurasi Plugin:\n" +
+            "2. Database Akun, Keys, & History AtomicRouter:\n" +
+            "   " + atomicDataDir.getAbsolutePath() + "/\n\n" +
+            "3. Profile Web & Konfigurasi Plugin:\n" +
             "   " + dshDataDir.getAbsolutePath() + "/profiles/web/\n\n" +
-            "3. Lokasi Penyimpanan Backup Eksternal:\n" +
+            "4. Lokasi Penyimpanan Backup Eksternal:\n" +
             "   " + backupRootDir.getAbsolutePath() + "/\n\n" +
-            "4. Primary Workspace User:\n" +
+            "5. Primary Workspace User:\n" +
             "   /sdcard (Penyimpanan Internal Utama HP)";
 
         new AlertDialog.Builder(this)
