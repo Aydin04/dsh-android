@@ -37,6 +37,13 @@ android {
         jniLibs {
             useLegacyPackaging = true
         }
+        resources {
+            excludes += ['META-INF/**']
+        }
+    }
+
+    androidResources {
+        noCompress 'tar', 'gz', 'tar.gz', 'tgz', 'zip'
     }
 }
 
