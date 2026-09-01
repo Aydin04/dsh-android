@@ -111,7 +111,9 @@ public class MainActivity extends AppCompatActivity {
     private int currentZoom = 100;
     private boolean isDesktopMode = false;
     private boolean isBarVisible = false;
-    private final StringBuilder logAccumulator = new StringBuilder();
+    private final java.util.LinkedList<String> logLines = new java.util.LinkedList<>();
+    private static final int MAX_LOG_LINES = 250;
+    private long lastLogUiUpdateTime = 0;
     private int simulatedProgress = 10;
 
     // Drag variables for moving the floating toolbar
@@ -250,9 +252,15 @@ public class MainActivity extends AppCompatActivity {
     private void setupButtons() {
         btnCopyLog.setOnClickListener(v -> {
             ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-            ClipData cd = ClipData.newPlainText("DSH Engine Logs", logAccumulator.toString());
+            StringBuilder sb = new StringBuilder();
+            synchronized (logLines) {
+                for (String l : logLines) {
+                    sb.append(l).append("\n");
+                }
+            }
+            ClipData cd = ClipData.newPlainText("DSH Engine Logs", sb.toString());
             cm.setPrimaryClip(cd);
-            Toast.makeText(this, "Logs copied to clipboard!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Logs (" + logLines.size() + " baris) disalin!", Toast.LENGTH_SHORT).show();
         });
 
         btnRetry.setOnClickListener(v -> restartEngine());
@@ -271,12 +279,16 @@ public class MainActivity extends AppCompatActivity {
 
         btnShowAllLogs.setOnClickListener(v -> {
             boolean isVisible = logScrollView.getVisibility() == View.VISIBLE;
+            if (!isVisible) {
+                refreshDebugLogsView();
+            }
             logScrollView.setVisibility(isVisible ? View.GONE : View.VISIBLE);
             logActionsLayout.setVisibility(isVisible ? View.GONE : View.VISIBLE);
             btnShowAllLogs.setText(isVisible ? "📋 Detail Log" : "Sembunyikan Log");
         });
 
         btnLogs.setOnClickListener(v -> {
+            refreshDebugLogsView();
             loadingLayout.setVisibility(View.VISIBLE);
             logScrollView.setVisibility(View.VISIBLE);
             logActionsLayout.setVisibility(View.VISIBLE);
@@ -801,42 +813,70 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void appendLog(String message) {
-        handler.post(() -> {
-            logAccumulator.append(message).append("\n");
-            debugLogs.setText(logAccumulator.toString());
-            logScrollView.post(() -> logScrollView.fullScroll(View.FOCUS_DOWN));
+        if (message == null) return;
+        synchronized (logLines) {
+            logLines.add(message);
+            if (logLines.size() > MAX_LOG_LINES) {
+                logLines.removeFirst();
+            }
+        }
 
-            // Clean log preview for single line status
-            String cleanMsg = message.replaceAll("\\[[0-9;]*m", "").trim();
-            if (!cleanMsg.isEmpty()) {
-                if (cleanMsg.contains("[INIT]")) {
-                    updateProgress(15, "Inisialisasi lingkungan perangkat...");
-                } else if (cleanMsg.contains("Node.js binary")) {
-                    updateProgress(30, "Mengekstrak binary Node.js ARM64...");
-                } else if (cleanMsg.contains("Ripgrep")) {
-                    updateProgress(40, "Menyiapkan Ripgrep search engine...");
-                } else if (cleanMsg.contains("PRoot binary")) {
-                    updateProgress(50, "Menyiapkan PRoot sandbox engine...");
-                } else if (cleanMsg.contains("Alpine Linux")) {
-                    updateProgress(65, "Mengekstrak Alpine Linux rootfs...");
-                } else if (cleanMsg.contains("shared libraries")) {
-                    updateProgress(75, "Menyiapkan native shared libraries...");
-                } else if (cleanMsg.contains("DeepSeek Harness")) {
-                    updateProgress(85, "Memuat modul core DeepSeek Harness...");
-                } else if (cleanMsg.contains("Launching dsh")) {
-                    updateProgress(92, "Menjalankan DeepSeek Harness server...");
-                } else if (cleanMsg.contains("HTTP 200 OK") || cleanMsg.contains("[READY]")) {
-                    updateProgress(100, "Dashboard Siap! Menghubungkan...");
-                } else {
-                    if (tvCurrentLogLine != null) {
-                        tvCurrentLogLine.setText(cleanMsg);
+        // Throttle UI updates to prevent Main Thread locking during tool execution and token streaming
+        long now = System.currentTimeMillis();
+        if (now - lastLogUiUpdateTime > 600 || !isLoaded) {
+            lastLogUiUpdateTime = now;
+            handler.post(() -> {
+                String cleanMsg = message.replaceAll("\\[[0-9;]*m", "").trim();
+                if (!cleanMsg.isEmpty()) {
+                    if (cleanMsg.contains("[INIT]")) {
+                        updateProgress(15, "Inisialisasi lingkungan perangkat...");
+                    } else if (cleanMsg.contains("Node.js binary")) {
+                        updateProgress(30, "Mengekstrak binary Node.js ARM64...");
+                    } else if (cleanMsg.contains("Ripgrep")) {
+                        updateProgress(40, "Menyiapkan Ripgrep search engine...");
+                    } else if (cleanMsg.contains("PRoot binary")) {
+                        updateProgress(50, "Menyiapkan PRoot sandbox engine...");
+                    } else if (cleanMsg.contains("Alpine Linux")) {
+                        updateProgress(65, "Mengekstrak Alpine Linux rootfs...");
+                    } else if (cleanMsg.contains("shared libraries")) {
+                        updateProgress(75, "Menyiapkan native shared libraries...");
+                    } else if (cleanMsg.contains("DeepSeek Harness")) {
+                        updateProgress(85, "Memuat modul core DeepSeek Harness...");
+                    } else if (cleanMsg.contains("Launching dsh")) {
+                        updateProgress(92, "Menjalankan DeepSeek Harness server...");
+                    } else if (cleanMsg.contains("HTTP 200 OK") || cleanMsg.contains("[READY]")) {
+                        updateProgress(100, "Dashboard Siap! Menghubungkan...");
+                    } else {
+                        if (tvCurrentLogLine != null && !isLoaded) {
+                            tvCurrentLogLine.setText(cleanMsg);
+                        }
                     }
                 }
+
+                if (debugLogs != null && debugLogs.isShown()) {
+                    refreshDebugLogsView();
+                }
+            });
+        }
+    }
+
+    private void refreshDebugLogsView() {
+        if (debugLogs == null) return;
+        StringBuilder sb = new StringBuilder();
+        synchronized (logLines) {
+            for (String l : logLines) {
+                sb.append(l).append("\n");
             }
-        });
+        }
+        debugLogs.setText(sb.toString());
+        if (logScrollView != null) {
+            logScrollView.post(() -> logScrollView.fullScroll(View.FOCUS_DOWN));
+        }
     }
 
     private void setupWebView() {
+        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
@@ -848,6 +888,7 @@ public class MainActivity extends AppCompatActivity {
         settings.setSupportZoom(true);
         settings.setBuiltInZoomControls(true);
         settings.setDisplayZoomControls(false);
+        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
 
         // Keep text zoom neutral (100%)
         settings.setTextZoom(100);
@@ -933,7 +974,9 @@ public class MainActivity extends AppCompatActivity {
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
-                appendLog("[WebConsole] " + consoleMessage.message());
+                if (consoleMessage.messageLevel() == ConsoleMessage.MessageLevel.ERROR) {
+                    appendLog("[WebConsole Error] " + consoleMessage.message());
+                }
                 return super.onConsoleMessage(consoleMessage);
             }
 

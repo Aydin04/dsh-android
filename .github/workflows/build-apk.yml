@@ -199,32 +199,21 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.3.0
-          name: "DSH Mobile v3.3.0 (Dual Release: Pure DSH & Full DSH + AtomicRouter)"
+          tag_name: v3.3.1
+          name: "DSH Mobile v3.3.1 (Anti-Lag, ANR Freeze Fix & Hardware Acceleration)"
           body: |
-            ## 🚀 DSH Mobile Release v3.3.0
-
-            Tersedia 2 pilihan edisi APK sesuai kebutuhan Anda:
-
-            ### 📦 1. `dsh-mobile-pure.apk` (~110 MB) — Edisi Ringan (Pure DSH)
-            - Khusus engine **DeepSeek Harness On-Device**.
-            - Ringan, hemat penyimpanan RAM & CPU.
-            - Sangat cocok untuk penggunaan DeepSeek mandiri atau jika menghubungkan model ke server/VPS AtomicRouter eksternal.
-
-            ### ⚡ 2. `dsh-mobile-full-atomicroute.apk` (~237 MB) — Edisi Lengkap (Dual-Engine)
-            - Menggabungkan **DeepSeek Harness + AtomicRouter Gateway On-Device**.
-            - Dilengkapi tab toolbar `🔀 AtomicRoute`, multi-account failover, dan smart model routing.
-
-            ---
-
-            ### 🛠️ Changelog & Fitur:
-            - 📥 **Fixed `blob:` and `data:` Web Export Downloads**: Mengatasi error intent saat download backup.
-            - 🛠️ **Fixed AtomicRoute JSON & SQLite/DB File Picker**: Filter SAF otomatis mengenali format ekstensi.
-            - 📂 **Universal Android Storage Access Framework (SAF)**.
-            - 🗄️ **Direct SQLite Import & Export**.
-            - 🎨 **Modernized Floating Toolbar**.
-            - 🛡️ **Anti-Crash & Pure Java XZ Stream**.
-            - 👑 **Universal Multi-Root SU**: Magisk, KernelSU, KernelSU Next, APatch.
+            ## 🚀 DSH Mobile Release v3.3.1
+            - ⚡ **Anti-Lag & ANR Freeze Fix (Main Thread Decoupling)**:
+              - Mengatasi masalah aplikasi macet / *Application Not Responding (ANR)* saat agent menjalankan banyak tool atau saat sinyal buruk.
+              - Sistem log dialihkan ke in-memory ring buffer berkecepatan tinggi dengan throttling UI otomatis (mencegah kalkulasi layout berat di main thread).
+              - Menghilangkan banjir broadcast console log React/Vite.
+            - 🧠 **V8 Memory & Heap Optimization (`--max-old-space-size=256`)**:
+              - Membatasi konsumsi RAM Node.js engine agar tidak memicu zRAM/Swap kernel thrashing di sistem Android.
+            - 🏎️ **WebView Hardware Acceleration**:
+              - Mengaktifkan `LAYER_TYPE_HARDWARE` dan caching DOM storage untuk rendering antarmuka yang sangat mulus.
+            - 📦 **Dual Release Options**:
+              - `dsh-mobile-pure.apk` (~110 MB) — Edisi Ringan (Pure DSH).
+              - `dsh-mobile-full-atomicroute.apk` (~237 MB) — Edisi Lengkap (Dual-Engine DSH + AtomicRouter).
           files: |
             app/build/outputs/apk/debug/dsh-mobile-pure.apk
             app/build/outputs/apk/debug/dsh-mobile-full-atomicroute.apk
