@@ -922,10 +922,10 @@ public class MainActivity extends AppCompatActivity {
                         intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
                     }
 
-                    // Set specific mime types if provided by website
-                    String[] acceptTypes = fileChooserParams.getAcceptTypes();
-                    if (acceptTypes != null && acceptTypes.length > 0 && !acceptTypes[0].isEmpty()) {
-                        intent.putExtra(Intent.EXTRA_MIME_TYPES, acceptTypes);
+                    // Sanitize and map extensions (.json, .sqlite, .db) to valid Android SAF MIME types
+                    String[] validMimeTypes = resolveValidMimeTypes(fileChooserParams.getAcceptTypes());
+                    if (validMimeTypes != null && validMimeTypes.length > 0 && !validMimeTypes[0].equals("*/*")) {
+                        intent.putExtra(Intent.EXTRA_MIME_TYPES, validMimeTypes);
                     }
 
                     startActivityForResult(Intent.createChooser(intent, "Pilih File Import"), FILE_CHOOSER_REQ_CODE);
@@ -936,6 +936,12 @@ public class MainActivity extends AppCompatActivity {
                         Intent fallbackIntent = new Intent(Intent.ACTION_GET_CONTENT);
                         fallbackIntent.addCategory(Intent.CATEGORY_OPENABLE);
                         fallbackIntent.setType("*/*");
+
+                        String[] validMimeTypes = resolveValidMimeTypes(fileChooserParams.getAcceptTypes());
+                        if (validMimeTypes != null && validMimeTypes.length > 0 && !validMimeTypes[0].equals("*/*")) {
+                            fallbackIntent.putExtra(Intent.EXTRA_MIME_TYPES, validMimeTypes);
+                        }
+
                         startActivityForResult(Intent.createChooser(fallbackIntent, "Pilih File Import"), FILE_CHOOSER_REQ_CODE);
                         return true;
                     } catch (Exception ex) {
@@ -949,6 +955,71 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+    }
+
+    private String[] resolveValidMimeTypes(String[] acceptTypes) {
+        if (acceptTypes == null || acceptTypes.length == 0) {
+            return new String[]{"*/*"};
+        }
+
+        java.util.Set<String> mimeSet = new java.util.LinkedHashSet<>();
+        for (String raw : acceptTypes) {
+            if (raw == null) continue;
+            String[] parts = raw.split(",");
+            for (String item : parts) {
+                String clean = item.trim().toLowerCase();
+                if (clean.isEmpty()) continue;
+
+                if (clean.startsWith(".")) {
+                    String ext = clean.substring(1);
+                    if (ext.equals("json") || ext.equals("jsonl")) {
+                        mimeSet.add("application/json");
+                        mimeSet.add("text/plain");
+                        mimeSet.add("application/octet-stream");
+                    } else if (ext.equals("sqlite") || ext.equals("sqlite3") || ext.equals("db")) {
+                        mimeSet.add("application/x-sqlite3");
+                        mimeSet.add("application/vnd.sqlite3");
+                        mimeSet.add("application/octet-stream");
+                    } else if (ext.equals("toml")) {
+                        mimeSet.add("text/plain");
+                        mimeSet.add("application/toml");
+                        mimeSet.add("application/octet-stream");
+                    } else if (ext.equals("har")) {
+                        mimeSet.add("application/json");
+                        mimeSet.add("text/plain");
+                        mimeSet.add("application/octet-stream");
+                    } else if (ext.equals("csv")) {
+                        mimeSet.add("text/csv");
+                        mimeSet.add("text/plain");
+                    } else if (ext.equals("zip")) {
+                        mimeSet.add("application/zip");
+                        mimeSet.add("application/x-zip-compressed");
+                        mimeSet.add("application/octet-stream");
+                    } else if (ext.equals("tar") || ext.equals("gz") || ext.equals("tgz")) {
+                        mimeSet.add("application/gzip");
+                        mimeSet.add("application/x-tar");
+                        mimeSet.add("application/octet-stream");
+                    } else {
+                        String fromMap = android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext);
+                        if (fromMap != null && !fromMap.isEmpty()) {
+                            mimeSet.add(fromMap);
+                        }
+                        mimeSet.add("application/octet-stream");
+                    }
+                } else if (clean.contains("/")) {
+                    mimeSet.add(clean);
+                    if (clean.equals("application/json")) {
+                        mimeSet.add("text/plain");
+                        mimeSet.add("application/octet-stream");
+                    }
+                }
+            }
+        }
+
+        if (mimeSet.isEmpty() || mimeSet.contains("*/*")) {
+            return new String[]{"*/*"};
+        }
+        return mimeSet.toArray(new String[0]);
     }
 
     private void connectToLocalDashboard() {

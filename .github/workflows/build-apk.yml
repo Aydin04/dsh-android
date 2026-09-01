@@ -189,13 +189,16 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.2.3
-          name: "DSH Mobile v3.2.3 (Universal Storage Access Framework File Picker Fix)"
+          tag_name: v3.2.4
+          name: "DSH Mobile v3.2.4 (AtomicRoute JSON & SQLite File Picker Fix)"
           body: |
-            ## 🚀 DSH Mobile Release v3.2.3
+            ## 🚀 DSH Mobile Release v3.2.4
+            - 🛠️ **Fixed AtomicRoute JSON & SQLite/DB File Picker**:
+              - Memperbaiki parsing & mapping MIME type pada WebChromeClient `onShowFileChooser`.
+              - Ekstensi web `.json`, `.sqlite`, `.db`, `.csv`, `.toml`, `.zip`, `.har` kini secara otomatis dikonversi ke Android SAF MIME types yang valid (`application/json`, `application/x-sqlite3`, `application/octet-stream`, dll).
+              - File `.json` dan database `.sqlite` / `.db` tidak lagi menjadi abu-abu (*disabled/unselectable*) saat memilih file di antarmuka AtomicRoute.
             - 📂 **Universal Android Storage Access Framework (SAF) File Picker**:
               - Menggunakan `Intent.ACTION_OPEN_DOCUMENT` dengan fallback `Intent.ACTION_GET_CONTENT`.
-              - Mengatasi masalah "No app available to handle this action / isinya kosong" saat memilih file picker di HP Android.
               - Mendukung semua aplikasi File Manager sistem Android, Google Files, Drive, dan SD Card.
             - 🗄️ **Direct AtomicRoute SQLite Import & Export**:
               - Fitur impor dan ekspor langsung file `storage.sqlite` AtomicRouter melalui menu `💾 Data / DB`.
