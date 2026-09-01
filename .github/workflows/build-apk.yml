@@ -137,8 +137,7 @@ jobs:
           
           tar -czf $GITHUB_WORKSPACE/app/src/main/assets/engine/dsh-core.tar.gz -C /tmp/global_dsh/lib/node_modules/@deepseek-ai dsh
 
-          echo "4. Downloading and Packaging Ultra-Compressed AtomicRouter Engine..."
-          sudo apt-get update && sudo apt-get install -y zstd || true
+          echo "4. Downloading and Packaging Ultra-Compressed Pure-XZ AtomicRouter Engine..."
           rm -rf /tmp/atomic_pack && mkdir -p /tmp/atomic_pack/atomic-router
           curl -s -L "https://github.com/Aydin04/atomic-router/releases/download/v3.8.50/atomic-router-linux-x64.tar.gz" | tar -xz -C /tmp/atomic_pack/atomic-router || true
           if [ -f "/tmp/atomic_pack/atomic-router/server.js" ]; then
@@ -156,7 +155,9 @@ jobs:
             
             find . -type f \( -name "*.map" -o -name "*.d.ts" -o -name "*.flow" -o -name "LICENSE*" -o -name "CHANGELOG*" \) -delete || true
             cd /tmp/atomic_pack
-            tar -I 'zstd -19 -T0' -cf $GITHUB_WORKSPACE/app/src/main/assets/engine/atomic-router.tar.zst atomic-router
+            tar -cf /tmp/atomic-router.tar atomic-router
+            xz -z -6 -T0 /tmp/atomic-router.tar
+            mv /tmp/atomic-router.tar.xz $GITHUB_WORKSPACE/app/src/main/assets/engine/atomic-router.tar.xz
           fi
           
           echo "=== ASSETS IN WORKSPACE ENGINE ==="
@@ -188,16 +189,16 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.2.0
-          name: "DSH Mobile v3.2.0 (Ultra-Compressed Zstandard Dual-Engine Release ~150-200MB)"
+          tag_name: v3.2.1
+          name: "DSH Mobile v3.2.1 (Pure Java Stable XZ Decompressor - Anti-Crash)"
           body: |
-            ## 🚀 DSH Mobile Release v3.2.0
-            - ⚡ **Ultra-Compressed Zstandard (Zstd-19) Engine**:
-              - Menggunakan kompresi Zstandard level 19 untuk memadatkan bundle AtomicRouter dari 1.6 GB menjadi hanya **~57 MB**!
-              - Mengintegrasikan `zstd-jni` di aplikasi Android untuk dekompresi super cepat tanpa memakan memori RAM berlebih.
-            - 🗜️ **Ukuran APK Sangat Ramping (~150-200 MB)**:
-              - Menghapus modul berat multi-platform non-runtime dan binary native yang tidak digunakan di Android.
-            - 🔀 **Full Standalone Dual-Engine Ready**:
+            ## 🚀 DSH Mobile Release v3.2.1
+            - 🛡️ **Fix Force Close / Native Crash**:
+              - Mengganti native JNI runtime dengan **Pure Java XZ Stream Decompressor (`org.tukaani:xz`)**.
+              - Menghilangkan dependensi lib JNI native C++ yang menyebabkan crash saat aplikasi dibuka di beberapa HP Android.
+            - 🗜️ **Ukuran APK Tetap Sangat Kecil (~200MB)**:
+              - Bundle AtomicRouter terkompresi dengan XZ level 6 (~95MB) dan diekstrak dengan aman tanpa resiko force close.
+            - 🔀 **Full Standalone Dual-Engine**:
               - DeepSeek Harness (`:3080`) & AtomicRouter Dashboard (`:20128`) aktif 100% offline.
             - 💾 **Dual Database Backup & Restore**: Backup data DSH (`.dsh/`) dan AtomicRouter (`.atomic-router/`) ke `/sdcard/DSH_Backups/`.
             - ✨ **Comprehensive 1-Click Feature Presets Library**: Preset Multi-Agent Swarm, Full-Power Autonomous, Web Search, dan Context Auto-Pruner.

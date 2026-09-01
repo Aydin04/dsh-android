@@ -326,7 +326,7 @@ public class LocalEngineService extends Service {
                     List<String> assetList = engineAssets != null ? Arrays.asList(engineAssets) : Collections.emptyList();
                     
                     List<InputStream> parts = new ArrayList<>();
-                    String compType = "gzip"; // "gzip", "zstd", "raw"
+                    String compType = "gzip"; // "gzip", "xz", "raw"
                     
                     // Check for multi-part chunks or single compressed assets
                     List<String> partNames = new ArrayList<>();
@@ -342,12 +342,13 @@ public class LocalEngineService extends Service {
                         for (String part : partNames) {
                             parts.add(getAssets().open("engine/" + part));
                         }
-                        if (partNames.get(0).endsWith(".zst")) {
-                            compType = "zstd";
+                        if (partNames.get(0).endsWith(".xz")) {
+                            compType = "xz";
                         }
-                    } else if (assetList.contains("atomic-router.tar.zst")) {
-                        parts.add(getAssets().open("engine/atomic-router.tar.zst"));
-                        compType = "zstd";
+                    } else if (assetList.contains("atomic-router.tar.xz") || assetList.contains("atomic-router.xz")) {
+                        String xzName = assetList.contains("atomic-router.tar.xz") ? "atomic-router.tar.xz" : "atomic-router.xz";
+                        parts.add(getAssets().open("engine/" + xzName));
+                        compType = "xz";
                     } else if (assetList.contains("atomic-router.tar.gz")) {
                         parts.add(getAssets().open("engine/atomic-router.tar.gz"));
                         compType = "gzip";
@@ -359,8 +360,8 @@ public class LocalEngineService extends Service {
                     if (!parts.isEmpty()) {
                         InputStream combinedIn = new SequenceInputStream(Collections.enumeration(parts));
                         InputStream inStream;
-                        if ("zstd".equals(compType)) {
-                            inStream = new com.github.luben.zstd.ZstdInputStreamNoFinalizer(new java.io.BufferedInputStream(combinedIn));
+                        if ("xz".equals(compType)) {
+                            inStream = new org.tukaani.xz.XZInputStream(new java.io.BufferedInputStream(combinedIn));
                         } else if ("gzip".equals(compType)) {
                             inStream = new GzipCompressorInputStream(new java.io.BufferedInputStream(combinedIn));
                         } else {
