@@ -913,17 +913,26 @@ public class MainActivity extends AppCompatActivity {
                 uploadMessageAboveL = filePathCallback;
 
                 try {
-                    Intent intent = fileChooserParams.createIntent();
-                    if (fileChooserParams.getAcceptTypes() != null && fileChooserParams.getAcceptTypes().length > 0 && !fileChooserParams.getAcceptTypes()[0].isEmpty()) {
-                        intent.setType(fileChooserParams.getAcceptTypes()[0]);
-                    } else {
-                        intent.setType("*/*");
-                    }
+                    Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
                     intent.addCategory(Intent.CATEGORY_OPENABLE);
-                    startActivityForResult(Intent.createChooser(intent, "Pilih File Import / Konfigurasi"), FILE_CHOOSER_REQ_CODE);
+                    intent.setType("*/*");
+                    
+                    // If multiple selection is requested
+                    if (fileChooserParams.getMode() == FileChooserParams.MODE_OPEN_MULTIPLE) {
+                        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+                    }
+
+                    // Set specific mime types if provided by website
+                    String[] acceptTypes = fileChooserParams.getAcceptTypes();
+                    if (acceptTypes != null && acceptTypes.length > 0 && !acceptTypes[0].isEmpty()) {
+                        intent.putExtra(Intent.EXTRA_MIME_TYPES, acceptTypes);
+                    }
+
+                    startActivityForResult(Intent.createChooser(intent, "Pilih File Import"), FILE_CHOOSER_REQ_CODE);
                     return true;
                 } catch (Exception e) {
                     try {
+                        // Fallback to ACTION_GET_CONTENT
                         Intent fallbackIntent = new Intent(Intent.ACTION_GET_CONTENT);
                         fallbackIntent.addCategory(Intent.CATEGORY_OPENABLE);
                         fallbackIntent.setType("*/*");

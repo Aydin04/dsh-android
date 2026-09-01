@@ -189,14 +189,14 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.2.2
-          name: "DSH Mobile v3.2.2 (Full File Chooser Import/Export & Modernized Toolbar)"
+          tag_name: v3.2.3
+          name: "DSH Mobile v3.2.3 (Universal Storage Access Framework File Picker Fix)"
           body: |
-            ## 🚀 DSH Mobile Release v3.2.2
-            - 📁 **Full File Chooser & Import/Export Support**:
-              - Mengaktifkan `onShowFileChooser` dan `DownloadListener` di WebView.
-              - Import file JSON, Database Backup, dan Config file di AtomicRoute & DSH kini 100% aktif dan membuka File Picker Android.
-              - Ekspor file langsung tersimpan otomatis ke folder `/sdcard/DSH_Backups/`.
+            ## 🚀 DSH Mobile Release v3.2.3
+            - 📂 **Universal Android Storage Access Framework (SAF) File Picker**:
+              - Menggunakan `Intent.ACTION_OPEN_DOCUMENT` dengan fallback `Intent.ACTION_GET_CONTENT`.
+              - Mengatasi masalah "No app available to handle this action / isinya kosong" saat memilih file picker di HP Android.
+              - Mendukung semua aplikasi File Manager sistem Android, Google Files, Drive, dan SD Card.
             - 🗄️ **Direct AtomicRoute SQLite Import & Export**:
               - Fitur impor dan ekspor langsung file `storage.sqlite` AtomicRouter melalui menu `💾 Data / DB`.
             - 🎨 **Modernized Floating Toolbar**:
