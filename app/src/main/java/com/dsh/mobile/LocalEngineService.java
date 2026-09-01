@@ -440,7 +440,7 @@ public class LocalEngineService extends Service {
 
             ProcessBuilder pb = new ProcessBuilder(
                     nodeFile.getAbsolutePath(),
-                    "--max-old-space-size=256",
+                    "--max-old-space-size=512",
                     dshBin.getAbsolutePath(),
                     "--profile", "web",
                     "--no-open",
@@ -468,13 +468,13 @@ public class LocalEngineService extends Service {
                     if (atomicServerJs.exists()) {
                         atomicPb = new ProcessBuilder(
                                 nodeFile.getAbsolutePath(),
-                                "--max-old-space-size=256",
+                                "--max-old-space-size=512",
                                 atomicServerJs.getAbsolutePath()
                         );
                     } else {
                         atomicPb = new ProcessBuilder(
                                 nodeFile.getAbsolutePath(),
-                                "--max-old-space-size=256",
+                                "--max-old-space-size=512",
                                 atomicBin.getAbsolutePath(),
                                 "serve",
                                 "--port", "20128",

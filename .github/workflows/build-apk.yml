@@ -199,16 +199,14 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.3.1
-          name: "DSH Mobile v3.3.1 (Anti-Lag, ANR Freeze Fix & Hardware Acceleration)"
+          tag_name: v3.3.2
+          name: "DSH Mobile v3.3.2 (Safe V8 512MB Heap Allocation & Smooth UI Engine)"
           body: |
-            ## 🚀 DSH Mobile Release v3.3.1
+            ## 🚀 DSH Mobile Release v3.3.2
+            - 🛡️ **Fix AtomicRouter V8 Startup Heap Limit**:
+              - Menaikkan batas alokasi V8 heap ke `--max-old-space-size=512` (512MB) agar AtomicRouter tidak mengalami crash `JavaScript heap out of memory / net::ERR_CONNECTION_REFUSED` saat memuat cache model intelligence dan database awal.
             - ⚡ **Anti-Lag & ANR Freeze Fix (Main Thread Decoupling)**:
-              - Mengatasi masalah aplikasi macet / *Application Not Responding (ANR)* saat agent menjalankan banyak tool atau saat sinyal buruk.
-              - Sistem log dialihkan ke in-memory ring buffer berkecepatan tinggi dengan throttling UI otomatis (mencegah kalkulasi layout berat di main thread).
-              - Menghilangkan banjir broadcast console log React/Vite.
-            - 🧠 **V8 Memory & Heap Optimization (`--max-old-space-size=256`)**:
-              - Membatasi konsumsi RAM Node.js engine agar tidak memicu zRAM/Swap kernel thrashing di sistem Android.
+              - Log dialihkan ke in-memory ring buffer berkecepatan tinggi dengan throttling UI otomatis.
             - 🏎️ **WebView Hardware Acceleration**:
               - Mengaktifkan `LAYER_TYPE_HARDWARE` dan caching DOM storage untuk rendering antarmuka yang sangat mulus.
             - 📦 **Dual Release Options**:
