@@ -95,6 +95,32 @@
                 android:orientation="horizontal">
 
                 <Button
+                    android:id="@+id/pillScreenshot"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="32dp"
+                    android:layout_marginEnd="6dp"
+                    android:backgroundTint="#24283B"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:text="📸 Screenshot Layar"
+                    android:textColor="#73DACA"
+                    android:textSize="11sp" />
+
+                <Button
+                    android:id="@+id/pillPickImage"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="32dp"
+                    android:layout_marginEnd="6dp"
+                    android:backgroundTint="#24283B"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:text="🖼️ Pilih Gambar"
+                    android:textColor="#7AA2F7"
+                    android:textSize="11sp" />
+
+                <Button
                     android:id="@+id/pillPresetGame"
                     style="@style/Widget.MaterialComponents.Button.TextButton"
                     android:layout_width="wrap_content"
@@ -117,7 +143,7 @@
                     android:paddingStart="8dp"
                     android:paddingEnd="8dp"
                     android:text="⏰ Jadwal / Alarm"
-                    android:textColor="#7AA2F7"
+                    android:textColor="#E0AF68"
                     android:textSize="11sp" />
 
                 <Button
@@ -130,7 +156,7 @@
                     android:paddingStart="8dp"
                     android:paddingEnd="8dp"
                     android:text="🧹 Clean RAM"
-                    android:textColor="#73DACA"
+                    android:textColor="#9ECE6A"
                     android:textSize="11sp" />
 
                 <Button
@@ -142,8 +168,8 @@
                     android:backgroundTint="#24283B"
                     android:paddingStart="8dp"
                     android:paddingEnd="8dp"
-                    android:text="📡 Toggle WiFi"
-                    android:textColor="#E0AF68"
+                    android:text="📡 WiFi"
+                    android:textColor="#2AC3DE"
                     android:textSize="11sp" />
 
                 <Button
@@ -155,7 +181,7 @@
                     android:backgroundTint="#24283B"
                     android:paddingStart="8dp"
                     android:paddingEnd="8dp"
-                    android:text="✈️ Airplane Mode"
+                    android:text="✈️ Airplane"
                     android:textColor="#F778BA"
                     android:textSize="11sp" />
             </LinearLayout>
@@ -176,10 +202,52 @@
                 android:background="#24283B"
                 android:lineSpacingExtra="3dp"
                 android:padding="12dp"
-                android:text="Halo! Saya asisten DSH Anda. Tanyakan apa saja atau jalankan perintah sistem langsung di sini."
+                android:text="Halo! Saya asisten DSH Anda. Tanyakan apa saja, jalankan perintah sistem, atau kirim gambar langsung dari galeri / screenshot."
                 android:textColor="#C0CAF5"
                 android:textSize="14sp" />
         </ScrollView>
+
+        <!-- Image Attachment Preview Thumbnail Bar -->
+        <LinearLayout
+            android:id="@+id/layoutAttachedImagePreview"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:background="#24283B"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="6dp"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/ivAttachedThumbnail"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:scaleType="centerCrop"
+                android:src="@drawable/ic_deepseek"
+                android:contentDescription="Thumbnail Gambar" />
+
+            <TextView
+                android:id="@+id/tvAttachedImageName"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:ellipsize="middle"
+                android:singleLine="true"
+                android:text="📸 screenshot.png terlampir"
+                android:textColor="#73DACA"
+                android:textSize="13sp" />
+
+            <ImageButton
+                android:id="@+id/btnRemoveAttachedImage"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@android:drawable/ic_menu_close_clear_cancel"
+                android:tint="#F778BA"
+                android:contentDescription="Hapus Lampiran" />
+        </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -188,23 +256,32 @@
             android:orientation="horizontal">
 
             <ImageButton
+                android:id="@+id/btnAttachImage"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@android:drawable/ic_menu_gallery"
+                android:tint="#7AA2F7"
+                android:contentDescription="Lampirkan Gambar" />
+
+            <ImageButton
                 android:id="@+id/btnVoiceInput"
-                android:layout_width="44dp"
-                android:layout_height="44dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@android:drawable/ic_btn_speak_now"
-                android:tint="#7AA2F7"
+                android:tint="#BB9AF7"
                 android:contentDescription="Voice Input" />
 
             <EditText
                 android:id="@+id/etAssistantInput"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="6dp"
-                android:layout_marginEnd="6dp"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp"
                 android:layout_weight="1"
                 android:background="#24283B"
-                android:hint="Tanya atau ketik perintah sistem..."
+                android:hint="Ketik pesan atau jelaskan gambar..."
                 android:imeOptions="actionSend"
                 android:inputType="textCapSentences|textMultiLine"
                 android:maxLines="3"
@@ -215,8 +292,8 @@
 
             <ImageButton
                 android:id="@+id/btnAssistantSend"
-                android:layout_width="44dp"
-                android:layout_height="44dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@android:drawable/ic_menu_send"
                 android:tint="#73DACA"
