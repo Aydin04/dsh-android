@@ -137,7 +137,7 @@ jobs:
           
           tar -czf $GITHUB_WORKSPACE/app/src/main/assets/engine/dsh-core.tar.gz -C /tmp/global_dsh/lib/node_modules/@deepseek-ai dsh
 
-       - name: Setup Gradle 8.5
+      - name: Setup Gradle 8.5
         uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: 8.5
