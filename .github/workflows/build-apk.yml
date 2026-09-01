@@ -189,18 +189,20 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.2.1
-          name: "DSH Mobile v3.2.1 (Pure Java Stable XZ Decompressor - Anti-Crash)"
+          tag_name: v3.2.2
+          name: "DSH Mobile v3.2.2 (Full File Chooser Import/Export & Modernized Toolbar)"
           body: |
-            ## 🚀 DSH Mobile Release v3.2.1
-            - 🛡️ **Fix Force Close / Native Crash**:
-              - Mengganti native JNI runtime dengan **Pure Java XZ Stream Decompressor (`org.tukaani:xz`)**.
-              - Menghilangkan dependensi lib JNI native C++ yang menyebabkan crash saat aplikasi dibuka di beberapa HP Android.
-            - 🗜️ **Ukuran APK Tetap Sangat Kecil (~200MB)**:
-              - Bundle AtomicRouter terkompresi dengan XZ level 6 (~95MB) dan diekstrak dengan aman tanpa resiko force close.
-            - 🔀 **Full Standalone Dual-Engine**:
-              - DeepSeek Harness (`:3080`) & AtomicRouter Dashboard (`:20128`) aktif 100% offline.
-            - 💾 **Dual Database Backup & Restore**: Backup data DSH (`.dsh/`) dan AtomicRouter (`.atomic-router/`) ke `/sdcard/DSH_Backups/`.
+            ## 🚀 DSH Mobile Release v3.2.2
+            - 📁 **Full File Chooser & Import/Export Support**:
+              - Mengaktifkan `onShowFileChooser` dan `DownloadListener` di WebView.
+              - Import file JSON, Database Backup, dan Config file di AtomicRoute & DSH kini 100% aktif dan membuka File Picker Android.
+              - Ekspor file langsung tersimpan otomatis ke folder `/sdcard/DSH_Backups/`.
+            - 🗄️ **Direct AtomicRoute SQLite Import & Export**:
+              - Fitur impor dan ekspor langsung file `storage.sqlite` AtomicRouter melalui menu `💾 Data / DB`.
+            - 🎨 **Modernized Floating Toolbar**:
+              - Tombol ditata rapi dengan hierarki visual yang jelas: `🔀 AtomicRoute`, `💾 Data / DB`, `📝 Config`, `🔌 Plugins`, `🔄`, `🖥️ Desk`, `👑 Root`, `🌐 Node`, `📋 Log`.
+            - 🛡️ **Anti-Crash & Pure Java XZ Stream**:
+              - Menggunakan `org.tukaani:xz` tanpa dependensi JNI native. Ukuran APK tetap ultra-ringan (~200MB).
             - ✨ **Comprehensive 1-Click Feature Presets Library**: Preset Multi-Agent Swarm, Full-Power Autonomous, Web Search, dan Context Auto-Pruner.
             - 📝 **Visual File Selector**: Navigasi mudah antara `cordis.patch.yml`, `package.json`, dan `cordis.yml`.
             - 🗑️ **Interactive Plugin Uninstaller / Manager**: Pasang dan hapus plugin via GUI.

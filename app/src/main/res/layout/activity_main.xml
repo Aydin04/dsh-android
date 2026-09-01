@@ -103,9 +103,61 @@
                     android:layout_marginHorizontal="4dp"
                     android:background="#30363d" />
 
+                <!-- Web Dashboard Switcher -->
+                <Button
+                    android:id="@+id/btnAtomicRoute"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:paddingHorizontal="10dp"
+                    android:background="?attr/selectableItemBackground"
+                    android:text="🔀 AtomicRoute"
+                    android:textColor="#f778ba"
+                    android:textStyle="bold"
+                    android:textSize="12sp" />
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="18dp"
+                    android:layout_marginHorizontal="2dp"
+                    android:background="#30363d" />
+
+                <!-- Backup & Database Management -->
+                <Button
+                    android:id="@+id/btnBackup"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:paddingHorizontal="8dp"
+                    android:background="?attr/selectableItemBackground"
+                    android:text="💾 Data / DB"
+                    android:textColor="#58a6ff"
+                    android:textSize="11sp" />
+
+                <!-- Config & Presets -->
+                <Button
+                    android:id="@+id/btnConfigDoc"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:paddingHorizontal="8dp"
+                    android:background="?attr/selectableItemBackground"
+                    android:text="📝 Config"
+                    android:textColor="#e3b341"
+                    android:textSize="11sp" />
+
+                <!-- Plugins -->
+                <Button
+                    android:id="@+id/btnPlugins"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:paddingHorizontal="8dp"
+                    android:background="?attr/selectableItemBackground"
+                    android:text="🔌 Plugins"
+                    android:textColor="#3fb950"
+                    android:textSize="11sp" />
+
+                <!-- System Controls -->
                 <Button
                     android:id="@+id/btnRefreshWeb"
-                    android:layout_width="wrap_content"
+                    android:layout_width="36dp"
                     android:layout_height="36dp"
                     android:background="?attr/selectableItemBackground"
                     android:text="🔄"
@@ -113,20 +165,22 @@
                     android:textSize="13sp" />
 
                 <Button
-                    android:id="@+id/btnConfigDoc"
+                    android:id="@+id/btnDesktopMode"
                     android:layout_width="wrap_content"
                     android:layout_height="36dp"
+                    android:paddingHorizontal="8dp"
                     android:background="?attr/selectableItemBackground"
-                    android:text="📝 Config"
-                    android:textColor="#e3b341"
+                    android:text="🖥️ Desk"
+                    android:textColor="#79c0ff"
                     android:textSize="11sp" />
 
                 <Button
                     android:id="@+id/btnRootToggle"
                     android:layout_width="wrap_content"
                     android:layout_height="36dp"
+                    android:paddingHorizontal="8dp"
                     android:background="?attr/selectableItemBackground"
-                    android:text="👑 Root SU"
+                    android:text="👑 Root"
                     android:textColor="#d2a8ff"
                     android:textSize="11sp" />
 
@@ -134,44 +188,9 @@
                     android:id="@+id/btnNode"
                     android:layout_width="wrap_content"
                     android:layout_height="36dp"
+                    android:paddingHorizontal="8dp"
                     android:background="?attr/selectableItemBackground"
                     android:text="🌐 Node"
-                    android:textColor="#58a6ff"
-                    android:textSize="11sp" />
-
-                <Button
-                    android:id="@+id/btnDesktopMode"
-                    android:layout_width="wrap_content"
-                    android:layout_height="36dp"
-                    android:background="?attr/selectableItemBackground"
-                    android:text="🖥️ Desk"
-                    android:textColor="#58a6ff"
-                    android:textSize="11sp" />
-
-                <Button
-                    android:id="@+id/btnAtomicRoute"
-                    android:layout_width="wrap_content"
-                    android:layout_height="36dp"
-                    android:background="?attr/selectableItemBackground"
-                    android:text="🔀 AtomicRoute"
-                    android:textColor="#f778ba"
-                    android:textSize="11sp" />
-
-                <Button
-                    android:id="@+id/btnPlugins"
-                    android:layout_width="wrap_content"
-                    android:layout_height="36dp"
-                    android:background="?attr/selectableItemBackground"
-                    android:text="🔌 Plugin"
-                    android:textColor="#3fb950"
-                    android:textSize="11sp" />
-
-                <Button
-                    android:id="@+id/btnBackup"
-                    android:layout_width="wrap_content"
-                    android:layout_height="36dp"
-                    android:background="?attr/selectableItemBackground"
-                    android:text="💾 Backup"
                     android:textColor="#58a6ff"
                     android:textSize="11sp" />
 
@@ -179,6 +198,7 @@
                     android:id="@+id/btnLogs"
                     android:layout_width="wrap_content"
                     android:layout_height="36dp"
+                    android:paddingHorizontal="8dp"
                     android:background="?attr/selectableItemBackground"
                     android:text="📋 Log"
                     android:textColor="#e3b341"

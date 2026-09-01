@@ -94,6 +94,8 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int PERMISSION_REQ_CODE = 101;
     private static final int MANAGE_STORAGE_REQ_CODE = 102;
+    private static final int FILE_CHOOSER_REQ_CODE = 103;
+    private android.webkit.ValueCallback<Uri[]> uploadMessageAboveL;
     private static final String PREFS_NAME = "DSH_PREFS";
     private static final String KEY_SERVER_URL = "SERVER_URL";
     private static final String KEY_ZOOM_LEVEL = "ZOOM_LEVEL";
@@ -857,8 +859,35 @@ public class MainActivity extends AppCompatActivity {
                     handler.postDelayed(() -> {
                         appendLog("[WebView Retry] Retrying connection to " + failedUrl + "...");
                         view.loadUrl(failedUrl);
-                    }, 1500);
+        webView.setDownloadListener((url, userAgent, contentDisposition, mimetype, contentLength) -> {
+            try {
+                if (url != null && url.startsWith("data:")) {
+                    // Handle data: URIs (e.g. exported JSON / database backups from AtomicRoute)
+                    int commaIndex = url.indexOf(",");
+                    if (commaIndex != -1) {
+                        String dataStr = url.substring(commaIndex + 1);
+                        byte[] decodedData;
+                        if (url.substring(0, commaIndex).contains(";base64")) {
+                            decodedData = android.util.Base64.decode(dataStr, android.util.Base64.DEFAULT);
+                        } else {
+                            decodedData = java.net.URLDecoder.decode(dataStr, "UTF-8").getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                        }
+                        
+                        File backupDir = new File(Environment.getExternalStorageDirectory(), "DSH_Backups");
+                        if (!backupDir.exists()) backupDir.mkdirs();
+                        String filename = "atomicroute_export_" + System.currentTimeMillis() + ".json";
+                        File targetFile = new File(backupDir, filename);
+                        try (FileOutputStream fos = new FileOutputStream(targetFile)) {
+                            fos.write(decodedData);
+                        }
+                        Toast.makeText(MainActivity.this, "✅ File diekspor ke: /sdcard/DSH_Backups/" + filename, Toast.LENGTH_LONG).show();
+                        return;
+                    }
                 }
+                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                startActivity(intent);
+            } catch (Exception e) {
+                Toast.makeText(MainActivity.this, "Gagal mengunduh file: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -867,6 +896,43 @@ public class MainActivity extends AppCompatActivity {
             public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
                 appendLog("[WebConsole] " + consoleMessage.message());
                 return super.onConsoleMessage(consoleMessage);
+            }
+
+            // Android 5.0+ File Chooser (for Import JSON, Import Database, Config file uploads)
+            @Override
+            public boolean onShowFileChooser(WebView webView, android.webkit.ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
+                if (uploadMessageAboveL != null) {
+                    uploadMessageAboveL.onReceiveValue(null);
+                    uploadMessageAboveL = null;
+                }
+                uploadMessageAboveL = filePathCallback;
+
+                try {
+                    Intent intent = fileChooserParams.createIntent();
+                    if (fileChooserParams.getAcceptTypes() != null && fileChooserParams.getAcceptTypes().length > 0 && !fileChooserParams.getAcceptTypes()[0].isEmpty()) {
+                        intent.setType(fileChooserParams.getAcceptTypes()[0]);
+                    } else {
+                        intent.setType("*/*");
+                    }
+                    intent.addCategory(Intent.CATEGORY_OPENABLE);
+                    startActivityForResult(Intent.createChooser(intent, "Pilih File Import / Konfigurasi"), FILE_CHOOSER_REQ_CODE);
+                    return true;
+                } catch (Exception e) {
+                    try {
+                        Intent fallbackIntent = new Intent(Intent.ACTION_GET_CONTENT);
+                        fallbackIntent.addCategory(Intent.CATEGORY_OPENABLE);
+                        fallbackIntent.setType("*/*");
+                        startActivityForResult(Intent.createChooser(fallbackIntent, "Pilih File Import"), FILE_CHOOSER_REQ_CODE);
+                        return true;
+                    } catch (Exception ex) {
+                        if (uploadMessageAboveL != null) {
+                            uploadMessageAboveL.onReceiveValue(null);
+                            uploadMessageAboveL = null;
+                        }
+                        Toast.makeText(MainActivity.this, "Gagal membuka File Picker: " + ex.getMessage(), Toast.LENGTH_SHORT).show();
+                        return false;
+                    }
+                }
             }
         });
     }
@@ -1210,18 +1276,24 @@ public class MainActivity extends AppCompatActivity {
         if (!backupRootDir.exists()) backupRootDir.mkdirs();
 
         String[] options = new String[]{
-            "💾 1. Backup Seluruh Data DSH Sekarang (Sesi, Storage, Konfig)",
-            "📂 2. Restore / Pulihkan Data dari File Backup (.tar.gz)",
-            "📋 3. Informasi Lokasi Database & Direktori Penyimpanan"
+            "💾 1. Backup Lengkap DSH & AtomicRoute (.tar.gz)",
+            "📂 2. Restore Lengkap dari File Backup (.tar.gz)",
+            "📤 3. Ekspor Database AtomicRoute (storage.sqlite)",
+            "📥 4. Impor Database AtomicRoute Langsung (storage.sqlite)",
+            "📋 5. Informasi Lokasi Database & Direktori Penyimpanan"
         };
 
         new AlertDialog.Builder(this)
-                .setTitle("💾 Backup & Restore Data DSH")
+                .setTitle("💾 Backup, Restore, & Database Manager")
                 .setItems(options, (dialog, which) -> {
                     if (which == 0) {
                         performDshBackup(backupRootDir, dshDataDir);
                     } else if (which == 1) {
                         showRestoreListDialog(backupRootDir, dshDataDir);
+                    } else if (which == 2) {
+                        exportAtomicSQLiteDirect(backupRootDir);
+                    } else if (which == 3) {
+                        importAtomicSQLiteDirect(backupRootDir);
                     } else {
                         showStorageLocationsInfo(dshDataDir, backupRootDir);
                     }
@@ -1374,6 +1446,106 @@ public class MainActivity extends AppCompatActivity {
                 .setMessage(info)
                 .setPositiveButton("Tutup", null)
                 .show();
+    }
+
+    private void exportAtomicSQLiteDirect(File backupRootDir) {
+        File atomicDb = new File(getFilesDir(), ".atomic-router/storage.sqlite");
+        if (!atomicDb.exists()) {
+            Toast.makeText(this, "Database AtomicRoute belum dibuat di storage internal.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        try {
+            String timestamp = new java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US).format(new java.util.Date());
+            File targetExport = new File(backupRootDir, "atomic_storage_" + timestamp + ".sqlite");
+            try (FileInputStream in = new FileInputStream(atomicDb);
+                 FileOutputStream out = new FileOutputStream(targetExport)) {
+                byte[] buf = new byte[16384];
+                int len;
+                while ((len = in.read(buf)) != -1) {
+                    out.write(buf, 0, len);
+                }
+            }
+            new AlertDialog.Builder(this)
+                    .setTitle("📤 Ekspor Database Berhasil")
+                    .setMessage("File database SQLite AtomicRoute telah berhasil diekspor ke:\n\n📁 " + targetExport.getAbsolutePath() + "\n\nAnda dapat menyimpannya atau memindahkannya kapan saja.")
+                    .setPositiveButton("OK", null)
+                    .show();
+        } catch (Exception e) {
+            Toast.makeText(this, "Gagal ekspor: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void importAtomicSQLiteDirect(File backupRootDir) {
+        File[] dbFiles = backupRootDir.listFiles((dir, name) -> name.endsWith(".sqlite") || name.endsWith(".db"));
+        if (dbFiles == null || dbFiles.length == 0) {
+            new AlertDialog.Builder(this)
+                    .setTitle("📥 Impor Database AtomicRoute")
+                    .setMessage("Tidak ditemukan file .sqlite atau .db di folder:\n" + backupRootDir.getAbsolutePath() + "\n\nSilakan letakkan file database Anda di folder tersebut terlebih dahulu.")
+                    .setPositiveButton("OK", null)
+                    .show();
+            return;
+        }
+
+        String[] items = new String[dbFiles.length];
+        for (int i = 0; i < dbFiles.length; i++) {
+            items[i] = "🗄️ " + dbFiles[i].getName() + " (" + (dbFiles[i].length() / 1024) + " KB)";
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle("Pilih Database untuk Diimpor")
+                .setItems(items, (dialog, which) -> {
+                    File selectedDb = dbFiles[which];
+                    new AlertDialog.Builder(this)
+                            .setTitle("Konfirmasi Impor Database")
+                            .setMessage("Apakah Anda ingin mengganti database aktif AtomicRoute dengan file " + selectedDb.getName() + "?\nServer akan di-restart otomatis.")
+                            .setPositiveButton("Ya, Timpa & Restart", (d, w) -> {
+                                try {
+                                    File targetDir = new File(getFilesDir(), ".atomic-router");
+                                    if (!targetDir.exists()) targetDir.mkdirs();
+                                    File targetDb = new File(targetDir, "storage.sqlite");
+                                    try (FileInputStream in = new FileInputStream(selectedDb);
+                                         FileOutputStream out = new FileOutputStream(targetDb)) {
+                                        byte[] buf = new byte[16384];
+                                        int len;
+                                        while ((len = in.read(buf)) != -1) {
+                                            out.write(buf, 0, len);
+                                        }
+                                    }
+                                    Toast.makeText(this, "✅ Database sukses diimpor! Me-restart server...", Toast.LENGTH_LONG).show();
+                                    restartEngine();
+                                } catch (Exception e) {
+                                    Toast.makeText(this, "Gagal impor: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                                }
+                            })
+                            .setNegativeButton("Batal", null)
+                            .show();
+                })
+                .setNegativeButton("Batal", null)
+                .show();
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == FILE_CHOOSER_REQ_CODE) {
+            if (uploadMessageAboveL != null) {
+                Uri[] results = null;
+                if (resultCode == RESULT_OK && data != null) {
+                    String dataString = data.getDataString();
+                    android.content.ClipData clipData = data.getClipData();
+                    if (clipData != null) {
+                        results = new Uri[clipData.getItemCount()];
+                        for (int i = 0; i < clipData.getItemCount(); i++) {
+                            results[i] = clipData.getItemAt(i).getUri();
+                        }
+                    } else if (dataString != null) {
+                        results = new Uri[]{Uri.parse(dataString)};
+                    }
+                }
+                uploadMessageAboveL.onReceiveValue(results);
+                uploadMessageAboveL = null;
+            }
+        }
     }
 
     @Override
