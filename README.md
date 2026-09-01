@@ -28,9 +28,7 @@
 
 ## 📦 Unduh & Pasang APK
 
-Anda dapat mengunduh file bundle APK rilis terbaru dari halaman **[Releases](https://github.com/Aydin04/dsh-android/releases)**.
-
-Tersedia versi ZIP hemat kuota: **`dsh-mobile-compressed.zip`** (~110 MB). Cukup ekstrak file zip tersebut dan pasang `app-debug.apk` di HP Anda.
+Anda dapat langsung mengunduh file `app-debug.apk` rilis terbaru dari halaman **[Releases](https://github.com/Aydin04/dsh-android/releases)** dan memasangnya di perangkat Android Anda.
 
 ---
 

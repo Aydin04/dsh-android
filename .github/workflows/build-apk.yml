@@ -172,13 +172,10 @@ jobs:
         run: |
           gradle assembleDebug --no-build-cache --info --stacktrace
 
-      - name: Check APK contents, Determine Release Tag, and Compress ZIP
+      - name: Check APK contents and Determine Release Tag
         id: release_info
         run: |
           ls -lh app/build/outputs/apk/debug/app-debug.apk
-          cd app/build/outputs/apk/debug/
-          zip -9 dsh-mobile-compressed.zip app-debug.apk
-          ls -lh dsh-mobile-compressed.zip
 
           # Extract DSH version from npm package
           DSH_VER=$(node -p "try { require('/tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh/package.json').version } catch(e) { '1.9.0' }")
@@ -217,9 +214,7 @@ jobs:
             - 🎨 **Aesthetic DeepSeek Splash**: Progress bar 0-100% dan rotating log.
             - 💬 **Chat Input (Enter = Newline)**: Tombol send untuk kirim.
             - 🌐 **Tombol Node di Toolbar (Remote VPS / Server DSH)**.
-            - 🗜️ **Tersedia Versi ZIP Hemat Kuota**: `dsh-mobile-compressed.zip`
           files: |
             app/build/outputs/apk/debug/app-debug.apk
-            app/build/outputs/apk/debug/dsh-mobile-compressed.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
