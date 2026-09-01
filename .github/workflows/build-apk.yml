@@ -199,16 +199,24 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.3.2
-          name: "DSH Mobile v3.3.2 (Safe V8 512MB Heap Allocation & Smooth UI Engine)"
+          tag_name: v3.4.0
+          name: "DSH Mobile v3.4.0 (Native Digital Assistant & Bottom-Sheet Overlay)"
           body: |
-            ## 🚀 DSH Mobile Release v3.3.2
-            - 🛡️ **Fix AtomicRouter V8 Startup Heap Limit**:
-              - Menaikkan batas alokasi V8 heap ke `--max-old-space-size=512` (512MB) agar AtomicRouter tidak mengalami crash `JavaScript heap out of memory / net::ERR_CONNECTION_REFUSED` saat memuat cache model intelligence dan database awal.
-            - ⚡ **Anti-Lag & ANR Freeze Fix (Main Thread Decoupling)**:
-              - Log dialihkan ke in-memory ring buffer berkecepatan tinggi dengan throttling UI otomatis.
-            - 🏎️ **WebView Hardware Acceleration**:
-              - Mengaktifkan `LAYER_TYPE_HARDWARE` dan caching DOM storage untuk rendering antarmuka yang sangat mulus.
+            ## 🚀 DSH Mobile Release v3.4.0 — Native System AI Assistant
+            - 🤖 **Native Android Digital Assistant (`AssistActivity`)**:
+              - Terdaftar sebagai asisten digital sistem Android (`android.intent.action.ASSIST`).
+              - Dapat dipanggil secara instan dari aplikasi mana pun via tahan tombol Power, Home Gesture, atau Quick Settings Tile!
+            - 🪟 **Translucent Bottom-Sheet Modal Dialog**:
+              - Antarmuka mengambang yang cepat, responsif, dan hemat sumber daya.
+            - ⚡ **Dual Mode Session: Temporary vs Persistent**:
+              - Mode **⚡ Temporary (Ephemeral)**: Sesi *in-memory* sekali pakai yang otomatis di-reset saat popup ditutup (tidak mengotori riwayat chat atau memori permanen).
+              - Mode **📌 Persistent**: Menyambung langsung ke sesi aktif utama DSH.
+            - ⏰ **Assistant Scheduler & AlarmManager (`AssistantAlarmReceiver`)**:
+              - Eksekusi tugas terjadwal presisi bahkan saat HP dalam kondisi deep sleep / layar mati.
+            - 🎛️ **Quick Action Carousel**:
+              - Tombol instan: `🎮 Game Boost`, `⏰ Jadwal/Alarm`, `🧹 Clean RAM`, `📡 Toggle WiFi`, `✈️ Airplane Mode`.
+            - 🎤 **Voice Interaction (Speech-To-Text)**:
+              - Input suara langsung via tombol mikrofon.
             - 📦 **Dual Release Options**:
               - `dsh-mobile-pure.apk` (~110 MB) — Edisi Ringan (Pure DSH).
               - `dsh-mobile-full-atomicroute.apk` (~237 MB) — Edisi Lengkap (Dual-Engine DSH + AtomicRouter).
