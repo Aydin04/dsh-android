@@ -137,7 +137,23 @@ jobs:
           
           tar -czf $GITHUB_WORKSPACE/app/src/main/assets/engine/dsh-core.tar.gz -C /tmp/global_dsh/lib/node_modules/@deepseek-ai dsh
 
-          echo "4. Downloading and Packaging Ultra-Compressed Pure-XZ AtomicRouter Engine..."
+       - name: Setup Gradle 8.5
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: 8.5
+
+      - name: Build Pure DSH APK Edition (Without AtomicRouter)
+        run: |
+          echo "=== BUILDING PURE DSH EDITION ==="
+          rm -f $GITHUB_WORKSPACE/app/src/main/assets/engine/atomic-router*
+          ls -lh $GITHUB_WORKSPACE/app/src/main/assets/engine/
+          gradle assembleDebug --no-build-cache --info
+          cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/dsh-mobile-pure.apk
+          ls -lh app/build/outputs/apk/debug/dsh-mobile-pure.apk
+
+      - name: Download & Package AtomicRouter Engine for Full Edition
+        run: |
+          echo "=== PACKAGING ATOMICROUTER ENGINE FOR FULL EDITION ==="
           rm -rf /tmp/atomic_pack && mkdir -p /tmp/atomic_pack/atomic-router
           curl -s -L "https://github.com/Aydin04/atomic-router/releases/download/v3.8.50/atomic-router-linux-x64.tar.gz" | tar -xz -C /tmp/atomic_pack/atomic-router || true
           if [ -f "/tmp/atomic_pack/atomic-router/server.js" ]; then
@@ -159,23 +175,20 @@ jobs:
             xz -z -6 -T0 /tmp/atomic-router.tar
             mv /tmp/atomic-router.tar.xz $GITHUB_WORKSPACE/app/src/main/assets/engine/atomic-router.tar.xz
           fi
-          
-          echo "=== ASSETS IN WORKSPACE ENGINE ==="
           ls -lh $GITHUB_WORKSPACE/app/src/main/assets/engine/
 
-      - name: Setup Gradle 8.5
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: 8.5
-
-      - name: Build Debug APK
+      - name: Build Full Dual-Engine APK Edition (DSH + AtomicRouter)
         run: |
-          gradle assembleDebug --no-build-cache --info --stacktrace
+          echo "=== BUILDING FULL DUAL-ENGINE EDITION ==="
+          gradle assembleDebug --no-build-cache --info
+          cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/dsh-mobile-full-atomicroute.apk
+          ls -lh app/build/outputs/apk/debug/dsh-mobile-full-atomicroute.apk
 
       - name: Check APK contents and Determine Release Tag
         id: release_info
         run: |
-          ls -lh app/build/outputs/apk/debug/app-debug.apk
+          echo "=== FINAL BUILT ARTIFACTS ==="
+          ls -lh app/build/outputs/apk/debug/*.apk
 
           # Extract DSH version from npm package
           DSH_VER=$(node -p "try { require('/tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh/package.json').version } catch(e) { '1.9.0' }")
@@ -186,38 +199,34 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.2.5
-          name: "DSH Mobile v3.2.5 (Blob Export & JSON/SQLite File Picker Fix)"
+          tag_name: v3.3.0
+          name: "DSH Mobile v3.3.0 (Dual Release: Pure DSH & Full DSH + AtomicRouter)"
           body: |
-            ## 🚀 DSH Mobile Release v3.2.5
-            - 📥 **Fixed `blob:` and `data:` Web Export Downloads**:
-              - Mengatasi crash `No Activity found to handle Intent { act=android.intent.action.VIEW dat=blob: }` saat mengekspor data/backup dari web AtomicRoute.
-              - Injeksi bridge otomatis untuk memproses URL `blob:` via JavaScript FileReader dan menyimpannya langsung ke `/sdcard/DSH_Backups/`.
-            - 🛠️ **Fixed AtomicRoute JSON & SQLite/DB File Picker**:
-              - Memperbaiki parsing & mapping MIME type pada WebChromeClient `onShowFileChooser`.
-              - Ekstensi web `.json`, `.sqlite`, `.db`, `.csv`, `.toml`, `.zip`, `.har` kini secara otomatis dikonversi ke Android SAF MIME types yang valid (`application/json`, `application/x-sqlite3`, `application/octet-stream`, dll).
-              - File `.json` dan database `.sqlite` / `.db` tidak lagi menjadi abu-abu (*disabled/unselectable*) saat memilih file di antarmuka AtomicRoute.
-            - 📂 **Universal Android Storage Access Framework (SAF) File Picker**:
-              - Menggunakan `Intent.ACTION_OPEN_DOCUMENT` dengan fallback `Intent.ACTION_GET_CONTENT`.
-              - Mendukung semua aplikasi File Manager sistem Android, Google Files, Drive, dan SD Card.
-            - 🗄️ **Direct AtomicRoute SQLite Import & Export**:
-              - Fitur impor dan ekspor langsung file `storage.sqlite` AtomicRouter melalui menu `💾 Data / DB`.
-            - 🎨 **Modernized Floating Toolbar**:
-              - Tombol ditata rapi dengan hierarki visual yang jelas: `🔀 AtomicRoute`, `💾 Data / DB`, `📝 Config`, `🔌 Plugins`, `🔄`, `🖥️ Desk`, `👑 Root`, `🌐 Node`, `📋 Log`.
-            - 🛡️ **Anti-Crash & Pure Java XZ Stream**:
-              - Menggunakan `org.tukaani:xz` tanpa dependensi JNI native. Ukuran APK tetap ultra-ringan (~200MB).
-            - ✨ **Comprehensive 1-Click Feature Presets Library**: Preset Multi-Agent Swarm, Full-Power Autonomous, Web Search, dan Context Auto-Pruner.
-            - 📝 **Visual File Selector**: Navigasi mudah antara `cordis.patch.yml`, `package.json`, dan `cordis.yml`.
-            - 🗑️ **Interactive Plugin Uninstaller / Manager**: Pasang dan hapus plugin via GUI.
-            - 🛠️ **Fix Cordis ESM Module Loader**: Memperbaiki `existsSync` loader saat plugin terpasang.
-            - 📦 **Embedded PNPM Engine**: `pnpm` terintegrasi langsung di dalam archive APK.
-            - 📺 **Live Interactive Plugin Terminal**: Output instalasi dan compile logs tampil secara real-time.
-            - 🔄 **Auto-Migration on Upgrade (Tanpa Perlu Fresh Install)**.
-            - 👑 **Universal Multi-Root SU**: Magisk (`/product/bin/magisk`), KernelSU, KernelSU Next, APatch.
-            - 🎨 **Aesthetic DeepSeek Splash**: Progress bar 0-100% dan rotating log.
-            - 💬 **Chat Input (Enter = Newline)**: Tombol send untuk kirim.
-            - 🌐 **Tombol Node di Toolbar (Remote VPS / Server DSH)**.
+            ## 🚀 DSH Mobile Release v3.3.0
+
+            Tersedia 2 pilihan edisi APK sesuai kebutuhan Anda:
+
+            ### 📦 1. `dsh-mobile-pure.apk` (~110 MB) — Edisi Ringan (Pure DSH)
+            - Khusus engine **DeepSeek Harness On-Device**.
+            - Ringan, hemat penyimpanan RAM & CPU.
+            - Sangat cocok untuk penggunaan DeepSeek mandiri atau jika menghubungkan model ke server/VPS AtomicRouter eksternal.
+
+            ### ⚡ 2. `dsh-mobile-full-atomicroute.apk` (~237 MB) — Edisi Lengkap (Dual-Engine)
+            - Menggabungkan **DeepSeek Harness + AtomicRouter Gateway On-Device**.
+            - Dilengkapi tab toolbar `🔀 AtomicRoute`, multi-account failover, dan smart model routing.
+
+            ---
+
+            ### 🛠️ Changelog & Fitur:
+            - 📥 **Fixed `blob:` and `data:` Web Export Downloads**: Mengatasi error intent saat download backup.
+            - 🛠️ **Fixed AtomicRoute JSON & SQLite/DB File Picker**: Filter SAF otomatis mengenali format ekstensi.
+            - 📂 **Universal Android Storage Access Framework (SAF)**.
+            - 🗄️ **Direct SQLite Import & Export**.
+            - 🎨 **Modernized Floating Toolbar**.
+            - 🛡️ **Anti-Crash & Pure Java XZ Stream**.
+            - 👑 **Universal Multi-Root SU**: Magisk, KernelSU, KernelSU Next, APatch.
           files: |
-            app/build/outputs/apk/debug/app-debug.apk
+            app/build/outputs/apk/debug/dsh-mobile-pure.apk
+            app/build/outputs/apk/debug/dsh-mobile-full-atomicroute.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

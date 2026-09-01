@@ -28,7 +28,16 @@
 
 ## 📦 Unduh & Pasang APK
 
-Anda dapat langsung mengunduh file `app-debug.apk` rilis terbaru dari halaman **[Releases](https://github.com/Aydin04/dsh-android/releases)** dan memasangnya di perangkat Android Anda.
+Tersedia **2 pilihan edisi APK** di halaman **[Releases](https://github.com/Aydin04/dsh-android/releases)**:
+
+1. **`dsh-mobile-pure.apk` (~110 MB) — Edisi Ringan (Pure DSH):**
+   - Berisi khusus engine **DeepSeek Harness On-Device**.
+   - Ringan, hemat RAM & CPU.
+   - Sangat cocok untuk penggunaan DeepSeek mandiri atau jika Anda ingin menghubungkannya ke router AI di server/VPS eksternal.
+
+2. **`dsh-mobile-full-atomicroute.apk` (~237 MB) — Edisi Lengkap (Dual-Engine):**
+   - Membawa **DeepSeek Harness + AtomicRouter Gateway On-Device**.
+   - Dilengkapi tab toolbar `🔀 AtomicRoute`, multi-account failover, dan smart model routing langsung dari HP.
 
 ---
 

@@ -308,20 +308,46 @@ public class MainActivity extends AppCompatActivity {
 
         btnDesktopMode.setOnClickListener(v -> toggleDesktopMode());
 
-        btnAtomicRoute.setOnClickListener(v -> {
-            String currentUrl = webView.getUrl();
-            if (currentUrl != null && currentUrl.contains("20128")) {
-                Toast.makeText(this, "Beralih ke DSH Chat Dashboard...", Toast.LENGTH_SHORT).show();
-                btnAtomicRoute.setText("🔀 AtomicRoute");
-                btnAtomicRoute.setTextColor(0xFFF778BA);
-                webView.loadUrl(LOCAL_URL);
-            } else {
-                Toast.makeText(this, "Membuka Full Dashboard AtomicRoute (Port 20128)...", Toast.LENGTH_SHORT).show();
-                btnAtomicRoute.setText("🤖 DSH Chat");
-                btnAtomicRoute.setTextColor(0xFF58A6FF);
-                webView.loadUrl("http://127.0.0.1:20128");
+        boolean hasAtomicRouter = false;
+        try {
+            String[] assets = getAssets().list("engine");
+            if (assets != null) {
+                for (String a : assets) {
+                    if (a.startsWith("atomic-router")) {
+                        hasAtomicRouter = true;
+                        break;
+                    }
+                }
             }
-        });
+        } catch (Exception ignored) {}
+        if (!hasAtomicRouter) {
+            File atomicDir = new File(getFilesDir(), "atomic-router");
+            if (atomicDir.exists() && (new File(atomicDir, "server.js").exists() || new File(atomicDir, "bin/omniroute.mjs").exists())) {
+                hasAtomicRouter = true;
+            }
+        }
+
+        if (btnAtomicRoute != null) {
+            if (!hasAtomicRouter) {
+                btnAtomicRoute.setVisibility(View.GONE);
+            } else {
+                btnAtomicRoute.setVisibility(View.VISIBLE);
+                btnAtomicRoute.setOnClickListener(v -> {
+                    String currentUrl = webView.getUrl();
+                    if (currentUrl != null && currentUrl.contains("20128")) {
+                        Toast.makeText(this, "Beralih ke DSH Chat Dashboard...", Toast.LENGTH_SHORT).show();
+                        btnAtomicRoute.setText("🔀 AtomicRoute");
+                        btnAtomicRoute.setTextColor(0xFFF778BA);
+                        webView.loadUrl(LOCAL_URL);
+                    } else {
+                        Toast.makeText(this, "Membuka Full Dashboard AtomicRoute (Port 20128)...", Toast.LENGTH_SHORT).show();
+                        btnAtomicRoute.setText("🤖 DSH Chat");
+                        btnAtomicRoute.setTextColor(0xFF58A6FF);
+                        webView.loadUrl("http://127.0.0.1:20128");
+                    }
+                });
+            }
+        }
 
         btnPlugins.setOnClickListener(v -> showPluginManagerDialog());
 
