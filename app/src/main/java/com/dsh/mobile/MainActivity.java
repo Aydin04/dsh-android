@@ -859,6 +859,11 @@ public class MainActivity extends AppCompatActivity {
                     handler.postDelayed(() -> {
                         appendLog("[WebView Retry] Retrying connection to " + failedUrl + "...");
                         view.loadUrl(failedUrl);
+                    }, 1500);
+                }
+            }
+        });
+
         webView.setDownloadListener((url, userAgent, contentDisposition, mimetype, contentLength) -> {
             try {
                 if (url != null && url.startsWith("data:")) {
