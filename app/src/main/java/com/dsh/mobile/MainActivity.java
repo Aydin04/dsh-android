@@ -866,26 +866,34 @@ public class MainActivity extends AppCompatActivity {
 
         webView.setDownloadListener((url, userAgent, contentDisposition, mimetype, contentLength) -> {
             try {
-                if (url != null && url.startsWith("data:")) {
-                    // Handle data: URIs (e.g. exported JSON / database backups from AtomicRoute)
-                    int commaIndex = url.indexOf(",");
-                    if (commaIndex != -1) {
-                        String dataStr = url.substring(commaIndex + 1);
-                        byte[] decodedData;
-                        if (url.substring(0, commaIndex).contains(";base64")) {
-                            decodedData = android.util.Base64.decode(dataStr, android.util.Base64.DEFAULT);
-                        } else {
-                            decodedData = java.net.URLDecoder.decode(dataStr, "UTF-8").getBytes(java.nio.charset.StandardCharsets.UTF_8);
-                        }
-                        
-                        File backupDir = new File(Environment.getExternalStorageDirectory(), "DSH_Backups");
-                        if (!backupDir.exists()) backupDir.mkdirs();
-                        String filename = "atomicroute_export_" + System.currentTimeMillis() + ".json";
-                        File targetFile = new File(backupDir, filename);
-                        try (FileOutputStream fos = new FileOutputStream(targetFile)) {
-                            fos.write(decodedData);
-                        }
-                        Toast.makeText(MainActivity.this, "✅ File diekspor ke: /sdcard/DSH_Backups/" + filename, Toast.LENGTH_LONG).show();
+                if (url != null) {
+                    if (url.startsWith("data:")) {
+                        saveDownloadedData(url, extractFilename(url, contentDisposition, mimetype), mimetype);
+                        return;
+                    }
+                    if (url.startsWith("blob:")) {
+                        String guessedName = extractFilename(url, contentDisposition, mimetype);
+                        String js = "javascript:(function() {" +
+                                "  try {" +
+                                "    fetch('" + url + "')" +
+                                "      .then(function(r) { return r.blob(); })" +
+                                "      .then(function(b) {" +
+                                "        var reader = new FileReader();" +
+                                "        reader.onloadend = function() {" +
+                                "          if (window.AndroidBridge && window.AndroidBridge.processBlobData) {" +
+                                "            window.AndroidBridge.processBlobData(reader.result, '" + guessedName + "', '" + (mimetype != null ? mimetype : "") + "');" +
+                                "          }" +
+                                "        };" +
+                                "        reader.readAsDataURL(b);" +
+                                "      })" +
+                                "      .catch(function(err) {" +
+                                "        console.error('Blob fetch error: ', err);" +
+                                "      });" +
+                                "  } catch(e) {" +
+                                "    console.error('Blob handler error: ', e);" +
+                                "  }" +
+                                "})()";
+                        runOnUiThread(() -> webView.evaluateJavascript(js, null));
                         return;
                     }
                 }
@@ -1150,6 +1158,78 @@ public class MainActivity extends AppCompatActivity {
         @JavascriptInterface
         public void openFileViewer(String path) {
             handler.post(() -> showConfigFileViewerDialog(path));
+        }
+
+        @JavascriptInterface
+        public void processBlobData(String base64Data, String filename, String mimetype) {
+            saveDownloadedData(base64Data, filename, mimetype);
+        }
+    }
+
+    private String extractFilename(String url, String contentDisposition, String mimetype) {
+        String filename = null;
+        try {
+            filename = android.webkit.URLUtil.guessFileName(url, contentDisposition, mimetype);
+        } catch (Exception ignored) {}
+        if (filename == null || filename.isEmpty() || filename.equals("downloadfile.bin") || filename.startsWith("downloadfile")) {
+            if (contentDisposition != null) {
+                int fnIndex = contentDisposition.toLowerCase().indexOf("filename=");
+                if (fnIndex != -1) {
+                    String fn = contentDisposition.substring(fnIndex + 9).trim().replace("\"", "").replace("'", "");
+                    if (fn.contains(";")) fn = fn.substring(0, fn.indexOf(";"));
+                    if (!fn.isEmpty()) filename = fn;
+                }
+            }
+        }
+        if (filename == null || filename.isEmpty() || filename.equals("downloadfile.bin") || filename.startsWith("downloadfile")) {
+            String ext = ".json";
+            if (mimetype != null && mimetype.contains("sqlite")) ext = ".sqlite";
+            else if (mimetype != null && (mimetype.contains("tar") || mimetype.contains("gzip"))) ext = ".tar.gz";
+            else if (mimetype != null && mimetype.contains("csv")) ext = ".csv";
+            filename = "atomicroute_export_" + System.currentTimeMillis() + ext;
+        }
+        return filename;
+    }
+
+    private void saveDownloadedData(String dataUri, String filename, String mimetype) {
+        if (dataUri == null || dataUri.isEmpty()) return;
+        try {
+            int commaIndex = dataUri.indexOf(",");
+            byte[] decodedData;
+            if (commaIndex != -1) {
+                String meta = dataUri.substring(0, commaIndex);
+                String rawData = dataUri.substring(commaIndex + 1);
+                if (meta.contains(";base64")) {
+                    decodedData = android.util.Base64.decode(rawData, android.util.Base64.DEFAULT);
+                } else {
+                    decodedData = java.net.URLDecoder.decode(rawData, "UTF-8").getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                }
+            } else {
+                decodedData = android.util.Base64.decode(dataUri, android.util.Base64.DEFAULT);
+            }
+
+            File backupDir = new File(Environment.getExternalStorageDirectory(), "DSH_Backups");
+            if (!backupDir.exists()) backupDir.mkdirs();
+
+            String finalName = filename;
+            if (finalName == null || finalName.isEmpty() || finalName.equals("null")) {
+                String ext = ".json";
+                if (dataUri.contains("application/x-sqlite") || (mimetype != null && mimetype.contains("sqlite"))) {
+                    ext = ".sqlite";
+                } else if (dataUri.contains("tar") || dataUri.contains("gzip") || (mimetype != null && mimetype.contains("gzip"))) {
+                    ext = ".tar.gz";
+                }
+                finalName = "atomicroute_export_" + System.currentTimeMillis() + ext;
+            }
+
+            File targetFile = new File(backupDir, finalName);
+            try (FileOutputStream fos = new FileOutputStream(targetFile)) {
+                fos.write(decodedData);
+            }
+
+            handler.post(() -> Toast.makeText(MainActivity.this, "✅ File diekspor ke: /sdcard/DSH_Backups/" + targetFile.getName(), Toast.LENGTH_LONG).show());
+        } catch (Exception e) {
+            handler.post(() -> Toast.makeText(MainActivity.this, "Gagal menyimpan file ekspor: " + e.getMessage(), Toast.LENGTH_SHORT).show());
         }
     }
 

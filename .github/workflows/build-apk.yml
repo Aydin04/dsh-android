@@ -186,10 +186,13 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.2.4
-          name: "DSH Mobile v3.2.4 (AtomicRoute JSON & SQLite File Picker Fix)"
+          tag_name: v3.2.5
+          name: "DSH Mobile v3.2.5 (Blob Export & JSON/SQLite File Picker Fix)"
           body: |
-            ## 🚀 DSH Mobile Release v3.2.4
+            ## 🚀 DSH Mobile Release v3.2.5
+            - 📥 **Fixed `blob:` and `data:` Web Export Downloads**:
+              - Mengatasi crash `No Activity found to handle Intent { act=android.intent.action.VIEW dat=blob: }` saat mengekspor data/backup dari web AtomicRoute.
+              - Injeksi bridge otomatis untuk memproses URL `blob:` via JavaScript FileReader dan menyimpannya langsung ke `/sdcard/DSH_Backups/`.
             - 🛠️ **Fixed AtomicRoute JSON & SQLite/DB File Picker**:
               - Memperbaiki parsing & mapping MIME type pada WebChromeClient `onShowFileChooser`.
               - Ekstensi web `.json`, `.sqlite`, `.db`, `.csv`, `.toml`, `.zip`, `.har` kini secara otomatis dikonversi ke Android SAF MIME types yang valid (`application/json`, `application/x-sqlite3`, `application/octet-stream`, dll).
