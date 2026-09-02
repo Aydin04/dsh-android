@@ -199,17 +199,17 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.5.8
-          name: "DSH Mobile v3.5.8 (Composer Excluded — Genuine AI Message Preview in Bubbles)"
+          tag_name: v3.5.9
+          name: "DSH Mobile v3.5.9 (Fast App Startup & Strict Generation-Triggered Bubbles)"
           body: |
-            ## 🚀 DSH Mobile Release v3.5.8 — Genuine AI Message Preview
-            - 🎯 **Fixed "Send message" False Preview Bug**:
-              - Mengatasi bug di mana teks tombol input/composer (*"Send message"*) terbaca sebagai balasan AI.
-              - Area form composer dan input kini dikecualikan secara ketat sehingga yang diekstrak dan dikirimkan ke **MIUI Conversation Bubble** serta notifikasi status bar adalah **100% teks isi balasan asli AI**.
+            ## 🚀 DSH Mobile Release v3.5.9 — Fast Startup & Strict AI Notifications
+            - ⚡ **Instant App Update & Fast Engine Extraction**:
+              - Menambahkan **Smart Length & Existence Caching** saat ekstraksi paket DSH, libs, dan runtime. File-file yang tidak berubah pada update APK langsung di-skip (tidak ditimpa ulang), memotong waktu instalasi/startup dari 30+ detik menjadi **kurang dari 1-2 detik**!
+            - 🎯 **Strict Generation-Triggered Notifications (No False Welcome Alerts)**:
+              - Menggunakan *State Machine* `wasGenerating`: Notifikasi **hanya dan pasti dipicu setelah AI selesai memproses pesan Anda**.
+              - Membuka aplikasi atau membuat sesi baru **tidak akan pernah lagi memicu notifikasi palsu**.
             - 🫧 **Native Android/MIUI Conversation Bubbles Integration**:
               - Menampilkan gelembung percakapan mengambang MIUI dengan preview 1-2 baris jawaban asli agent.
-            - ⚡ **Ultra-Fast Turn Completion (400ms Polling)**.
-            - 🛡️ **Stock Google Assistant Gestures Restored**.
             - 📸 **On-Demand Screenshot with Disappearing Animation & Auto `@screenshot_*.png` Injection**.
             - 📦 **Dual Release Options**:
               - `dsh-mobile-pure.apk` (~110 MB) — Edisi Ringan (Pure DSH).

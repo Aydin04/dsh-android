@@ -1202,18 +1202,20 @@ public class MainActivity extends AppCompatActivity {
                 "    if (text.toLowerCase() === 'send message' || text.toLowerCase() === 'send' || text.toLowerCase() === 'kirim') return '';" +
                 "    return text;" +
                 "  }" +
+                "  var wasGenerating = false;" +
+                "  var lastNotifiedText = '';" +
                 "  function checkTurnCompletion() {" +
                 "    try {" +
                 "      if (isGeneratingActive()) {" +
-                "        isWaitingForAgent = true;" +
+                "        wasGenerating = true;" +
                 "        return;" +
                 "      }" +
-                "      if (isWaitingForAgent) {" +
+                "      if (wasGenerating) {" +
                 "        var answer = getCleanAssistantAnswer();" +
-                "        if (answer.length > 5 && !answer.toLowerCase().startsWith('deep diving') && !answer.toLowerCase().startsWith('thinking')) {" +
+                "        if (answer.length > 3 && !answer.toLowerCase().startsWith('deep diving') && !answer.toLowerCase().startsWith('thinking')) {" +
                 "          if (answer !== lastNotifiedText && answer.toUpperCase() !== 'ASSISTANT') {" +
                 "            lastNotifiedText = answer;" +
-                "            isWaitingForAgent = false;" +
+                "            wasGenerating = false;" +
                 "            if (window.AndroidBridge && window.AndroidBridge.notifyAgentReply) {" +
                 "              window.AndroidBridge.notifyAgentReply(answer);" +
                 "            }" +

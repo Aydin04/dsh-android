@@ -243,6 +243,10 @@ public class LocalEngineService extends Service {
                             if (entry.isDirectory()) {
                                 if (!outputFile.exists()) outputFile.mkdirs();
                             } else {
+                                if (outputFile.exists() && entry.getSize() > 0 && outputFile.length() == entry.getSize()) {
+                                    libCount++;
+                                    continue;
+                                }
                                 File parent = outputFile.getParentFile();
                                 if (parent != null && !parent.exists()) parent.mkdirs();
                                 try (OutputStream out = new FileOutputStream(outputFile)) {
@@ -289,11 +293,16 @@ public class LocalEngineService extends Service {
                     try (TarArchiveInputStream tarIn = new TarArchiveInputStream(inStream)) {
                         TarArchiveEntry entry;
                         int count = 0;
+                        int skipped = 0;
                         while ((entry = tarIn.getNextTarEntry()) != null) {
                             File outputFile = new File(filesDir, entry.getName());
                             if (entry.isDirectory()) {
                                 if (!outputFile.exists()) outputFile.mkdirs();
                             } else {
+                                if (outputFile.exists() && entry.getSize() > 0 && outputFile.length() == entry.getSize()) {
+                                    skipped++;
+                                    continue;
+                                }
                                 File parent = outputFile.getParentFile();
                                 if (parent != null && !parent.exists()) parent.mkdirs();
 
@@ -307,10 +316,10 @@ public class LocalEngineService extends Service {
                             }
                             count++;
                             if (count % 2000 == 0) {
-                                emitLog("[EXTRACT] Unpacked " + count + " files...");
+                                emitLog("[EXTRACT] Unpacked " + count + " files (skipped " + skipped + " identical)...");
                             }
                         }
-                        emitLog("[EXTRACT] Extracted total " + count + " DSH package files successfully.");
+                        emitLog("[EXTRACT] Extracted " + count + " files (skipped " + skipped + " cached).");
                     }
                 }
             } else {
@@ -370,11 +379,16 @@ public class LocalEngineService extends Service {
                         try (TarArchiveInputStream tarIn = new TarArchiveInputStream(inStream)) {
                             TarArchiveEntry entry;
                             int aCount = 0;
+                            int aSkipped = 0;
                             while ((entry = tarIn.getNextTarEntry()) != null) {
                                 File outputFile = new File(filesDir, entry.getName());
                                 if (entry.isDirectory()) {
                                     if (!outputFile.exists()) outputFile.mkdirs();
                                 } else {
+                                    if (outputFile.exists() && entry.getSize() > 0 && outputFile.length() == entry.getSize()) {
+                                        aSkipped++;
+                                        continue;
+                                    }
                                     File parent = outputFile.getParentFile();
                                     if (parent != null && !parent.exists()) parent.mkdirs();
                                     try (OutputStream out = new FileOutputStream(outputFile)) {
@@ -387,10 +401,10 @@ public class LocalEngineService extends Service {
                                 }
                                 aCount++;
                                 if (aCount % 2000 == 0) {
-                                    emitLog("[EXTRACT ATOMIC] Unpacked " + aCount + " files...");
+                                    emitLog("[EXTRACT ATOMIC] Unpacked " + aCount + " files (skipped " + aSkipped + " cached)...");
                                 }
                             }
-                            emitLog("[EXTRACT SUCCESS] Extracted total " + aCount + " AtomicRouter files.");
+                            emitLog("[EXTRACT SUCCESS] Extracted " + aCount + " AtomicRouter files (skipped " + aSkipped + " cached).");
                         }
                     }
                 } catch (Exception err) {
