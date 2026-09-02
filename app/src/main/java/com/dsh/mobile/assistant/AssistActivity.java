@@ -1,5 +1,6 @@
 package com.dsh.mobile.assistant;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlarmManager;
 import android.app.AlertDialog;
@@ -15,20 +16,21 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.speech.RecognizerIntent;
-import android.text.TextUtils;
-import android.util.Base64;
 import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
-import android.view.inputmethod.EditorInfo;
+import android.webkit.ValueCallback;
+import android.webkit.WebChromeClient;
+import android.webkit.WebResourceError;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
-import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -37,57 +39,31 @@ import androidx.annotation.Nullable;
 import com.dsh.mobile.MainActivity;
 import com.dsh.mobile.R;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
-
 import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Locale;
 
 public class AssistActivity extends Activity {
 
-    private static final int SPEECH_REQUEST_CODE = 1001;
-    private static final int IMAGE_PICK_REQUEST_CODE = 1002;
     private static final String PREFS_NAME = "DSH_ASSISTANT_PREFS";
-    private static final String KEY_IS_TEMP_MODE = "IS_TEMP_MODE";
+    private static final String DSH_URL = "http://127.0.0.1:3080";
 
     private LinearLayout assistantBottomSheet;
     private TextView tvAssistantTitle;
-    private TextView tvAssistantResponse;
-    private ScrollView responseScrollView;
-    private ProgressBar pbGeneratingIndicator;
-    private EditText etAssistantInput;
-
-    private Button btnModeToggle;
     private Button btnPresetsDropdown;
     private Button btnCronDropdown;
-    private ImageButton btnPlusMenu;
-    private ImageButton btnVoiceInput;
-    private ImageButton btnAssistantSend;
+    private ImageButton btnAttachScreenshot;
     private ImageButton btnExpandFull;
     private ImageButton btnCloseAssistant;
 
-    private LinearLayout layoutAttachedImagePreview;
-    private ImageView ivAttachedThumbnail;
-    private TextView tvAttachedImageName;
-    private ImageButton btnRemoveAttachedImage;
+    private WebView assistantWebView;
+    private ProgressBar assistantWebLoading;
 
-    private boolean isTemporaryMode = true;
     private final Handler handler = new Handler(Looper.getMainLooper());
-    private File attachedImageFile = null;
-    private Bitmap attachedBitmap = null;
+    private File lastScreenshotFile = null;
 
-    // Preset State Tracking
+    // Preset States
     private boolean isGameBoostOn = false;
     private boolean isBatterySaverOn = false;
     private boolean isAirplaneOn = false;
@@ -105,44 +81,23 @@ public class AssistActivity extends Activity {
 
         initViews();
         setupListeners();
-        initSessionMode();
+        setupWebView();
         loadPresetStates();
 
-        // 1. Take clean background screenshot BEFORE showing the popup UI
+        // 1. Take clean background screenshot BEFORE showing popup
         takeCleanScreenshotAndShowUI();
-
-        Intent intent = getIntent();
-        if (intent != null && Intent.ACTION_VOICE_COMMAND.equals(intent.getAction())) {
-            startVoiceInput();
-        }
     }
 
     private void initViews() {
         assistantBottomSheet = findViewById(R.id.assistantBottomSheet);
         tvAssistantTitle = findViewById(R.id.tvAssistantTitle);
-        tvAssistantResponse = findViewById(R.id.tvAssistantResponse);
-        responseScrollView = findViewById(R.id.responseScrollView);
-        pbGeneratingIndicator = findViewById(R.id.pbGeneratingIndicator);
-        etAssistantInput = findViewById(R.id.etAssistantInput);
-
-        btnModeToggle = findViewById(R.id.btnModeToggle);
         btnPresetsDropdown = findViewById(R.id.btnPresetsDropdown);
         btnCronDropdown = findViewById(R.id.btnCronDropdown);
-        btnPlusMenu = findViewById(R.id.btnPlusMenu);
-        btnVoiceInput = findViewById(R.id.btnVoiceInput);
-        btnAssistantSend = findViewById(R.id.btnAssistantSend);
+        btnAttachScreenshot = findViewById(R.id.btnAttachScreenshot);
         btnExpandFull = findViewById(R.id.btnExpandFull);
         btnCloseAssistant = findViewById(R.id.btnCloseAssistant);
-
-        layoutAttachedImagePreview = findViewById(R.id.layoutAttachedImagePreview);
-        ivAttachedThumbnail = findViewById(R.id.ivAttachedThumbnail);
-        tvAttachedImageName = findViewById(R.id.tvAttachedImageName);
-        btnRemoveAttachedImage = findViewById(R.id.btnRemoveAttachedImage);
-    }
-
-    private void initSessionMode() {
-        isTemporaryMode = getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getBoolean(KEY_IS_TEMP_MODE, true);
-        updateModeUI();
+        assistantWebView = findViewById(R.id.assistantWebView);
+        assistantWebLoading = findViewById(R.id.assistantWebLoading);
     }
 
     private void loadPresetStates() {
@@ -152,31 +107,12 @@ public class AssistActivity extends Activity {
         isAirplaneOn = prefs.getBoolean("PRESET_AIRPLANE", false);
     }
 
-    private void updateModeUI() {
-        if (isTemporaryMode) {
-            btnModeToggle.setText("⚡ Temp");
-            btnModeToggle.setTextColor(Color.parseColor("#F778BA"));
-            tvAssistantTitle.setText("DSH (⚡ Temp)");
-        } else {
-            btnModeToggle.setText("📌 Main");
-            btnModeToggle.setTextColor(Color.parseColor("#7AA2F7"));
-            tvAssistantTitle.setText("DSH (📌 Main)");
-        }
-    }
-
     private void setupListeners() {
-        btnModeToggle.setOnClickListener(v -> {
-            isTemporaryMode = !isTemporaryMode;
-            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putBoolean(KEY_IS_TEMP_MODE, isTemporaryMode).apply();
-            updateModeUI();
-            Toast.makeText(this, isTemporaryMode ? "Mode Temporary: Sesi instan sekali pakai." : "Mode Persistent: Terhubung ke sesi utama.", Toast.LENGTH_SHORT).show();
-        });
-
         btnPresetsDropdown.setOnClickListener(v -> showPresetsDropdownDialog());
 
         btnCronDropdown.setOnClickListener(v -> showCronDropdownDialog());
 
-        btnPlusMenu.setOnClickListener(v -> showPlusActionMenu());
+        btnAttachScreenshot.setOnClickListener(v -> injectScreenshotIntoDshChat());
 
         btnExpandFull.setOnClickListener(v -> {
             Intent mainIntent = new Intent(this, MainActivity.class);
@@ -186,20 +122,56 @@ public class AssistActivity extends Activity {
         });
 
         btnCloseAssistant.setOnClickListener(v -> finish());
+    }
 
-        btnVoiceInput.setOnClickListener(v -> startVoiceInput());
+    @SuppressLint("SetJavaScriptEnabled")
+    private void setupWebView() {
+        assistantWebView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        WebSettings settings = assistantWebView.getSettings();
+        settings.setJavaScriptEnabled(true);
+        settings.setDomStorageEnabled(true);
+        settings.setDatabaseEnabled(true);
+        settings.setAllowFileAccess(true);
+        settings.setAllowContentAccess(true);
+        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        settings.setTextZoom(100);
 
-        btnRemoveAttachedImage.setOnClickListener(v -> removeAttachedImage());
-
-        btnAssistantSend.setOnClickListener(v -> processUserQuery());
-
-        etAssistantInput.setOnEditorActionListener((v, actionId, event) -> {
-            if (actionId == EditorInfo.IME_ACTION_SEND) {
-                processUserQuery();
-                return true;
+        assistantWebView.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                assistantWebLoading.setVisibility(View.GONE);
+                injectCustomAssistantStyles(view);
             }
-            return false;
+
+            @Override
+            public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                super.onReceivedError(view, request, error);
+                if (request.isForMainFrame()) {
+                    handler.postDelayed(() -> view.loadUrl(DSH_URL), 1500);
+                }
+            }
         });
+
+        assistantWebView.setWebChromeClient(new WebChromeClient());
+        assistantWebView.loadUrl(DSH_URL);
+    }
+
+    private void injectCustomAssistantStyles(WebView view) {
+        String js = "javascript:(function() {" +
+                "  try {" +
+                "    document.addEventListener('keydown', function(e) {" +
+                "      if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey) {" +
+                "        var active = document.activeElement;" +
+                "        if (active && (active.tagName === 'TEXTAREA' || active.isContentEditable)) {" +
+                "          e.stopPropagation();" +
+                "        }" +
+                "      }" +
+                "    }, true);" +
+                "  } catch(e) {}" +
+                "})()";
+        view.evaluateJavascript(js, null);
     }
 
     private void takeCleanScreenshotAndShowUI() {
@@ -207,81 +179,43 @@ public class AssistActivity extends Activity {
             try {
                 File targetDir = new File(getExternalFilesDir(null) != null ? getExternalFilesDir(null) : getFilesDir(), "dsh_screenshots");
                 if (!targetDir.exists()) targetDir.mkdirs();
-                File screenFile = new File(targetDir, "screen_" + System.currentTimeMillis() + ".jpg");
+                lastScreenshotFile = new File(targetDir, "current_screen.png");
 
-                // Execute clean screencap before popup is rendered
-                runRootCommand("screencap -p " + screenFile.getAbsolutePath());
+                // Execute screencap before popup becomes visible
+                runRootCommand("screencap -p " + lastScreenshotFile.getAbsolutePath());
 
-                if (screenFile.exists() && screenFile.length() > 0) {
-                    Bitmap bmp = BitmapFactory.decodeFile(screenFile.getAbsolutePath());
-                    handler.post(() -> {
-                        attachImage(screenFile, bmp, "📸 Tangkapan Layar Terlampir (" + (screenFile.length() / 1024) + " KB)");
-                        assistantBottomSheet.setVisibility(View.VISIBLE);
-                    });
-                } else {
-                    handler.post(() -> assistantBottomSheet.setVisibility(View.VISIBLE));
-                }
+                handler.post(() -> {
+                    assistantBottomSheet.setVisibility(View.VISIBLE);
+                });
             } catch (Exception e) {
                 handler.post(() -> assistantBottomSheet.setVisibility(View.VISIBLE));
             }
         }).start();
     }
 
-    private void showPlusActionMenu() {
-        String[] options = new String[]{
-                "🖼️ Pilih Gambar dari Galeri",
-                "📸 Tangkap Ulang Layar (Clean Recapture)",
-                "📋 Salin Semua Teks / Angka di Layar (OCR)",
-                "🧹 Kosongkan Lampiran Gambar"
-        };
-
-        new AlertDialog.Builder(this)
-                .setTitle("➕ Menu Tambahan DSH")
-                .setItems(options, (dialog, which) -> {
-                    if (which == 0) {
-                        openImagePicker();
-                    } else if (which == 1) {
-                        recaptureCleanScreenshot();
-                    } else if (which == 2) {
-                        etAssistantInput.setText("Salin dan ekstrak seluruh tulisan, angka, kode, dan link dari gambar layar ini secara lengkap.");
-                        processUserQuery();
-                    } else {
-                        removeAttachedImage();
-                    }
-                })
-                .setNegativeButton("Batal", null)
-                .show();
-    }
-
-    private void recaptureCleanScreenshot() {
-        assistantBottomSheet.setVisibility(View.INVISIBLE);
-        handler.postDelayed(() -> takeCleanScreenshotAndShowUI(), 180);
-    }
-
-    private void openImagePicker() {
-        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-        intent.setType("image/*");
-        intent.addCategory(Intent.CATEGORY_OPENABLE);
-        startActivityForResult(Intent.createChooser(intent, "Pilih Gambar untuk DSH"), IMAGE_PICK_REQUEST_CODE);
-    }
-
-    private void attachImage(File file, Bitmap bmp, String displayName) {
-        this.attachedImageFile = file;
-        this.attachedBitmap = bmp;
-        if (layoutAttachedImagePreview != null) {
-            layoutAttachedImagePreview.setVisibility(View.VISIBLE);
-            if (bmp != null) ivAttachedThumbnail.setImageBitmap(bmp);
-            tvAttachedImageName.setText(displayName);
+    private void injectScreenshotIntoDshChat() {
+        if (lastScreenshotFile != null && lastScreenshotFile.exists()) {
+            String js = "javascript:(function() {" +
+                    "  try {" +
+                    "    var textarea = document.querySelector('textarea') || document.querySelector('[contenteditable=\"true\"]');" +
+                    "    if (textarea) {" +
+                    "      var text = '@" + lastScreenshotFile.getName() + " Jelaskan isi layar ini dan salin teks/angka penting di dalamnya. ';" +
+                    "      textarea.value = text;" +
+                    "      textarea.dispatchEvent(new Event('input', { bubbles: true }));" +
+                    "      textarea.focus();" +
+                    "    }" +
+                    "  } catch(e) {}" +
+                    "})()";
+            assistantWebView.evaluateJavascript(js, null);
+            Toast.makeText(this, "📸 Tangkapan layar disisipkan ke chat!", Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(this, "Mengambil tangkapan layar baru...", Toast.LENGTH_SHORT).show();
+            assistantBottomSheet.setVisibility(View.INVISIBLE);
+            handler.postDelayed(() -> {
+                takeCleanScreenshotAndShowUI();
+                injectScreenshotIntoDshChat();
+            }, 200);
         }
-    }
-
-    private void removeAttachedImage() {
-        this.attachedImageFile = null;
-        this.attachedBitmap = null;
-        if (layoutAttachedImagePreview != null) {
-            layoutAttachedImagePreview.setVisibility(View.GONE);
-        }
-        Toast.makeText(this, "Lampiran gambar dihapus", Toast.LENGTH_SHORT).show();
     }
 
     private void showPresetsDropdownDialog() {
@@ -301,10 +235,10 @@ public class AssistActivity extends Activity {
                         getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putBoolean("PRESET_GAME_BOOST", isGameBoostOn).apply();
                         if (isGameBoostOn) {
                             runRootCommand("echo performance > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null; sync; echo 3 > /proc/sys/vm/drop_caches");
-                            Toast.makeText(this, "🎮 Game Boost [ON]: CPU disetel ke Performance", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(this, "🎮 Game Boost [ON]: CPU Performance", Toast.LENGTH_SHORT).show();
                         } else {
                             runRootCommand("echo schedutil > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null");
-                            Toast.makeText(this, "🎮 Game Boost [OFF]: CPU disetel ke Schedutil", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(this, "🎮 Game Boost [OFF]: CPU Schedutil", Toast.LENGTH_SHORT).show();
                         }
                     } else if (which == 1) {
                         isBatterySaverOn = !isBatterySaverOn;
@@ -351,7 +285,7 @@ public class AssistActivity extends Activity {
                     } else if (which == 2) {
                         scheduleRootTask(15 * 60 * 1000, "settings put system screen_brightness 10", "Dim Layar (15m)");
                     } else {
-                        Toast.makeText(this, "Ketik di chat: 'Jadwalkan [aksi] dalam [waktu]'", Toast.LENGTH_LONG).show();
+                        Toast.makeText(this, "Jadwalkan kustom langsung via chat DSH!", Toast.LENGTH_LONG).show();
                     }
                 })
                 .setNegativeButton("Tutup", null)
@@ -378,184 +312,7 @@ public class AssistActivity extends Activity {
             am.setExact(AlarmManager.RTC_WAKEUP, triggerAt, pi);
         }
 
-        tvAssistantResponse.setText("⏰ Jadwal Terdaftar: " + label + " akan dijalankan dalam " + (delayMs / 60000) + " menit.");
-        Toast.makeText(this, "Jadwal " + label + " disimpan!", Toast.LENGTH_SHORT).show();
-    }
-
-    private void startVoiceInput() {
-        try {
-            Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
-            intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Bicara sekarang dengan DSH...");
-            startActivityForResult(intent, SPEECH_REQUEST_CODE);
-        } catch (Exception e) {
-            Toast.makeText(this, "Speech recognition tidak tersedia.", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (resultCode == RESULT_OK && data != null) {
-            if (requestCode == SPEECH_REQUEST_CODE) {
-                ArrayList<String> results = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
-                if (results != null && !results.isEmpty()) {
-                    etAssistantInput.setText(results.get(0));
-                    processUserQuery();
-                }
-            } else if (requestCode == IMAGE_PICK_REQUEST_CODE) {
-                Uri imageUri = data.getData();
-                if (imageUri != null) {
-                    processPickedImageUri(imageUri);
-                }
-            }
-        }
-    }
-
-    private void processPickedImageUri(Uri uri) {
-        try {
-            InputStream is = getContentResolver().openInputStream(uri);
-            Bitmap bmp = BitmapFactory.decodeStream(is);
-            if (is != null) is.close();
-
-            File uploadDir = new File(getFilesDir(), "dsh_uploads");
-            if (!uploadDir.exists()) uploadDir.mkdirs();
-            File dest = new File(uploadDir, "upload_" + System.currentTimeMillis() + ".jpg");
-
-            FileOutputStream fos = new FileOutputStream(dest);
-            if (bmp != null) {
-                bmp.compress(Bitmap.CompressFormat.JPEG, 90, fos);
-                fos.flush();
-                fos.close();
-                attachImage(dest, bmp, "🖼️ " + dest.getName() + " (" + (dest.length() / 1024) + " KB)");
-            }
-        } catch (Exception e) {
-            Toast.makeText(this, "Gagal memproses gambar: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    private void processUserQuery() {
-        String query = etAssistantInput.getText().toString().trim();
-        final File currentImg = this.attachedImageFile;
-        final Bitmap currentBmp = this.attachedBitmap;
-
-        if (TextUtils.isEmpty(query) && currentImg == null) return;
-
-        if (TextUtils.isEmpty(query) && currentImg != null) {
-            query = "Jelaskan dan analisis isi gambar layar ini secara lengkap, serta salin semua tulisan/angka yang ada di dalamnya.";
-        }
-
-        final String promptToSend = query;
-        etAssistantInput.setText("");
-        removeAttachedImage();
-
-        tvAssistantResponse.setText("⏳ Sedang memproses...");
-        pbGeneratingIndicator.setVisibility(View.VISIBLE);
-
-        new Thread(() -> {
-            try {
-                if (promptToSend.startsWith("!") || promptToSend.startsWith("$") || promptToSend.startsWith("su ")) {
-                    String cmd = promptToSend.replaceFirst("^[!$]\\s*", "");
-                    String output = runRootCommand(cmd);
-                    handler.post(() -> {
-                        pbGeneratingIndicator.setVisibility(View.GONE);
-                        tvAssistantResponse.setText("💻 [Root Output]:\n" + (output.isEmpty() ? "(Perintah sukses dijalankan)" : output));
-                    });
-                    return;
-                }
-
-                // Connect to AI Gateway at port 20128 (OpenAI-compatible)
-                URL url = new URL("http://127.0.0.1:20128/v1/chat/completions");
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setRequestMethod("POST");
-                conn.setRequestProperty("Content-Type", "application/json");
-                conn.setRequestProperty("Accept", "text/event-stream, application/json");
-                conn.setConnectTimeout(5000);
-                conn.setReadTimeout(30000);
-                conn.setDoOutput(true);
-
-                JSONObject payload = new JSONObject();
-                payload.put("model", "default");
-                payload.put("stream", true);
-
-                JSONArray messages = new JSONArray();
-                JSONObject userMsg = new JSONObject();
-                userMsg.put("role", "user");
-
-                if (currentImg != null && currentBmp != null) {
-                    JSONArray contentArray = new JSONArray();
-                    JSONObject textObj = new JSONObject();
-                    textObj.put("type", "text");
-                    textObj.put("text", promptToSend);
-                    contentArray.put(textObj);
-
-                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                    currentBmp.compress(Bitmap.CompressFormat.JPEG, 85, baos);
-                    String b64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP);
-
-                    JSONObject imgObj = new JSONObject();
-                    imgObj.put("type", "image_url");
-                    JSONObject urlObj = new JSONObject();
-                    urlObj.put("url", "data:image/jpeg;base64," + b64);
-                    imgObj.put("image_url", urlObj);
-                    contentArray.put(imgObj);
-
-                    userMsg.put("content", contentArray);
-                } else {
-                    userMsg.put("content", promptToSend);
-                }
-                messages.put(userMsg);
-                payload.put("messages", messages);
-
-                try (OutputStream os = conn.getOutputStream()) {
-                    os.write(payload.toString().getBytes(StandardCharsets.UTF_8));
-                }
-
-                int code = conn.getResponseCode();
-                if (code == 200) {
-                    final StringBuilder fullRes = new StringBuilder();
-                    try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
-                        String line;
-                        while ((line = reader.readLine()) != null) {
-                            if (line.startsWith("data: ")) {
-                                String dataStr = line.substring(6).trim();
-                                if ("[DONE]".equals(dataStr)) break;
-                                try {
-                                    JSONObject chunk = new JSONObject(dataStr);
-                                    JSONArray choices = chunk.optJSONArray("choices");
-                                    if (choices != null && choices.length() > 0) {
-                                        JSONObject delta = choices.getJSONObject(0).optJSONObject("delta");
-                                        if (delta != null && delta.has("content")) {
-                                            String token = delta.getString("content");
-                                            fullRes.append(token);
-                                            handler.post(() -> tvAssistantResponse.setText(fullRes.toString()));
-                                        }
-                                    }
-                                } catch (Exception ignored) {}
-                            }
-                        }
-                    }
-                    handler.post(() -> {
-                        pbGeneratingIndicator.setVisibility(View.GONE);
-                        if (fullRes.length() == 0) {
-                            tvAssistantResponse.setText("✅ Selesai.");
-                        }
-                    });
-                } else {
-                    // Fallback to direct conversational response
-                    handler.post(() -> {
-                        pbGeneratingIndicator.setVisibility(View.GONE);
-                        tvAssistantResponse.setText("🤖 DSH Engine Online (Port 20128).\nPermintaan diproses: \"" + promptToSend + "\"");
-                    });
-                }
-            } catch (Exception e) {
-                handler.post(() -> {
-                    pbGeneratingIndicator.setVisibility(View.GONE);
-                    tvAssistantResponse.setText("⚠️ Status Gateway: " + e.getMessage() + "\n(Tip: Pastikan router/model aktif atau gunakan perintah !shell).");
-                });
-            }
-        }).start();
+        Toast.makeText(this, "⏰ Jadwal " + label + " disimpan (" + (delayMs / 60000) + "m)", Toast.LENGTH_SHORT).show();
     }
 
     private String runRootCommand(String command) {
@@ -582,6 +339,9 @@ public class AssistActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        if (assistantWebView != null) {
+            assistantWebView.destroy();
+        }
         super.onDestroy();
     }
 }

@@ -13,10 +13,10 @@
         android:layout_gravity="bottom"
         android:background="#16161E"
         android:orientation="vertical"
-        android:paddingStart="16dp"
-        android:paddingTop="10dp"
-        android:paddingEnd="16dp"
-        android:paddingBottom="16dp"
+        android:paddingStart="12dp"
+        android:paddingTop="8dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="12dp"
         android:visibility="invisible">
 
         <!-- Top Drag Handle Pill -->
@@ -25,21 +25,22 @@
             android:layout_height="4dp"
             android:layout_gravity="center_horizontal"
             android:layout_marginTop="2dp"
-            android:layout_marginBottom="12dp"
+            android:layout_marginBottom="8dp"
             android:background="#3B4261" />
 
-        <!-- Header Bar -->
+        <!-- Header Bar with Quick Action Controls -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
-            android:orientation="horizontal">
+            android:orientation="horizontal"
+            android:paddingBottom="6dp">
 
             <ImageView
-                android:layout_width="26dp"
-                android:layout_height="26dp"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
                 android:src="@drawable/ic_deepseek"
-                android:contentDescription="Assistant Logo" />
+                android:contentDescription="DeepSeek Logo" />
 
             <TextView
                 android:id="@+id/tvAssistantTitle"
@@ -49,30 +50,16 @@
                 android:layout_weight="1"
                 android:text="DSH Assistant"
                 android:textColor="#FFFFFF"
-                android:textSize="16sp"
+                android:textSize="15sp"
                 android:textStyle="bold" />
-
-            <!-- Mode Selector (Temp vs Main) -->
-            <Button
-                android:id="@+id/btnModeToggle"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="wrap_content"
-                android:layout_height="34dp"
-                android:layout_marginEnd="6dp"
-                android:paddingStart="8dp"
-                android:paddingEnd="8dp"
-                android:text="⚡ Temp"
-                android:textColor="#F778BA"
-                android:textSize="11sp"
-                app:strokeColor="#F778BA" />
 
             <!-- Presets Menu Dropdown Button -->
             <Button
                 android:id="@+id/btnPresetsDropdown"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="wrap_content"
-                android:layout_height="34dp"
-                android:layout_marginEnd="6dp"
+                android:layout_height="32dp"
+                android:layout_marginEnd="4dp"
                 android:paddingStart="8dp"
                 android:paddingEnd="8dp"
                 android:text="⚡ Presets"
@@ -85,8 +72,8 @@
                 android:id="@+id/btnCronDropdown"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="wrap_content"
-                android:layout_height="34dp"
-                android:layout_marginEnd="6dp"
+                android:layout_height="32dp"
+                android:layout_marginEnd="4dp"
                 android:paddingStart="8dp"
                 android:paddingEnd="8dp"
                 android:text="⏰ Cron"
@@ -94,11 +81,23 @@
                 android:textSize="11sp"
                 app:strokeColor="#7AA2F7" />
 
-            <!-- Expand Button -->
+            <!-- Screenshot Action Button -->
+            <ImageButton
+                android:id="@+id/btnAttachScreenshot"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginEnd="4dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@android:drawable/ic_menu_camera"
+                android:tint="#73DACA"
+                android:contentDescription="Screenshot Layar" />
+
+            <!-- Expand Button (Open Full Web App) -->
             <ImageButton
                 android:id="@+id/btnExpandFull"
-                android:layout_width="34dp"
-                android:layout_height="34dp"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginEnd="4dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@android:drawable/ic_menu_crop"
                 android:tint="#7AA2F7"
@@ -107,153 +106,33 @@
             <!-- Close Button -->
             <ImageButton
                 android:id="@+id/btnCloseAssistant"
-                android:layout_width="34dp"
-                android:layout_height="34dp"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@android:drawable/ic_menu_close_clear_cancel"
                 android:tint="#787C99"
                 android:contentDescription="Tutup" />
         </LinearLayout>
 
-        <!-- Response / Conversation Bubble Area -->
-        <ScrollView
-            android:id="@+id/responseScrollView"
+        <!-- Official DSH Embedded WebView Container -->
+        <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:layout_marginBottom="10dp"
-            android:maxHeight="240dp"
-            android:scrollbars="vertical">
+            android:layout_height="420dp"
+            android:background="#13141F">
 
-            <LinearLayout
+            <WebView
+                android:id="@+id/assistantWebView"
                 android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#13141F" />
+
+            <ProgressBar
+                android:id="@+id/assistantWebLoading"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/tvAssistantResponse"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:background="#1F2335"
-                    android:lineSpacingExtra="3dp"
-                    android:padding="12dp"
-                    android:text="Tangkapan layar siap! Tanyakan apa saja tentang layar ini, salin teks, atau beri perintah sistem."
-                    android:textColor="#C0CAF5"
-                    android:textSize="14sp" />
-
-                <!-- Streaming / Typing Status Indicator -->
-                <ProgressBar
-                    android:id="@+id/pbGeneratingIndicator"
-                    style="?android:attr/progressBarStyleHorizontal"
-                    android:layout_width="match_parent"
-                    android:layout_height="3dp"
-                    android:indeterminate="true"
-                    android:visibility="gone" />
-            </LinearLayout>
-        </ScrollView>
-
-        <!-- Attachment Preview Bar (with Discard Button) -->
-        <LinearLayout
-            android:id="@+id/layoutAttachedImagePreview"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:background="#1F2335"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:padding="6dp"
-            android:visibility="gone">
-
-            <ImageView
-                android:id="@+id/ivAttachedThumbnail"
-                android:layout_width="44dp"
-                android:layout_height="44dp"
-                android:scaleType="centerCrop"
-                android:src="@drawable/ic_deepseek"
-                android:contentDescription="Thumbnail Lampiran" />
-
-            <TextView
-                android:id="@+id/tvAttachedImageName"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:layout_weight="1"
-                android:ellipsize="middle"
-                android:singleLine="true"
-                android:text="📸 Tangkapan Layar Terlampir"
-                android:textColor="#73DACA"
-                android:textSize="12sp" />
-
-            <ImageButton
-                android:id="@+id/btnRemoveAttachedImage"
-                android:layout_width="34dp"
-                android:layout_height="34dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@android:drawable/ic_menu_close_clear_cancel"
-                android:tint="#F778BA"
-                android:contentDescription="Hapus Lampiran" />
-        </LinearLayout>
-
-        <!-- Modern Input Bar (Matching DeepSeek Official Theme) -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="#1F2335"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingStart="6dp"
-            android:paddingTop="2dp"
-            android:paddingEnd="6dp"
-            android:paddingBottom="2dp">
-
-            <!-- Plus Menu Button (for Actions, Image, OCR, Presets) -->
-            <ImageButton
-                android:id="@+id/btnPlusMenu"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@android:drawable/ic_input_add"
-                android:tint="#7AA2F7"
-                android:contentDescription="Menu Tambahan" />
-
-            <!-- Voice Mic Button -->
-            <ImageButton
-                android:id="@+id/btnVoiceInput"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@android:drawable/ic_btn_speak_now"
-                android:tint="#BB9AF7"
-                android:contentDescription="Voice Input" />
-
-            <!-- Chat Text Input Field -->
-            <EditText
-                android:id="@+id/etAssistantInput"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
-                android:layout_marginEnd="4dp"
-                android:layout_weight="1"
-                android:background="@android:color/transparent"
-                android:hint="Tanya sesuatu atau perintah sistem..."
-                android:imeOptions="actionSend"
-                android:inputType="textCapSentences|textMultiLine"
-                android:maxLines="3"
-                android:padding="8dp"
-                android:textColor="#FFFFFF"
-                android:textColorHint="#565F89"
-                android:textSize="14sp" />
-
-            <!-- Send Action Button with Glow -->
-            <ImageButton
-                android:id="@+id/btnAssistantSend"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@android:drawable/ic_menu_send"
-                android:tint="#73DACA"
-                android:contentDescription="Kirim" />
-        </LinearLayout>
+                android:layout_gravity="center"
+                android:indeterminateTint="#58A6FF" />
+        </FrameLayout>
     </LinearLayout>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -199,21 +199,20 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.4.2
-          name: "DSH Mobile v3.4.2 (Clean Screen Context, AI Streaming & Modern Assistant)"
+          tag_name: v3.4.3
+          name: "DSH Mobile v3.4.3 (Official Embedded DSH Floating GUI & Clean Screen AI)"
           body: |
-            ## 🚀 DSH Mobile Release v3.4.2 — Clean Screen Context & Modern Assistant
-            - 📸 **Clean Background Screen Capture**:
-              - Tangkapan layar diambil secara bersih di latar belakang **sebelum popup asisten muncul**, sehingga tampilan jendela asisten tidak akan ikut terfoto sama sekali.
-              - Dilengkapi tombol silang `✕` untuk menghapus lampiran screenshot jika ingin mengetik pesan biasa.
-            - ⚡ **Direct AI Gateway Connection & Live Streaming**:
-              - Menghubungkan popup asisten langsung ke endpoint `/v1/chat/completions` dengan dukungan *Server-Sent Events (SSE) Live Token Streaming* dan *Progress Indicator*.
-            - 🎨 **Modern DeepSeek Aesthetic**:
-              - Desain rounded bottom-sheet modern dengan tema Dark Slate (`#16161E`), input bar capsule dengan tombol `+` menu tambahan, voice mic, dan send glow effect.
+            ## 🚀 DSH Mobile Release v3.4.3 — Official Embedded DSH Floating GUI
+            - 🌐 **100% Authentic Official DSH Web GUI in Floating Bottom-Sheet**:
+              - Popup asisten mengintegrasikan tampilan resmi DeepSeek Harness Dashboard secara langsung di dalam bottom-sheet mengambang.
+              - 100% sinkron dengan fitur resmi DSH: tampilan chat asli, streaming animasi, rendering Markdown & code highlighting, dan live tool call executions.
+            - 📸 **Clean Background Screen Capture & 1-Tap Attachment**:
+              - Tangkapan layar diambil secara otomatis dan bersih sebelum jendela popup muncul.
+              - Tombol `📸` di header menyisipkan `@current_screen.png` langsung ke kolom chat DSH secara instan.
             - 🎛️ **Interactive Presets Dropdown [ON/OFF]**:
-              - Menu dropdown dengan status aktif/nonaktif real-time: `🟢 [ON] 🎮 Game Boost`, `🟢 [ON] 🔋 Battery Saver`, `🧹 Deep Clean RAM`, `✈️ Airplane Mode`.
+              - Menu dropdown dengan status real-time: `🟢 [ON] 🎮 Game Boost`, `🟢 [ON] 🔋 Battery Saver`, `🧹 Deep Clean RAM`, `✈️ Airplane Mode`, `📡 WiFi Radio`.
             - ⏰ **Interactive Cron & Scheduler Dropdown**:
-              - Menu dropdown untuk menjadwalkan tugas otomatis (Mode Pesawat 10m, Clean RAM tiap jam, dll).
+              - Menu dropdown untuk menjadwalkan tugas otomatis presisi via `AlarmManager`.
             - 📦 **Dual Release Options**:
               - `dsh-mobile-pure.apk` (~110 MB) — Edisi Ringan (Pure DSH).
               - `dsh-mobile-full-atomicroute.apk` (~237 MB) — Edisi Lengkap (Dual-Engine DSH + AtomicRouter).
