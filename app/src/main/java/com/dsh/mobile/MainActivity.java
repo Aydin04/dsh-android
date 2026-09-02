@@ -25,6 +25,8 @@ import android.view.ViewConfiguration;
 import android.webkit.ConsoleMessage;
 import android.webkit.JavascriptInterface;
 import androidx.core.app.NotificationCompat;
+import androidx.core.app.Person;
+import androidx.core.graphics.drawable.IconCompat;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
@@ -1162,12 +1164,12 @@ public class MainActivity extends AppCompatActivity {
                 "  var checkTimer = null;" +
                 "  function checkAssistantTurn() {" +
                 "    try {" +
-                "      var msgs = document.querySelectorAll('[class*=\"conversation\"] [class*=\"bubble\"], [class*=\"message-item\"], [class*=\"assistant\"]');" +
+                "      var msgs = document.querySelectorAll('article, [data-role=\"assistant\"], [class*=\"assistant\"], [class*=\"message\"], [class*=\"bubble\"], [class*=\"turn\"], [class*=\"conversation\"]');" +
                 "      if (msgs && msgs.length > 0) {" +
                 "        var lastMsg = msgs[msgs.length - 1];" +
                 "        var text = (lastMsg.innerText || lastMsg.textContent || '').trim();" +
-                "        if (text.length > 5 && text !== lastNotifiedText) {" +
-                "          var isStreaming = lastMsg.querySelector('[class*=\"cursor\"], [class*=\"typing\"], [class*=\"loading\"], [class*=\"spinner\"]');" +
+                "        if (text.length > 3 && text !== lastNotifiedText) {" +
+                "          var isStreaming = document.querySelector('[class*=\"cursor\"], [class*=\"typing\"], [class*=\"loading\"], [class*=\"spinner\"], [class*=\"progress\"]');" +
                 "          if (!isStreaming) {" +
                 "            lastNotifiedText = text;" +
                 "            if (window.AndroidBridge && window.AndroidBridge.notifyAgentReply) {" +
@@ -1180,9 +1182,10 @@ public class MainActivity extends AppCompatActivity {
                 "  }" +
                 "  var observer = new MutationObserver(function() {" +
                 "    clearTimeout(checkTimer);" +
-                "    checkTimer = setTimeout(checkAssistantTurn, 1000);" +
+                "    checkTimer = setTimeout(checkAssistantTurn, 800);" +
                 "  });" +
                 "  observer.observe(document.body, { childList: true, subtree: true, characterData: true });" +
+                "  setInterval(checkAssistantTurn, 2500);" +
                 "})();";
         view.evaluateJavascript(js, null);
     }
@@ -1255,6 +1258,11 @@ public class MainActivity extends AppCompatActivity {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             permissionsNeeded.add(Manifest.permission.CAMERA);
         }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                permissionsNeeded.add(Manifest.permission.POST_NOTIFICATIONS);
+            }
+        }
 
         if (!permissionsNeeded.isEmpty()) {
             ActivityCompat.requestPermissions(this, permissionsNeeded.toArray(new String[0]), PERMISSION_REQ_CODE);
@@ -1294,6 +1302,9 @@ public class MainActivity extends AppCompatActivity {
             channel.setDescription("Notifikasi balasan selesai dari Agent DeepSeek Harness.");
             channel.enableVibration(true);
             channel.enableLights(true);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                channel.setAllowBubbles(true);
+            }
             NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
             if (nm != null) {
                 nm.createNotificationChannel(channel);
@@ -1317,11 +1328,21 @@ public class MainActivity extends AppCompatActivity {
                 PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0)
         );
 
+        Person agentPerson = new Person.Builder()
+                .setName("DeepSeek Agent")
+                .setIcon(IconCompat.createWithResource(this, R.drawable.ic_deepseek))
+                .setBot(true)
+                .build();
+
+        NotificationCompat.MessagingStyle messagingStyle = new NotificationCompat.MessagingStyle(agentPerson)
+                .setConversationTitle("DeepSeek Harness")
+                .addMessage(replyText, System.currentTimeMillis(), agentPerson);
+
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, AGENT_REPLY_CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_deepseek)
                 .setContentTitle("🤖 DeepSeek Agent Selesai")
                 .setContentText(preview)
-                .setStyle(new NotificationCompat.BigTextStyle().bigText(replyText))
+                .setStyle(messagingStyle)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setCategory(NotificationCompat.CATEGORY_MESSAGE)
                 .setAutoCancel(true)

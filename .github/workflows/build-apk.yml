@@ -199,21 +199,18 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.5.3
-          name: "DSH Mobile v3.5.3 (Native Agent Reply Push Notification & MIUI Bubbles Integration)"
+          tag_name: v3.5.4
+          name: "DSH Mobile v3.5.4 (Runtime Notification Permission & Native MIUI Bubbles Fix)"
           body: |
-            ## 🚀 DSH Mobile Release v3.5.3 — Agent Push Notification & MIUI Bubbles
-            - 🔔 **Native Background Agent Reply Push Notification**:
-              - Saat Anda mengirim tugas ke Agent lalu me-minimize DSH atau beralih ke aplikasi lain (YouTube, Game, Dokumen), DSH secara otomatis mendeteksi saat AI selesai merespons.
-              - Mengirimkan **Notifikasi Status Bar (Heads-Up)** dengan getaran lembut dan preview teks jawaban AI:
-                > 🤖 **DeepSeek Agent Selesai**  
-                > *"Tugas selesai: [Rangkuman jawaban/hasil analisis]"*
-            - 🫧 **100% Native MIUI/HyperOS Conversation Bubbles Integration**:
-              - Terintegrasi langsung dengan fitur **Conversation Bubbles** dan **Jendela Mengambang (Floating Windows)** bawaan MIUI/HyperOS.
-              - Mengetuk notifikasi atau gelembung langsung membuka kembali jendela chat DSH tepat di percakapan aktif.
+            ## 🚀 DSH Mobile Release v3.5.4 — Notification Permission & MIUI Bubbles Fix
+            - 🔔 **Added Runtime `POST_NOTIFICATIONS` Permission (Android 13+)**:
+              - Meminta izin notifikasi secara eksplisit pada Android 13/14/15 & MIUI HyperOS saat pertama kali dibuka, sehingga notifikasi status bar dan gelembung tidak diblokir oleh sistem.
+            - 🫧 **Native Android/MIUI `MessagingStyle` & `Person` Integration**:
+              - Mengonfigurasi notifikasi menggunakan `NotificationCompat.MessagingStyle` resmi dengan bot person `DeepSeek Agent` dan `setAllowBubbles(true)` agar MIUI/HyperOS mengenali chat ini sebagai percakapan yang berhak memunculkan **Conversation Bubble**.
+            - 📡 **Enhanced Multi-Strategy Assistant Completion Detector**:
+              - Memperbarui skrip pemantau respons AI agar mendeteksi seluruh jenis elemen chat DSH dan langsung memicu notifikasi saat giliran agent selesai.
             - 📸 **On-Demand Screenshot with Disappearing Animation & Auto `@screenshot_*.png` Injection**.
             - 🔍 **Compact 80% UI Scale (Dropdown Model Jelas & Rapi)**.
-            - ⚡ **Interactive Root Presets Dropdown [ON/OFF]**.
             - 📦 **Dual Release Options**:
               - `dsh-mobile-pure.apk` (~110 MB) — Edisi Ringan (Pure DSH).
               - `dsh-mobile-full-atomicroute.apk` (~237 MB) — Edisi Lengkap (Dual-Engine DSH + AtomicRouter).
