@@ -1168,19 +1168,23 @@ public class MainActivity extends AppCompatActivity {
                 "  var isGenerating = false;" +
                 "  var wasGenerating = false;" +
                 "  function checkIsGenerating() {" +
-                "    var stopBtn = document.querySelector('button[aria-label*=\"stop\" i], button[title*=\"stop\" i], [class*=\"stop\" i], button[aria-label*=\"hentikan\" i]');" +
-                "    var busy = document.querySelector('[aria-busy=\"true\"], [data-status=\"running\"], [data-status=\"busy\"], [data-status=\"generating\"], [class*=\"loading\" i], [class*=\"spinner\" i]');" +
+                "    var stopBtn = document.querySelector('button[aria-label*="stop" i], button[title*="stop" i], [class*="stop" i], button[aria-label*="hentikan" i]');" +
+                "    var busy = document.querySelector('[aria-busy="true"], [data-status="running"], [data-status="busy"], [data-status="generating"], [class*="loading" i], [class*="spinner" i]');" +
                 "    return !!(stopBtn || busy);" +
                 "  }" +
+                "  function isPureTimerOrNumbers(str) {" +
+                "    var cleaned = str.replace(/[0-9.: smsecminsecondsthougthinking()/-]/gi, '').trim();" +
+                "    return cleaned.length === 0;" +
+                "  }" +
                 "  function getCleanAssistantAnswer() {" +
-                "    var candidates = document.querySelectorAll('[data-role=\"assistant\"], [class*=\"assistant\" i], [data-author=\"assistant\"], [data-role=\"agent\"], [class*=\"agent\" i], article');" +
+                "    var candidates = document.querySelectorAll('[data-role="assistant"], [class*="assistant" i], [data-author="assistant"], [data-role="agent"], [class*="agent" i], article');" +
                 "    var validTurns = [];" +
                 "    for (var i = 0; i < candidates.length; i++) {" +
                 "      var el = candidates[i];" +
-                "      if (el.closest('[data-role=\"user\"], [class*=\"user\" i], [class*=\"human\" i], [data-author=\"user\"]')) continue;" +
-                "      if (el.matches('[data-role=\"user\"], [class*=\"user\" i], [class*=\"human\" i], [data-author=\"user\"]')) continue;" +
-                "      if (el.closest('[class*=\"composer\" i], form, [role=\"form\"], [class*=\"header\" i]')) continue;" +
-                "      if (el.querySelector('textarea, input, [role=\"textbox\"]')) continue;" +
+                "      if (el.closest('[data-role="user"], [class*="user" i], [class*="human" i], [data-author="user"]')) continue;" +
+                "      if (el.matches('[data-role="user"], [class*="user" i], [class*="human" i], [data-author="user"]')) continue;" +
+                "      if (el.closest('[class*="composer" i], form, [role="form"], [class*="header" i]')) continue;" +
+                "      if (el.querySelector('textarea, input, [role="textbox"]')) continue;" +
                 "      if (el.classList.contains('composer') || (el.className && typeof el.className === 'string' && el.className.toLowerCase().includes('composer'))) continue;" +
                 "      validTurns.push(el);" +
                 "    }" +
@@ -1188,23 +1192,23 @@ public class MainActivity extends AppCompatActivity {
                 "    if (validTurns.length > 0) {" +
                 "      targetNode = validTurns[validTurns.length - 1];" +
                 "    } else {" +
-                "      var proseList = document.querySelectorAll('[class*=\"prose\" i], [class*=\"markdown\" i], .dsh-markdown');" +
+                "      var proseList = document.querySelectorAll('[class*="prose" i], [class*="markdown" i], .dsh-markdown');" +
                 "      for (var k = proseList.length - 1; k >= 0; k--) {" +
                 "        var pEl = proseList[k];" +
-                "        if (pEl.closest('[data-role=\"user\"], [class*=\"user\" i], [class*=\"human\" i], [class*=\"composer\" i]')) continue;" +
+                "        if (pEl.closest('[data-role="user"], [class*="user" i], [class*="human" i], [class*="composer" i]')) continue;" +
                 "        targetNode = pEl;" +
                 "        break;" +
                 "      }" +
                 "    }" +
                 "    if (!targetNode) return '';" +
                 "    var clone = targetNode.cloneNode(true);" +
-                "    var unwanted = clone.querySelectorAll('details, summary, [class*=\"role\" i], [class*=\"badge\" i], [class*=\"header\" i], [class*=\"thought\" i], [class*=\"thinking\" i], [class*=\"timer\" i], [class*=\"duration\" i], [class*=\"status\" i], [class*=\"step\" i], [class*=\"trajectory\" i], [class*=\"deep\" i], [class*=\"avatar\" i], [class*=\"icon\" i], [class*=\"tool\" i], [class*=\"action\" i], [class*=\"call\" i], button, svg, [class*=\"composer\" i]');" +
+                "    var unwanted = clone.querySelectorAll('details, summary, [class*="role" i], [class*="badge" i], [class*="header" i], [class*="thought" i], [class*="thinking" i], [class*="timer" i], [class*="duration" i], [class*="status" i], [class*="step" i], [class*="trajectory" i], [class*="deep" i], [class*="avatar" i], [class*="icon" i], [class*="tool" i], [class*="action" i], [class*="call" i], button, svg, [class*="composer" i]');" +
                 "    for (var j = 0; j < unwanted.length; j++) { unwanted[j].remove(); }" +
                 "    var text = (clone.innerText || clone.textContent || '').trim();" +
-                "    text = text.replace(/^(ASSISTANT|USER|AGENT|DEEPSEEK)\s*[:\n]*/i, '').trim();" +
-                "    text = text.replace(/^(thought for [0-9.]+\s*(?:s|sec|seconds|m|min)?|thinking\s*\([0-9.]+\s*(?:s|sec|seconds|m|min)?\)|[0-9.]+\s*(?:s|sec|seconds|m|min))\s*/i, '').trim();" +
+                "    text = text.replace(/^(ASSISTANT|USER|AGENT|DEEPSEEK)[ :
+]*/i, '').trim();" +
                 "    if (!text || text.length < 5) return '';" +
-                "    if (/^[0-9.\s:\-sm]+$/.test(text)) return '';" +
+                "    if (isPureTimerOrNumbers(text)) return '';" +
                 "    if (text.toLowerCase() === 'send message' || text.toLowerCase() === 'send' || text.toLowerCase() === 'kirim' || text.toLowerCase() === 'assistant') return '';" +
                 "    return text;" +
                 "  }" +
