@@ -199,16 +199,15 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.5.5
-          name: "DSH Mobile v3.5.5 (Runtime Notification Permission & Native MIUI Bubbles Fix)"
+          tag_name: v3.5.6
+          name: "DSH Mobile v3.5.6 (Fixed Deep Diving False Notification & Final Answer Filter)"
           body: |
-            ## 🚀 DSH Mobile Release v3.5.5 — Notification Permission & MIUI Bubbles Fix
-            - 🔔 **Added Runtime `POST_NOTIFICATIONS` Permission (Android 13+)**:
-              - Meminta izin notifikasi secara eksplisit pada Android 13/14/15 & MIUI HyperOS saat pertama kali dibuka, sehingga notifikasi status bar dan gelembung tidak diblokir oleh sistem.
-            - 🫧 **Native Android/MIUI `MessagingStyle` & `Person` Integration**:
-              - Mengonfigurasi notifikasi menggunakan `NotificationCompat.MessagingStyle` resmi dengan bot person `DeepSeek Agent` dan `setAllowBubbles(true)` agar MIUI/HyperOS mengenali chat ini sebagai percakapan yang berhak memunculkan **Conversation Bubble**.
-            - 📡 **Enhanced Multi-Strategy Assistant Completion Detector**:
-              - Memperbarui skrip pemantau respons AI agar mendeteksi seluruh jenis elemen chat DSH dan langsung memicu notifikasi saat giliran agent selesai.
+            ## 🚀 DSH Mobile Release v3.5.6 — Final Answer Notification Filter
+            - 🎯 **Fixed Premature "Deep diving..." Notification**:
+              - Mengatasi masalah di mana status awal berpikir (*"Deep diving..." / "Thinking..."*) terkirim sebagai notifikasi sebelum jawaban selesai.
+              - Sistem kini secara cerdas menunggu sampai tombol Stop/Generating hilang dan **hanya mengirim notifikasi saat jawaban final teks AI benar-benar telah selesai ditulis**.
+            - 🫧 **Native Android/MIUI Conversation Bubbles Integration**:
+              - Mendukung penuh notifikasi percakapan `MessagingStyle` resmi dengan `DeepSeek Agent` dan `setAllowBubbles(true)` agar MIUI/HyperOS menampilkan preview gelembung samping.
             - 📸 **On-Demand Screenshot with Disappearing Animation & Auto `@screenshot_*.png` Injection**.
             - 🔍 **Compact 80% UI Scale (Dropdown Model Jelas & Rapi)**.
             - 📦 **Dual Release Options**:

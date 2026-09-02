@@ -1153,42 +1153,63 @@ public class MainActivity extends AppCompatActivity {
 
     private void injectChatEnterKeyHandler(WebView view) {
         String js = "(function() {" +
-                "  if (window.__dshEnterPatched) return;" +
-                "  window.__dshEnterPatched = true;" +
+                "  if (window.__dshAgentNotifierPatched) return;" +
+                "  window.__dshAgentNotifierPatched = true;" +
+                "  var isWaitingForAgent = false;" +
+                "  var lastNotifiedText = '';" +
                 "  document.addEventListener('keydown', function(e) {" +
                 "    if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {" +
                 "      var target = e.target;" +
                 "      if (target && (target.tagName === 'TEXTAREA' || target.isContentEditable || target.getAttribute('role') === 'textbox')) {" +
                 "        e.stopPropagation();" +
+                "        isWaitingForAgent = true;" +
                 "      }" +
                 "    }" +
                 "  }, true);" +
-                "  var lastNotifiedText = '';" +
-                "  var checkTimer = null;" +
-                "  function checkAssistantTurn() {" +
+                "  document.addEventListener('click', function(e) {" +
+                "    var btn = e.target.closest('button, [role=\"button\"]');" +
+                "    if (btn) {" +
+                "      var label = (btn.getAttribute('aria-label') || btn.title || btn.innerText || '').toLowerCase();" +
+                "      if (label.includes('send') || label.includes('kirim') || btn.querySelector('svg')) {" +
+                "        isWaitingForAgent = true;" +
+                "      }" +
+                "    }" +
+                "  }, true);" +
+                "  function isGeneratingActive() {" +
+                "    var stopBtn = document.querySelector('button[aria-label*=\"Stop\" i], button[title*=\"Stop\" i], [class*=\"stop\" i], [class*=\"abort\" i]');" +
+                "    var spinners = document.querySelectorAll('[class*=\"cursor\" i], [class*=\"typing\" i], [class*=\"loading\" i], [class*=\"spinner\" i], [class*=\"progress\" i]');" +
+                "    return (stopBtn !== null || spinners.length > 0);" +
+                "  }" +
+                "  function getCleanAssistantAnswer() {" +
+                "    var messages = document.querySelectorAll('article, [data-role=\"assistant\"], [class*=\"assistant\" i], [class*=\"message\" i]');" +
+                "    if (!messages || messages.length === 0) return '';" +
+                "    var lastMsg = messages[messages.length - 1];" +
+                "    var clone = lastMsg.cloneNode(true);" +
+                "    var thinkingNodes = clone.querySelectorAll('[class*=\"thought\" i], [class*=\"thinking\" i], [class*=\"status\" i], [class*=\"step\" i], [class*=\"trajectory\" i], [class*=\"deep\" i]');" +
+                "    thinkingNodes.forEach(function(n) { n.remove(); });" +
+                "    return (clone.innerText || clone.textContent || '').trim();" +
+                "  }" +
+                "  function checkTurnCompletion() {" +
                 "    try {" +
-                "      var msgs = document.querySelectorAll('article, [data-role=\"assistant\"], [class*=\"assistant\"], [class*=\"message\"], [class*=\"bubble\"], [class*=\"turn\"], [class*=\"conversation\"]');" +
-                "      if (msgs && msgs.length > 0) {" +
-                "        var lastMsg = msgs[msgs.length - 1];" +
-                "        var text = (lastMsg.innerText || lastMsg.textContent || '').trim();" +
-                "        if (text.length > 3 && text !== lastNotifiedText) {" +
-                "          var isStreaming = document.querySelector('[class*=\"cursor\"], [class*=\"typing\"], [class*=\"loading\"], [class*=\"spinner\"], [class*=\"progress\"]');" +
-                "          if (!isStreaming) {" +
-                "            lastNotifiedText = text;" +
+                "      if (isGeneratingActive()) {" +
+                "        isWaitingForAgent = true;" +
+                "        return;" +
+                "      }" +
+                "      if (isWaitingForAgent) {" +
+                "        var answer = getCleanAssistantAnswer();" +
+                "        if (answer.length > 6 && !answer.toLowerCase().startsWith('deep diving') && !answer.toLowerCase().startsWith('thinking')) {" +
+                "          if (answer !== lastNotifiedText) {" +
+                "            lastNotifiedText = answer;" +
+                "            isWaitingForAgent = false;" +
                 "            if (window.AndroidBridge && window.AndroidBridge.notifyAgentReply) {" +
-                "              window.AndroidBridge.notifyAgentReply(text);" +
+                "              window.AndroidBridge.notifyAgentReply(answer);" +
                 "            }" +
                 "          }" +
                 "        }" +
                 "      }" +
                 "    } catch(e) {}" +
                 "  }" +
-                "  var observer = new MutationObserver(function() {" +
-                "    clearTimeout(checkTimer);" +
-                "    checkTimer = setTimeout(checkAssistantTurn, 800);" +
-                "  });" +
-                "  observer.observe(document.body, { childList: true, subtree: true, characterData: true });" +
-                "  setInterval(checkAssistantTurn, 2500);" +
+                "  setInterval(checkTurnCompletion, 1000);" +
                 "})();";
         view.evaluateJavascript(js, null);
     }
