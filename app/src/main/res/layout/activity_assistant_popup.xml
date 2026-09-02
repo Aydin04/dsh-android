@@ -13,22 +13,22 @@
         android:layout_gravity="bottom"
         android:background="#0D1117"
         android:orientation="vertical"
-        android:paddingStart="12dp"
-        android:paddingTop="8dp"
-        android:paddingEnd="12dp"
-        android:paddingBottom="12dp"
+        android:paddingStart="10dp"
+        android:paddingTop="6dp"
+        android:paddingEnd="10dp"
+        android:paddingBottom="10dp"
         android:visibility="invisible">
 
-        <!-- Top Drag Pill Handle (DSH Dashboard Dark Theme) -->
+        <!-- Top Drag Pill Handle -->
         <View
             android:layout_width="36dp"
             android:layout_height="4dp"
             android:layout_gravity="center_horizontal"
             android:layout_marginTop="2dp"
-            android:layout_marginBottom="8dp"
+            android:layout_marginBottom="6dp"
             android:background="#30363D" />
 
-        <!-- Header Controls Bar (DSH Style) -->
+        <!-- Floating Assistant Control Header -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -36,46 +36,32 @@
             android:orientation="horizontal"
             android:paddingBottom="6dp">
 
+            <!-- Hamburger Button (Toggle DSH Sidebar) -->
+            <ImageButton
+                android:id="@+id/btnToggleSidebar"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@android:drawable/ic_menu_sort_by_size"
+                android:tint="#58A6FF"
+                android:contentDescription="Toggle Sidebar" />
+
             <ImageView
-                android:layout_width="22dp"
-                android:layout_height="22dp"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_marginStart="4dp"
                 android:src="@drawable/ic_deepseek"
-                android:contentDescription="DeepSeek Logo" />
+                android:contentDescription="DSH Logo" />
 
             <TextView
                 android:id="@+id/tvHeaderBrand"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="6dp"
-                android:text="DeepSeek"
+                android:text="DSH"
                 android:textColor="#E6EDF3"
                 android:textSize="14sp"
                 android:textStyle="bold" />
-
-            <!-- Mode Selector (Temp vs Main) -->
-            <Button
-                android:id="@+id/btnModeToggle"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="wrap_content"
-                android:layout_height="28dp"
-                android:layout_marginStart="8dp"
-                android:paddingStart="6dp"
-                android:paddingEnd="6dp"
-                android:text="⚡ Temp"
-                android:textColor="#F778BA"
-                android:textSize="10sp"
-                app:strokeColor="#30363D" />
-
-            <!-- Save Session Button (for Temp Mode) -->
-            <ImageButton
-                android:id="@+id/btnSaveSession"
-                android:layout_width="28dp"
-                android:layout_height="28dp"
-                android:layout_marginStart="4dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@android:drawable/ic_menu_save"
-                android:tint="#7EE787"
-                android:contentDescription="Simpan Sesi ke Utama" />
 
             <View
                 android:layout_width="0dp"
@@ -110,15 +96,27 @@
                 android:textSize="10sp"
                 app:strokeColor="#30363D" />
 
-            <!-- Expand Button -->
+            <!-- Screenshot Action Button -->
+            <ImageButton
+                android:id="@+id/btnAttachScreenshot"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_marginEnd="4dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@android:drawable/ic_menu_camera"
+                android:tint="#7EE787"
+                android:contentDescription="Tangkapan Layar" />
+
+            <!-- Expand Button (Open Full Screen Web App) -->
             <ImageButton
                 android:id="@+id/btnExpandFull"
                 android:layout_width="28dp"
                 android:layout_height="28dp"
+                android:layout_marginEnd="4dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@android:drawable/ic_menu_crop"
                 android:tint="#79C0FF"
-                android:contentDescription="Full Dashboard" />
+                android:contentDescription="Full App" />
 
             <!-- Close Button -->
             <ImageButton
@@ -131,190 +129,25 @@
                 android:contentDescription="Tutup" />
         </LinearLayout>
 
-        <!-- Multi-turn Conversation Scroll Area (DSH Theme) -->
-        <ScrollView
-            android:id="@+id/chatScrollView"
+        <!-- Authentic Embedded Official DSH Web View -->
+        <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="290dp"
-            android:layout_marginTop="2dp"
-            android:layout_marginBottom="6dp"
-            android:background="#161B22"
-            android:padding="4dp"
-            android:scrollbars="vertical">
+            android:layout_height="460dp"
+            android:background="#0D1117">
 
-            <LinearLayout
-                android:id="@+id/chatMessagesContainer"
+            <WebView
+                android:id="@+id/assistantWebView"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="4dp">
-                <!-- Message Bubbles Dynamically Injected Here -->
-            </LinearLayout>
-        </ScrollView>
-
-        <!-- Thinking & Execution Status Indicator (DSH Pulse Bar) -->
-        <LinearLayout
-            android:id="@+id/layoutThinkingStatus"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="6dp"
-            android:background="#21262D"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingStart="8dp"
-            android:paddingTop="3dp"
-            android:paddingEnd="8dp"
-            android:paddingBottom="3dp"
-            android:visibility="gone">
+                android:layout_height="match_parent"
+                android:background="#0D1117" />
 
             <ProgressBar
-                android:layout_width="12dp"
-                android:layout_height="12dp"
+                android:id="@+id/assistantWebLoading"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_gravity="center"
                 android:indeterminateTint="#58A6FF" />
-
-            <TextView
-                android:id="@+id/tvThinkingStatus"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="6dp"
-                android:text="💭 Thinking..."
-                android:textColor="#58A6FF"
-                android:textSize="11sp" />
-        </LinearLayout>
-
-        <!-- Attached Image Thumbnail Preview Bar -->
-        <LinearLayout
-            android:id="@+id/layoutAttachedImagePreview"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="6dp"
-            android:background="#21262D"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:padding="4dp"
-            android:visibility="gone">
-
-            <ImageView
-                android:id="@+id/ivAttachedThumbnail"
-                android:layout_width="34dp"
-                android:layout_height="34dp"
-                android:scaleType="centerCrop"
-                android:src="@drawable/ic_deepseek"
-                android:contentDescription="Thumbnail Lampiran" />
-
-            <TextView
-                android:id="@+id/tvAttachedImageName"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:layout_weight="1"
-                android:ellipsize="middle"
-                android:singleLine="true"
-                android:text="📸 Tangkapan Layar Terlampir"
-                android:textColor="#7EE787"
-                android:textSize="11sp" />
-
-            <ImageButton
-                android:id="@+id/btnRemoveAttachedImage"
-                android:layout_width="26dp"
-                android:layout_height="26dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@android:drawable/ic_menu_close_clear_cancel"
-                android:tint="#F778BA"
-                android:contentDescription="Hapus Lampiran" />
-        </LinearLayout>
-
-        <!-- Official DSH Input Box Structure (Box Container with Controls Inside) -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="#21262D"
-            android:orientation="vertical"
-            android:padding="6dp">
-
-            <!-- Text Input Area -->
-            <EditText
-                android:id="@+id/etAssistantInput"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@android:color/transparent"
-                android:hint="Tanyakan sesuatu atau perintahkan sistem..."
-                android:imeOptions="actionSend"
-                android:inputType="textCapSentences|textMultiLine"
-                android:maxLines="3"
-                android:minLines="1"
-                android:padding="6dp"
-                android:textColor="#FFFFFF"
-                android:textColorHint="#8B949E"
-                android:textSize="13sp" />
-
-            <!-- DSH Sub-Toolbar inside Input Box (Model, Tokens, Attach, Send) -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <!-- Model Selector Pill Inside Box (Matching DSH Dashboard) -->
-                <Button
-                    android:id="@+id/btnModelSelector"
-                    style="@style/Widget.MaterialComponents.Button.TextButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="26dp"
-                    android:backgroundTint="#30363D"
-                    android:paddingStart="6dp"
-                    android:paddingEnd="6dp"
-                    android:text="🤖 default ▼"
-                    android:textColor="#58A6FF"
-                    android:textSize="10sp" />
-
-                <!-- Token Usage Counter Indicator -->
-                <TextView
-                    android:id="@+id/tvTokenBadge"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:text="Tokens: 0"
-                    android:textColor="#8B949E"
-                    android:textSize="10sp" />
-
-                <View
-                    android:layout_width="0dp"
-                    android:layout_height="1dp"
-                    android:layout_weight="1" />
-
-                <!-- Plus Action Button -->
-                <ImageButton
-                    android:id="@+id/btnPlusMenu"
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@android:drawable/ic_input_add"
-                    android:tint="#79C0FF"
-                    android:contentDescription="Menu Aksi" />
-
-                <!-- Voice Mic Button -->
-                <ImageButton
-                    android:id="@+id/btnVoiceInput"
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@android:drawable/ic_btn_speak_now"
-                    android:tint="#D2A8FF"
-                    android:contentDescription="Voice Input" />
-
-                <!-- Official Styled Circular Send Button -->
-                <ImageButton
-                    android:id="@+id/btnAssistantSend"
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:layout_marginStart="4dp"
-                    android:background="@android:drawable/ic_menu_send"
-                    android:tint="#7EE787"
-                    android:contentDescription="Kirim" />
-            </LinearLayout>
-        </LinearLayout>
+        </FrameLayout>
     </LinearLayout>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
