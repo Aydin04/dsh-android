@@ -1164,47 +1164,68 @@ public class MainActivity extends AppCompatActivity {
                 "    }" +
                 "  }, true);" +
                 "  var lastNotifiedText = '';" +
-                "  var lastObservedText = '';" +
                 "  var settleTimer = null;" +
+                "  var isGenerating = false;" +
+                "  var wasGenerating = false;" +
+                "  function checkIsGenerating() {" +
+                "    var stopBtn = document.querySelector('button[aria-label*=\"stop\" i], button[title*=\"stop\" i], [class*=\"stop\" i], button[aria-label*=\"hentikan\" i]');" +
+                "    var busy = document.querySelector('[aria-busy=\"true\"], [data-status=\"running\"], [data-status=\"busy\"], [data-status=\"generating\"], [class*=\"loading\" i], [class*=\"spinner\" i]');" +
+                "    return !!(stopBtn || busy);" +
+                "  }" +
                 "  function getCleanAssistantAnswer() {" +
-                "    var allElements = document.querySelectorAll('article, [data-role=\"assistant\"], [class*=\"assistant\" i], [class*=\"message\" i], [class*=\"bubble\" i], [class*=\"turn\" i], [class*=\"prose\" i], .dsh-markdown, p');" +
-                "    var validMessages = [];" +
-                "    for (var i = 0; i < allElements.length; i++) {" +
-                "      var el = allElements[i];" +
-                "      if (el.closest('[class*=\"composer\" i], form, [role=\"form\"]')) continue;" +
+                "    var turnCandidates = document.querySelectorAll('article, [data-role=\"assistant\"], [class*=\"assistant\" i], [class*=\"turn\" i], [class*=\"message\" i], [class*=\"bubble\" i]');" +
+                "    var validTurns = [];" +
+                "    for (var i = 0; i < turnCandidates.length; i++) {" +
+                "      var el = turnCandidates[i];" +
+                "      if (el.closest('[class*=\"composer\" i], form, [role=\"form\"], [class*=\"header\" i]')) continue;" +
                 "      if (el.querySelector('textarea, input, [role=\"textbox\"]')) continue;" +
                 "      if (el.classList.contains('composer') || (el.className && typeof el.className === 'string' && el.className.toLowerCase().includes('composer'))) continue;" +
-                "      var raw = (el.innerText || el.textContent || '').trim().toLowerCase();" +
-                "      if (raw === 'send message' || raw === 'send' || raw === 'kirim' || raw === 'assistant' || raw.startsWith('deep diving') || raw.startsWith('thinking')) continue;" +
-                "      validMessages.push(el);" +
+                "      validTurns.push(el);" +
                 "    }" +
-                "    if (validMessages.length === 0) return '';" +
-                "    var lastMsg = validMessages[validMessages.length - 1];" +
-                "    var contentNode = lastMsg.querySelector('[class*=\"markdown\" i], [class*=\"prose\" i], [class*=\"content\" i], [class*=\"body\" i]') || lastMsg;" +
-                "    var clone = contentNode.cloneNode(true);" +
-                "    var unwanted = clone.querySelectorAll('[class*=\"role\" i], [class*=\"badge\" i], [class*=\"header\" i], [class*=\"thought\" i], [class*=\"thinking\" i], [class*=\"status\" i], [class*=\"step\" i], [class*=\"trajectory\" i], [class*=\"deep\" i], [class*=\"avatar\" i], [class*=\"icon\" i], [class*=\"tools\" i], button, svg, [class*=\"composer\" i]');" +
+                "    var targetNode = null;" +
+                "    if (validTurns.length > 0) {" +
+                "      targetNode = validTurns[validTurns.length - 1];" +
+                "    } else {" +
+                "      var proseList = document.querySelectorAll('[class*=\"prose\" i], [class*=\"markdown\" i], .dsh-markdown');" +
+                "      if (proseList.length > 0) targetNode = proseList[proseList.length - 1];" +
+                "    }" +
+                "    if (!targetNode) return '';" +
+                "    var clone = targetNode.cloneNode(true);" +
+                "    var unwanted = clone.querySelectorAll('details, summary, [class*=\"role\" i], [class*=\"badge\" i], [class*=\"header\" i], [class*=\"thought\" i], [class*=\"thinking\" i], [class*=\"timer\" i], [class*=\"duration\" i], [class*=\"status\" i], [class*=\"step\" i], [class*=\"trajectory\" i], [class*=\"deep\" i], [class*=\"avatar\" i], [class*=\"icon\" i], [class*=\"tool\" i], [class*=\"action\" i], [class*=\"call\" i], button, svg, [class*=\"composer\" i]');" +
                 "    for (var j = 0; j < unwanted.length; j++) { unwanted[j].remove(); }" +
                 "    var text = (clone.innerText || clone.textContent || '').trim();" +
-                "    text = text.replace(/^(ASSISTANT|USER|AGENT|DEEPSEEK)\\s*[:\\n]*/i, '').trim();" +
-                "    if (text.toLowerCase() === 'send message' || text.toLowerCase() === 'send' || text.toLowerCase() === 'kirim') return '';" +
+                "    text = text.replace(/^(ASSISTANT|USER|AGENT|DEEPSEEK)\s*[:\n]*/i, '').trim();" +
+                "    text = text.replace(/^(thought for [\d\.]+\s*(?:s|sec|seconds|m|min)?|thinking\s*\([\d\.]+\s*(?:s|sec|seconds|m|min)?\)|[\d\.]+\s*(?:s|sec|seconds|m|min))\s*/i, '').trim();" +
+                "    if (!text || text.length < 5) return '';" +
+                "    if (/^[\d\.\s\:\-sm]+$/.test(text)) return '';" +
+                "    if (text.toLowerCase() === 'send message' || text.toLowerCase() === 'send' || text.toLowerCase() === 'kirim' || text.toLowerCase() === 'assistant') return '';" +
                 "    return text;" +
                 "  }" +
-                "  function handleDOMChange() {" +
+                "  function processUpdate() {" +
+                "    var currentlyGenerating = checkIsGenerating();" +
+                "    if (currentlyGenerating) {" +
+                "      wasGenerating = true;" +
+                "      isGenerating = true;" +
+                "      return;" +
+                "    }" +
                 "    var answer = getCleanAssistantAnswer();" +
-                "    if (!answer || answer.length < 4 || answer === lastNotifiedText) return;" +
-                "    lastObservedText = answer;" +
+                "    if (!answer || answer.length < 5 || answer === lastNotifiedText) return;" +
                 "    clearTimeout(settleTimer);" +
                 "    settleTimer = setTimeout(function() {" +
-                "      if (lastObservedText && lastObservedText !== lastNotifiedText && lastObservedText.length > 4) {" +
-                "        lastNotifiedText = lastObservedText;" +
+                "      var finalAnswer = getCleanAssistantAnswer();" +
+                "      if (finalAnswer && finalAnswer !== lastNotifiedText && finalAnswer.length >= 5 && !checkIsGenerating()) {" +
+                "        lastNotifiedText = finalAnswer;" +
+                "        wasGenerating = false;" +
+                "        isGenerating = false;" +
                 "        if (window.AndroidBridge && window.AndroidBridge.notifyAgentReply) {" +
-                "          window.AndroidBridge.notifyAgentReply(lastObservedText);" +
+                "          window.AndroidBridge.notifyAgentReply(finalAnswer);" +
                 "        }" +
                 "      }" +
-                "    }, 1200);" +
+                "    }, 800);" +
                 "  }" +
-                "  var observer = new MutationObserver(handleDOMChange);" +
+                "  var observer = new MutationObserver(processUpdate);" +
                 "  observer.observe(document.body, { childList: true, subtree: true, characterData: true });" +
+                "  setInterval(processUpdate, 1000);" +
                 "})();";
         view.evaluateJavascript(js, null);
     }
