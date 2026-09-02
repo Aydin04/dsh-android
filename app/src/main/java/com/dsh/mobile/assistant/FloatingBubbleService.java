@@ -11,7 +11,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.PixelFormat;
-import android.graphics.Point;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
@@ -43,6 +42,9 @@ import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.InputStreamReader;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 public class FloatingBubbleService extends Service {
 
@@ -315,7 +317,7 @@ public class FloatingBubbleService extends Service {
                 "    window.injectDshAttachment = function(filename) {" +
                 "      var textarea = document.querySelector('textarea') || document.querySelector('[contenteditable=\"true\"]');" +
                 "      if (textarea) {" +
-                "        var textToInsert = '@' + filename + ' Jelaskan isi gambar layar ini: ';" +
+                "        var textToInsert = '@' + filename + ' ';" +
                 "        if (textarea.tagName === 'TEXTAREA') {" +
                 "          textarea.value = textToInsert + (textarea.value || '');" +
                 "          textarea.dispatchEvent(new Event('input', { bubbles: true }));" +
@@ -354,21 +356,33 @@ public class FloatingBubbleService extends Service {
     }
 
     private void takeScreenshotAndInject() {
+        // 1. Sembunyikan window floating sebentar
         windowView.setVisibility(View.INVISIBLE);
+        Toast.makeText(this, "📸 Mengambil screenshot...", Toast.LENGTH_SHORT).show();
+
+        // 2. Beri jeda 200ms agar OS merender layar bersih di belakangnya
         handler.postDelayed(() -> new Thread(() -> {
             try {
-                File targetFile = new File("/sdcard/current_screen.png");
-                runRootCommand("screencap -p /sdcard/current_screen.png");
+                File dir = new File("/sdcard/DSH_Screenshots");
+                if (!dir.exists()) dir.mkdirs();
 
+                String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
+                String filename = "screenshot_" + timeStamp + ".png";
+                File screenshotFile = new File(dir, filename);
+
+                // Ambil screenshot via root dan salin juga ke root sdcard
+                runRootCommand("screencap -p " + screenshotFile.getAbsolutePath() + " && cp " + screenshotFile.getAbsolutePath() + " /sdcard/current_screen.png 2>/dev/null || true");
+
+                // 3. Tampilkan kembali jendela dan sisipkan @nama_file ke input chat DSH
                 handler.post(() -> {
                     windowView.setVisibility(View.VISIBLE);
-                    bubbleWebView.evaluateJavascript("javascript:if(window.injectDshAttachment) { window.injectDshAttachment('current_screen.png'); }", null);
-                    Toast.makeText(this, "📸 Tangkapan layar disisipkan ke DSH!", Toast.LENGTH_SHORT).show();
+                    bubbleWebView.evaluateJavascript("javascript:if(window.injectDshAttachment) { window.injectDshAttachment('" + filename + "'); }", null);
+                    Toast.makeText(this, "📸 Screenshot @" + filename + " disisipkan ke chat!", Toast.LENGTH_SHORT).show();
                 });
             } catch (Exception e) {
                 handler.post(() -> windowView.setVisibility(View.VISIBLE));
             }
-        }).start(), 150);
+        }).start(), 200);
     }
 
     private void showPresetsDialog() {
