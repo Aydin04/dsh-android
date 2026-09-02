@@ -199,23 +199,22 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.4.4
-          name: "DSH Mobile v3.4.4 (Refined DSH Assistant, Model Selector & Thinking Badge)"
+          tag_name: v3.4.5
+          name: "DSH Mobile v3.4.5 (Dynamic Models Sync, Isolated Task & Response Fix)"
           body: |
-            ## 🚀 DSH Mobile Release v3.4.4 — Refined DSH Assistant
-            - 🤖 **Interactive AI Model Selector Pill**:
-              - Tombol dropdown model di header (`🤖 default ▼`, `deepseek-chat`, `deepseek-reasoner`, `claude-3-7-sonnet`, `gpt-4o`, `gemini-2.5-flash`, dll.) untuk beralih model AI routing secara instan langsung dari popup!
-            - 💭 **Thinking & Execution Status Badge**:
-              - Menampilkan indikator status berpikir `💭 Sedang memproses...` dengan animasi spinner saat AI memproses jawaban atau mengeksekusi perintah sistem.
-            - 🎨 **Focused Official DSH Theme & Capsule Input Bar**:
-              - Menggunakan tata letak yang bersih, ringkas, dan fokus tanpa elemen dashboard yang mengganggu.
-              - Capsule input bar dengan tombol `➕` (Pilih gambar galeri, Tangkap ulang layar, Salin teks OCR, Bersihkan lampiran).
-            - 📸 **Clean Background Screen Capture**:
-              - Layar bersih ditangkap otomatis sebelum jendela popup muncul.
-            - 🎛️ **Interactive Presets Dropdown [ON/OFF]**:
-              - Toggle `🟢 [ON] 🎮 Game Boost`, `🟢 [ON] 🔋 Battery Saver`, `🧹 Deep Clean RAM`, `✈️ Airplane Mode`, `📡 WiFi Radio`.
-            - ⏰ **Interactive Cron & Scheduler Dropdown**:
-              - Menjadwalkan tugas otomatis via Android `AlarmManager`.
+            ## 🚀 DSH Mobile Release v3.4.5 — Dynamic Models Sync & Response Fix
+            - 🛠️ **Fixed Empty Response ("Hanya Balas Selesai")**:
+              - Mengatasi masalah otentikasi lokal di AtomicRouter dengan menyetel `REQUIRE_API_KEY=false` & `OMNIROUTE_API_KEY=dsh-local-key` serta menyertakan authorization header pada setiap request chat completion.
+              - Respons streaming token maupun JSON kini ditampilkan secara lengkap tanpa terputus.
+            - 🔄 **Dynamic AI Model Sync from Router**:
+              - Dropdown `🤖 Model` kini membaca dan memuat daftar model yang **benar-benar terpasang dan aktif** di router Anda secara dinamis dari `/v1/models`.
+            - 🛡️ **Isolated Task Lifecycle (Fix App Stuck / Freeze)**:
+              - `AssistActivity` kini berjalan pada `taskAffinity="com.dsh.mobile.assistant"` yang terisolasi secara independen.
+              - Membuka atau menutup floating assistant tidak akan lagi membekukan atau mengganggu WebView sesi utama DSH Mobile.
+            - 💭 **Thinking & Execution Indicator**:
+              - Menampilkan badge status berpikir real-time `💭 Sedang memproses...` saat agent mengeksekusi jawaban.
+            - 📸 **Clean Background Screen Capture & ➕ Action Menu**.
+            - 🎛️ **Interactive Presets Dropdown [ON/OFF] & ⏰ Cron Scheduler**.
             - 📦 **Dual Release Options**:
               - `dsh-mobile-pure.apk` (~110 MB) — Edisi Ringan (Pure DSH).
               - `dsh-mobile-full-atomicroute.apk` (~237 MB) — Edisi Lengkap (Dual-Engine DSH + AtomicRouter).

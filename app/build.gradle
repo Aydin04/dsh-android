@@ -10,8 +10,8 @@ android {
         applicationId "com.dsh.mobile"
         minSdk 24
         targetSdk 28
-        versionCode 43
-        versionName "3.4.4"
+        versionCode 44
+        versionName "3.4.5"
 
         ndk {
             abiFilters 'arm64-v8a'

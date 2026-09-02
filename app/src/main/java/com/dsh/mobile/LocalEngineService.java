@@ -484,6 +484,9 @@ public class LocalEngineService extends Service {
                     atomicPb.directory(atomicDir);
                     atomicPb.environment().put("HOME", filesDir.getAbsolutePath());
                     atomicPb.environment().put("DATA_DIR", new File(filesDir, ".atomic-router").getAbsolutePath());
+                    atomicPb.environment().put("REQUIRE_API_KEY", "false");
+                    atomicPb.environment().put("OMNIROUTE_API_KEY", "dsh-local-key");
+                    atomicPb.environment().put("ROUTER_API_KEY", "dsh-local-key");
                     atomicPb.environment().put("PORT", "20128");
                     atomicPb.environment().put("HOSTNAME", "127.0.0.1");
                     atomicPb.environment().put("LD_LIBRARY_PATH", libDir.getAbsolutePath());

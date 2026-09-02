@@ -70,8 +70,9 @@
         <activity
             android:name=".assistant.AssistActivity"
             android:theme="@style/Theme.DSH.TransparentAssistant"
+            android:taskAffinity="com.dsh.mobile.assistant"
+            android:launchMode="singleTask"
             android:excludeFromRecents="true"
-            android:launchMode="singleInstance"
             android:windowSoftInputMode="stateAlwaysVisible|adjustResize"
             android:exported="true">
             <intent-filter>

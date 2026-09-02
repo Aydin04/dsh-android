@@ -51,6 +51,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 public class AssistActivity extends Activity {
@@ -60,6 +61,7 @@ public class AssistActivity extends Activity {
     private static final String PREFS_NAME = "DSH_ASSISTANT_PREFS";
     private static final String KEY_IS_TEMP_MODE = "IS_TEMP_MODE";
     private static final String KEY_SELECTED_MODEL = "SELECTED_MODEL";
+    private static final String AUTH_TOKEN = "Bearer dsh-local-key";
 
     private LinearLayout assistantBottomSheet;
     private Button btnModelSelector;
@@ -86,6 +88,7 @@ public class AssistActivity extends Activity {
 
     private boolean isTemporaryMode = true;
     private String selectedModel = "default";
+    private final List<String> availableModels = new ArrayList<>();
     private final Handler handler = new Handler(Looper.getMainLooper());
     private File attachedImageFile = null;
     private Bitmap attachedBitmap = null;
@@ -110,7 +113,10 @@ public class AssistActivity extends Activity {
         setupListeners();
         loadSettings();
 
-        // Take clean background screenshot before popup is visible
+        // 1. Fetch available models dynamically from AtomicRouter
+        fetchDynamicModels();
+
+        // 2. Take clean background screenshot before popup is visible
         takeCleanScreenshotAndShowUI();
 
         Intent intent = getIntent();
@@ -190,7 +196,7 @@ public class AssistActivity extends Activity {
 
         btnExpandFull.setOnClickListener(v -> {
             Intent mainIntent = new Intent(this, MainActivity.class);
-            mainIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            mainIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
             startActivity(mainIntent);
             finish();
         });
@@ -206,24 +212,58 @@ public class AssistActivity extends Activity {
         });
     }
 
-    private void showModelSelectorDialog() {
-        String[] defaultModels = new String[]{
-                "default",
-                "deepseek-chat",
-                "deepseek-reasoner",
-                "claude-3-7-sonnet",
-                "claude-3-5-sonnet",
-                "gpt-4o",
-                "gpt-4o-mini",
-                "gemini-2.5-flash",
-                "gemini-2.5-pro",
-                "grok-2"
-        };
+    private void fetchDynamicModels() {
+        new Thread(() -> {
+            try {
+                URL url = new URL("http://127.0.0.1:20128/v1/models");
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setRequestProperty("Authorization", AUTH_TOKEN);
+                conn.setConnectTimeout(3000);
+                conn.setReadTimeout(4000);
 
+                if (conn.getResponseCode() == 200) {
+                    StringBuilder sb = new StringBuilder();
+                    try (BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
+                        String l;
+                        while ((l = br.readLine()) != null) sb.append(l);
+                    }
+                    JSONObject root = new JSONObject(sb.toString());
+                    JSONArray data = root.optJSONArray("data");
+                    if (data != null && data.length() > 0) {
+                        availableModels.clear();
+                        for (int i = 0; i < data.length(); i++) {
+                            JSONObject m = data.getJSONObject(i);
+                            String id = m.optString("id");
+                            if (!TextUtils.isEmpty(id)) {
+                                availableModels.add(id);
+                            }
+                        }
+                    }
+                }
+            } catch (Exception ignored) {}
+        }).start();
+    }
+
+    private void showModelSelectorDialog() {
+        List<String> list = new ArrayList<>(availableModels);
+        if (list.isEmpty()) {
+            list.add("default");
+            list.add("deepseek-chat");
+            list.add("deepseek-reasoner");
+            list.add("claude-3-7-sonnet");
+            list.add("claude-3-5-sonnet");
+            list.add("gpt-4o");
+            list.add("gpt-4o-mini");
+            list.add("gemini-2.5-flash");
+            list.add("gemini-2.5-pro");
+        }
+
+        String[] modelArray = list.toArray(new String[0]);
         new AlertDialog.Builder(this)
-                .setTitle("🤖 Pilih Model AI (Routing)")
-                .setItems(defaultModels, (dialog, which) -> {
-                    selectedModel = defaultModels[which];
+                .setTitle("🤖 Pilih Model AI")
+                .setItems(modelArray, (dialog, which) -> {
+                    selectedModel = modelArray[which];
                     getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putString(KEY_SELECTED_MODEL, selectedModel).apply();
                     btnModelSelector.setText("🤖 " + selectedModel + " ▼");
                     Toast.makeText(this, "Model aktif: " + selectedModel, Toast.LENGTH_SHORT).show();
@@ -497,6 +537,7 @@ public class AssistActivity extends Activity {
                 conn.setRequestMethod("POST");
                 conn.setRequestProperty("Content-Type", "application/json");
                 conn.setRequestProperty("Accept", "text/event-stream, application/json");
+                conn.setRequestProperty("Authorization", AUTH_TOKEN);
                 conn.setConnectTimeout(5000);
                 conn.setReadTimeout(30000);
                 conn.setDoOutput(true);
@@ -562,25 +603,48 @@ public class AssistActivity extends Activity {
                                         }
                                     }
                                 } catch (Exception ignored) {}
+                            } else if (!line.trim().isEmpty() && !line.startsWith("data:")) {
+                                // Non-SSE JSON fallback response
+                                try {
+                                    JSONObject nonSse = new JSONObject(line);
+                                    JSONArray choices = nonSse.optJSONArray("choices");
+                                    if (choices != null && choices.length() > 0) {
+                                        JSONObject msg = choices.getJSONObject(0).optJSONObject("message");
+                                        if (msg != null && msg.has("content")) {
+                                            fullRes.append(msg.getString("content"));
+                                        }
+                                    }
+                                } catch (Exception ignored) {}
                             }
                         }
                     }
                     handler.post(() -> {
                         layoutThinkingStatus.setVisibility(View.GONE);
                         if (fullRes.length() == 0) {
-                            tvAssistantResponse.setText("✅ Selesai.");
+                            tvAssistantResponse.setText("✅ Respon kosong atau selesai diproses.");
+                        } else {
+                            tvAssistantResponse.setText(fullRes.toString());
                         }
                     });
                 } else {
+                    StringBuilder errSb = new StringBuilder();
+                    InputStream es = conn.getErrorStream();
+                    if (es != null) {
+                        try (BufferedReader er = new BufferedReader(new InputStreamReader(es))) {
+                            String el;
+                            while ((el = er.readLine()) != null) errSb.append(el);
+                        }
+                    }
+                    String errDetails = errSb.toString();
                     handler.post(() -> {
                         layoutThinkingStatus.setVisibility(View.GONE);
-                        tvAssistantResponse.setText("🤖 DSH Engine Online.\nPermintaan diproses: \"" + promptToSend + "\"");
+                        tvAssistantResponse.setText("⚠️ Error HTTP " + code + " dari Gateway:\n" + (errDetails.isEmpty() ? "Periksa koneksi router/model aktif." : errDetails));
                     });
                 }
             } catch (Exception e) {
                 handler.post(() -> {
                     layoutThinkingStatus.setVisibility(View.GONE);
-                    tvAssistantResponse.setText("⚠️ Status: " + e.getMessage() + "\n(Tip: Periksa apakah model '" + selectedModel + "' tersedia di gateway router).");
+                    tvAssistantResponse.setText("⚠️ Koneksi Gagal: " + e.getMessage() + "\n(Tip: Pastikan engine AtomicRouter aktif di port 20128).");
                 });
             }
         }).start();
