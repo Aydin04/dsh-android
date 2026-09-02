@@ -199,22 +199,20 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.4.5
-          name: "DSH Mobile v3.4.5 (Dynamic Models Sync, Isolated Task & Response Fix)"
+          tag_name: v3.4.6
+          name: "DSH Mobile v3.4.6 (Multi-turn Chat, Direct Root Execution & Instant Screenshot)"
           body: |
-            ## 🚀 DSH Mobile Release v3.4.5 — Dynamic Models Sync & Response Fix
-            - 🛠️ **Fixed Empty Response ("Hanya Balas Selesai")**:
-              - Mengatasi masalah otentikasi lokal di AtomicRouter dengan menyetel `REQUIRE_API_KEY=false` & `OMNIROUTE_API_KEY=dsh-local-key` serta menyertakan authorization header pada setiap request chat completion.
-              - Respons streaming token maupun JSON kini ditampilkan secara lengkap tanpa terputus.
-            - 🔄 **Dynamic AI Model Sync from Router**:
-              - Dropdown `🤖 Model` kini membaca dan memuat daftar model yang **benar-benar terpasang dan aktif** di router Anda secara dinamis dari `/v1/models`.
-            - 🛡️ **Isolated Task Lifecycle (Fix App Stuck / Freeze)**:
-              - `AssistActivity` kini berjalan pada `taskAffinity="com.dsh.mobile.assistant"` yang terisolasi secara independen.
-              - Membuka atau menutup floating assistant tidak akan lagi membekukan atau mengganggu WebView sesi utama DSH Mobile.
-            - 💭 **Thinking & Execution Indicator**:
-              - Menampilkan badge status berpikir real-time `💭 Sedang memproses...` saat agent mengeksekusi jawaban.
-            - 📸 **Clean Background Screen Capture & ➕ Action Menu**.
-            - 🎛️ **Interactive Presets Dropdown [ON/OFF] & ⏰ Cron Scheduler**.
+            ## 🚀 DSH Mobile Release v3.4.6 — Multi-turn Chat & Direct Root Execution
+            - 💬 **Full Multi-turn Conversation & History**:
+              - Mendukung percakapan tanya-jawab berlanjut tanpa batas (tidak lagi terhenti pada 1 kali tanya).
+              - Tampilan chat bubble modern (User Bubble kanan, Agent Bubble kiri lengkap dengan avatar DeepSeek, model tag `🤖`, dan tombol salin 📋).
+            - ⚡ **Direct Autonomous Root Execution**:
+              - Saat Anda meminta perintah sistem (misal: *"aktifkan mode pesawat"*, *"matikan wifi"*, *"clean ram"*), agent tidak lagi memberikan tutorial teks, melainkan **langsung mengeksekusi perintah root tersebut di Android secara otomatis**!
+            - 📸 **Instant Zero-Lag Screen Capture**:
+              - Pengambilan tangkapan layar langsung diproses pada milidetik pertama saat tombol asisten ditekan tanpa buffer lag, dan file lama otomatis dibersihkan.
+            - 💾 **1-Tap Save Temporary Session (`💾`)**:
+              - Mode Temporary tetap bisa digunakan untuk chat multi-turn santai. Jika ada percakapan penting yang ingin disimpan, tekan tombol `💾` di header untuk menyimpan transkrip ke `/sdcard/DSH_Sessions/`.
+            - 🤖 **Dynamic Model Selector (`🤖 default ▼`)** & **⚡ Presets Dropdown [ON/OFF]**.
             - 📦 **Dual Release Options**:
               - `dsh-mobile-pure.apk` (~110 MB) — Edisi Ringan (Pure DSH).
               - `dsh-mobile-full-atomicroute.apk` (~237 MB) — Edisi Lengkap (Dual-Engine DSH + AtomicRouter).

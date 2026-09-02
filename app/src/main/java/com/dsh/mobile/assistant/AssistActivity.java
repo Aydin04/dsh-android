@@ -4,12 +4,15 @@ import android.app.Activity;
 import android.app.AlarmManager;
 import android.app.AlertDialog;
 import android.app.PendingIntent;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -20,6 +23,7 @@ import android.text.TextUtils;
 import android.util.Base64;
 import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
 import android.widget.Button;
@@ -53,6 +57,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class AssistActivity extends Activity {
 
@@ -66,15 +72,16 @@ public class AssistActivity extends Activity {
     private LinearLayout assistantBottomSheet;
     private Button btnModelSelector;
     private Button btnModeToggle;
+    private ImageButton btnSaveSession;
     private Button btnPresetsDropdown;
     private Button btnCronDropdown;
     private ImageButton btnExpandFull;
     private ImageButton btnCloseAssistant;
 
-    private ScrollView responseScrollView;
+    private ScrollView chatScrollView;
+    private LinearLayout chatMessagesContainer;
     private LinearLayout layoutThinkingStatus;
     private TextView tvThinkingStatus;
-    private TextView tvAssistantResponse;
 
     private LinearLayout layoutAttachedImagePreview;
     private ImageView ivAttachedThumbnail;
@@ -93,10 +100,28 @@ public class AssistActivity extends Activity {
     private File attachedImageFile = null;
     private Bitmap attachedBitmap = null;
 
+    // Multi-turn Conversation Messages
+    private final JSONArray conversationHistory = new JSONArray();
+
     // Preset States
     private boolean isGameBoostOn = false;
     private boolean isBatterySaverOn = false;
     private boolean isAirplaneOn = false;
+
+    private static final String SYSTEM_INSTRUCTION =
+            "You are DSH Android AI Assistant with full root shell capabilities.\n" +
+            "When the user asks you to perform an action or change system settings (such as airplane mode, wifi, bluetooth, clean RAM, game mode, open apps, brightness, volume, reboot, or run shell scripts), DO NOT just explain how to do it in Android Settings.\n" +
+            "Instead, execute the command directly using the exact syntax:\n" +
+            "```execute_command\n<root_shell_command>\n```\n" +
+            "Followed by a brief, friendly confirmation in Indonesian.\n" +
+            "Common root commands:\n" +
+            "- Airplane Mode ON: settings put global airplane_mode_on 1 && am broadcast -a android.intent.action.AIRPLANE_MODE --ez state true\n" +
+            "- Airplane Mode OFF: settings put global airplane_mode_on 0 && am broadcast -a android.intent.action.AIRPLANE_MODE --ez state false\n" +
+            "- WiFi ON: svc wifi enable\n" +
+            "- WiFi OFF: svc wifi disable\n" +
+            "- Clean RAM: sync; echo 3 > /proc/sys/vm/drop_caches\n" +
+            "- Game Boost ON: echo performance > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null; sync; echo 3 > /proc/sys/vm/drop_caches\n" +
+            "- Open App: monkey -p <package_name> 1";
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -113,11 +138,11 @@ public class AssistActivity extends Activity {
         setupListeners();
         loadSettings();
 
-        // 1. Fetch available models dynamically from AtomicRouter
+        // 1. Fetch available models from router
         fetchDynamicModels();
 
-        // 2. Take clean background screenshot before popup is visible
-        takeCleanScreenshotAndShowUI();
+        // 2. Take fresh, instant screenshot before showing popup
+        takeFreshScreenshotAndShowUI();
 
         Intent intent = getIntent();
         if (intent != null && Intent.ACTION_VOICE_COMMAND.equals(intent.getAction())) {
@@ -129,15 +154,16 @@ public class AssistActivity extends Activity {
         assistantBottomSheet = findViewById(R.id.assistantBottomSheet);
         btnModelSelector = findViewById(R.id.btnModelSelector);
         btnModeToggle = findViewById(R.id.btnModeToggle);
+        btnSaveSession = findViewById(R.id.btnSaveSession);
         btnPresetsDropdown = findViewById(R.id.btnPresetsDropdown);
         btnCronDropdown = findViewById(R.id.btnCronDropdown);
         btnExpandFull = findViewById(R.id.btnExpandFull);
         btnCloseAssistant = findViewById(R.id.btnCloseAssistant);
 
-        responseScrollView = findViewById(R.id.responseScrollView);
+        chatScrollView = findViewById(R.id.chatScrollView);
+        chatMessagesContainer = findViewById(R.id.chatMessagesContainer);
         layoutThinkingStatus = findViewById(R.id.layoutThinkingStatus);
         tvThinkingStatus = findViewById(R.id.tvThinkingStatus);
-        tvAssistantResponse = findViewById(R.id.tvAssistantResponse);
 
         layoutAttachedImagePreview = findViewById(R.id.layoutAttachedImagePreview);
         ivAttachedThumbnail = findViewById(R.id.ivAttachedThumbnail);
@@ -166,9 +192,11 @@ public class AssistActivity extends Activity {
         if (isTemporaryMode) {
             btnModeToggle.setText("⚡ Temp");
             btnModeToggle.setTextColor(Color.parseColor("#F778BA"));
+            btnSaveSession.setVisibility(View.VISIBLE);
         } else {
             btnModeToggle.setText("📌 Main");
             btnModeToggle.setTextColor(Color.parseColor("#7AA2F7"));
+            btnSaveSession.setVisibility(View.GONE);
         }
     }
 
@@ -181,6 +209,8 @@ public class AssistActivity extends Activity {
             updateModeUI();
             Toast.makeText(this, isTemporaryMode ? "Mode Temporary: Sesi instan sekali pakai." : "Mode Persistent: Terhubung ke sesi utama.", Toast.LENGTH_SHORT).show();
         });
+
+        btnSaveSession.setOnClickListener(v -> saveCurrentSessionToDisk());
 
         btnPresetsDropdown.setOnClickListener(v -> showPresetsDropdownDialog());
 
@@ -272,19 +302,27 @@ public class AssistActivity extends Activity {
                 .show();
     }
 
-    private void takeCleanScreenshotAndShowUI() {
+    private void takeFreshScreenshotAndShowUI() {
         new Thread(() -> {
             try {
                 File targetDir = new File(getExternalFilesDir(null) != null ? getExternalFilesDir(null) : getFilesDir(), "dsh_screenshots");
                 if (!targetDir.exists()) targetDir.mkdirs();
-                File screenFile = new File(targetDir, "screen_" + System.currentTimeMillis() + ".jpg");
 
+                // Clean older screenshots
+                File[] oldFiles = targetDir.listFiles();
+                if (oldFiles != null) {
+                    for (File f : oldFiles) f.delete();
+                }
+
+                File screenFile = new File(targetDir, "screen_" + System.currentTimeMillis() + ".png");
+
+                // Execute instantaneous screencap
                 runRootCommand("screencap -p " + screenFile.getAbsolutePath());
 
                 if (screenFile.exists() && screenFile.length() > 0) {
                     Bitmap bmp = BitmapFactory.decodeFile(screenFile.getAbsolutePath());
                     handler.post(() -> {
-                        attachImage(screenFile, bmp, "📸 Tangkapan Layar Terlampir (" + (screenFile.length() / 1024) + " KB)");
+                        attachImage(screenFile, bmp, "📸 Layar Terlampir (" + (screenFile.length() / 1024) + " KB)");
                         assistantBottomSheet.setVisibility(View.VISIBLE);
                     });
                 } else {
@@ -299,7 +337,7 @@ public class AssistActivity extends Activity {
     private void showPlusActionMenu() {
         String[] options = new String[]{
                 "🖼️ Pilih Gambar dari Galeri",
-                "📸 Tangkap Ulang Layar (Clean Recapture)",
+                "📸 Tangkap Ulang Layar (Fresh Capture)",
                 "📋 Salin Semua Teks / Angka di Layar (OCR)",
                 "🧹 Kosongkan Lampiran Gambar"
         };
@@ -311,7 +349,7 @@ public class AssistActivity extends Activity {
                         openImagePicker();
                     } else if (which == 1) {
                         assistantBottomSheet.setVisibility(View.INVISIBLE);
-                        handler.postDelayed(() -> takeCleanScreenshotAndShowUI(), 180);
+                        handler.postDelayed(() -> takeFreshScreenshotAndShowUI(), 120);
                     } else if (which == 2) {
                         etAssistantInput.setText("Salin dan ekstrak seluruh tulisan, angka, kode, dan link dari gambar layar ini secara lengkap.");
                         processUserQuery();
@@ -347,6 +385,50 @@ public class AssistActivity extends Activity {
             layoutAttachedImagePreview.setVisibility(View.GONE);
         }
         Toast.makeText(this, "Lampiran dihapus", Toast.LENGTH_SHORT).show();
+    }
+
+    private void saveCurrentSessionToDisk() {
+        if (conversationHistory.length() == 0) {
+            Toast.makeText(this, "Belum ada percakapan untuk disimpan.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        try {
+            File sessionsDir = new File("/sdcard/DSH_Sessions");
+            if (!sessionsDir.exists()) sessionsDir.mkdirs();
+            File sessionFile = new File(sessionsDir, "session_" + System.currentTimeMillis() + ".md");
+
+            StringBuilder sb = new StringBuilder();
+            sb.append("# 🤖 DSH Assistant Session Transcript\n");
+            sb.append("Date: ").append(new java.util.Date()).append("\n");
+            sb.append("Model: ").append(selectedModel).append("\n\n---\n\n");
+
+            for (int i = 0; i < conversationHistory.length(); i++) {
+                JSONObject msg = conversationHistory.getJSONObject(i);
+                String role = msg.optString("role", "user");
+                Object content = msg.opt("content");
+                sb.append("### ").append(role.toUpperCase()).append(":\n");
+                if (content instanceof String) {
+                    sb.append(content).append("\n\n");
+                } else if (content instanceof JSONArray) {
+                    JSONArray arr = (JSONArray) content;
+                    for (int j = 0; j < arr.length(); j++) {
+                        JSONObject block = arr.getJSONObject(j);
+                        if ("text".equals(block.optString("type"))) {
+                            sb.append(block.optString("text")).append("\n\n");
+                        }
+                    }
+                }
+            }
+
+            try (FileOutputStream fos = new FileOutputStream(sessionFile)) {
+                fos.write(sb.toString().getBytes(StandardCharsets.UTF_8));
+            }
+
+            Toast.makeText(this, "💾 Sesi disimpan ke: " + sessionFile.getAbsolutePath(), Toast.LENGTH_LONG).show();
+        } catch (Exception e) {
+            Toast.makeText(this, "Gagal menyimpan sesi: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void showPresetsDropdownDialog() {
@@ -443,8 +525,7 @@ public class AssistActivity extends Activity {
             am.setExact(AlarmManager.RTC_WAKEUP, triggerAt, pi);
         }
 
-        tvAssistantResponse.setText("⏰ Jadwal Terdaftar: " + label + " akan dijalankan dalam " + (delayMs / 60000) + " menit.");
-        Toast.makeText(this, "Jadwal " + label + " disimpan!", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "⏰ Jadwal " + label + " disimpan!", Toast.LENGTH_SHORT).show();
     }
 
     private void startVoiceInput() {
@@ -500,6 +581,92 @@ public class AssistActivity extends Activity {
         }
     }
 
+    private void addUserBubble(String text, boolean hasImage) {
+        LinearLayout userBubble = new LinearLayout(this);
+        userBubble.setOrientation(LinearLayout.VERTICAL);
+        userBubble.setBackgroundColor(Color.parseColor("#202744"));
+        userBubble.setPadding(12, 10, 12, 10);
+
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.gravity = Gravity.END;
+        lp.setMargins(40, 6, 6, 6);
+        userBubble.setLayoutParams(lp);
+
+        TextView tv = new TextView(this);
+        tv.setText(text + (hasImage ? " 📸 [Gambar Terlampir]" : ""));
+        tv.setTextColor(Color.parseColor("#FFFFFF"));
+        tv.setTextSize(13f);
+        tv.setLineSpacing(3, 1);
+        userBubble.addView(tv);
+
+        chatMessagesContainer.addView(userBubble);
+        scrollToBottom();
+    }
+
+    private TextView addAssistantBubble(String initialText) {
+        LinearLayout assistantBubble = new LinearLayout(this);
+        assistantBubble.setOrientation(LinearLayout.VERTICAL);
+        assistantBubble.setBackgroundColor(Color.parseColor("#181B2B"));
+        assistantBubble.setPadding(12, 10, 12, 10);
+
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.gravity = Gravity.START;
+        lp.setMargins(6, 6, 40, 6);
+        assistantBubble.setLayoutParams(lp);
+
+        // Header with Model Tag and Copy Button
+        LinearLayout header = new LinearLayout(this);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+
+        TextView tvModel = new TextView(this);
+        tvModel.setText("🤖 " + selectedModel);
+        tvModel.setTextColor(Color.parseColor("#58A6FF"));
+        tvModel.setTextSize(10f);
+        tvModel.setTypeface(null, Typeface.BOLD);
+        LinearLayout.LayoutParams mlp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1);
+        header.addView(tvModel, mlp);
+
+        ImageButton btnCopy = new ImageButton(this);
+        btnCopy.setImageResource(android.R.drawable.ic_menu_agenda);
+        btnCopy.setColorFilter(Color.parseColor("#787C99"));
+        btnCopy.setBackgroundColor(Color.TRANSPARENT);
+        btnCopy.setLayoutParams(new LinearLayout.LayoutParams(dp(24), dp(24)));
+        header.addView(btnCopy);
+        assistantBubble.addView(header);
+
+        TextView tvContent = new TextView(this);
+        tvContent.setText(initialText);
+        tvContent.setTextColor(Color.parseColor("#C0CAF5"));
+        tvContent.setTextSize(13f);
+        tvContent.setLineSpacing(3, 1);
+        assistantBubble.addView(tvContent);
+
+        // Stats Footer
+        TextView tvStats = new TextView(this);
+        tvStats.setText("⚡ Streaming tokens...");
+        tvStats.setTextColor(Color.parseColor("#565F89"));
+        tvStats.setTextSize(9f);
+        assistantBubble.addView(tvStats);
+
+        btnCopy.setOnClickListener(v -> {
+            ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+            ClipData clip = ClipData.newPlainText("DSH Assistant", tvContent.getText().toString());
+            cm.setPrimaryClip(clip);
+            Toast.makeText(this, "📋 Respons disalin ke clipboard", Toast.LENGTH_SHORT).show();
+        });
+
+        chatMessagesContainer.addView(assistantBubble);
+        scrollToBottom();
+        return tvContent;
+    }
+
+    private void scrollToBottom() {
+        handler.post(() -> chatScrollView.fullScroll(View.FOCUS_DOWN));
+    }
+
     private void processUserQuery() {
         String query = etAssistantInput.getText().toString().trim();
         final File currentImg = this.attachedImageFile;
@@ -515,9 +682,13 @@ public class AssistActivity extends Activity {
         etAssistantInput.setText("");
         removeAttachedImage();
 
-        tvAssistantResponse.setText("");
+        addUserBubble(promptToSend, currentImg != null);
+
         layoutThinkingStatus.setVisibility(View.VISIBLE);
         tvThinkingStatus.setText("💭 Sedang memproses dengan " + selectedModel + "...");
+
+        final TextView assistantTv = addAssistantBubble("...");
+        final long startTime = System.currentTimeMillis();
 
         new Thread(() -> {
             try {
@@ -526,12 +697,12 @@ public class AssistActivity extends Activity {
                     String output = runRootCommand(cmd);
                     handler.post(() -> {
                         layoutThinkingStatus.setVisibility(View.GONE);
-                        tvAssistantResponse.setText("💻 [Root Output]:\n" + (output.isEmpty() ? "(Perintah sukses dijalankan)" : output));
+                        assistantTv.setText("💻 [Root Output]:\n" + (output.isEmpty() ? "(Perintah sukses dijalankan)" : output));
+                        scrollToBottom();
                     });
                     return;
                 }
 
-                // Connect to AI Gateway at port 20128
                 URL url = new URL("http://127.0.0.1:20128/v1/chat/completions");
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("POST");
@@ -547,6 +718,19 @@ public class AssistActivity extends Activity {
                 payload.put("stream", true);
 
                 JSONArray messages = new JSONArray();
+
+                // 1. Add System Instruction
+                JSONObject sysMsg = new JSONObject();
+                sysMsg.put("role", "system");
+                sysMsg.put("content", SYSTEM_INSTRUCTION);
+                messages.put(sysMsg);
+
+                // 2. Add Multi-turn History
+                for (int i = 0; i < conversationHistory.length(); i++) {
+                    messages.put(conversationHistory.getJSONObject(i));
+                }
+
+                // 3. Add Current User Message
                 JSONObject userMsg = new JSONObject();
                 userMsg.put("role", "user");
 
@@ -573,6 +757,8 @@ public class AssistActivity extends Activity {
                     userMsg.put("content", promptToSend);
                 }
                 messages.put(userMsg);
+                conversationHistory.put(userMsg);
+
                 payload.put("messages", messages);
 
                 try (OutputStream os = conn.getOutputStream()) {
@@ -582,6 +768,8 @@ public class AssistActivity extends Activity {
                 int code = conn.getResponseCode();
                 if (code == 200) {
                     final StringBuilder fullRes = new StringBuilder();
+                    int tokenCount = 0;
+
                     try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
                         String line;
                         while ((line = reader.readLine()) != null) {
@@ -596,15 +784,17 @@ public class AssistActivity extends Activity {
                                         if (delta != null && delta.has("content")) {
                                             String token = delta.getString("content");
                                             fullRes.append(token);
+                                            tokenCount++;
+                                            final int currentTokens = tokenCount;
                                             handler.post(() -> {
                                                 layoutThinkingStatus.setVisibility(View.GONE);
-                                                tvAssistantResponse.setText(fullRes.toString());
+                                                assistantTv.setText(fullRes.toString());
+                                                scrollToBottom();
                                             });
                                         }
                                     }
                                 } catch (Exception ignored) {}
                             } else if (!line.trim().isEmpty() && !line.startsWith("data:")) {
-                                // Non-SSE JSON fallback response
                                 try {
                                     JSONObject nonSse = new JSONObject(line);
                                     JSONArray choices = nonSse.optJSONArray("choices");
@@ -618,13 +808,34 @@ public class AssistActivity extends Activity {
                             }
                         }
                     }
+
+                    final String finalText = fullRes.toString();
+
+                    // Check for executable commands in response
+                    Pattern p = Pattern.compile("```(?:execute_command|sh|bash)\\s*\\n([\\s\\S]*?)\\n```");
+                    Matcher m = p.matcher(finalText);
+                    if (m.find()) {
+                        String cmdToExec = m.group(1).trim();
+                        handler.post(() -> tvThinkingStatus.setText("⚡ Menjalankan: " + cmdToExec));
+                        String cmdOut = runRootCommand(cmdToExec);
+                        handler.post(() -> {
+                            assistantTv.setText(finalText + "\n\n💻 [Status Eksekusi Root]: Sukses dieksekusi.");
+                        });
+                    }
+
+                    // Save Assistant reply to conversation history
+                    JSONObject assistantHistoryMsg = new JSONObject();
+                    assistantHistoryMsg.put("role", "assistant");
+                    assistantHistoryMsg.put("content", finalText);
+                    conversationHistory.put(assistantHistoryMsg);
+
+                    final long duration = Math.max(1, System.currentTimeMillis() - startTime);
                     handler.post(() -> {
                         layoutThinkingStatus.setVisibility(View.GONE);
-                        if (fullRes.length() == 0) {
-                            tvAssistantResponse.setText("✅ Respon kosong atau selesai diproses.");
-                        } else {
-                            tvAssistantResponse.setText(fullRes.toString());
+                        if (finalText.isEmpty()) {
+                            assistantTv.setText("✅ Selesai diproses.");
                         }
+                        scrollToBottom();
                     });
                 } else {
                     StringBuilder errSb = new StringBuilder();
@@ -638,13 +849,15 @@ public class AssistActivity extends Activity {
                     String errDetails = errSb.toString();
                     handler.post(() -> {
                         layoutThinkingStatus.setVisibility(View.GONE);
-                        tvAssistantResponse.setText("⚠️ Error HTTP " + code + " dari Gateway:\n" + (errDetails.isEmpty() ? "Periksa koneksi router/model aktif." : errDetails));
+                        assistantTv.setText("⚠️ Error HTTP " + code + " dari Gateway:\n" + (errDetails.isEmpty() ? "Periksa router aktif." : errDetails));
+                        scrollToBottom();
                     });
                 }
             } catch (Exception e) {
                 handler.post(() -> {
                     layoutThinkingStatus.setVisibility(View.GONE);
-                    tvAssistantResponse.setText("⚠️ Koneksi Gagal: " + e.getMessage() + "\n(Tip: Pastikan engine AtomicRouter aktif di port 20128).");
+                    assistantTv.setText("⚠️ Koneksi Gagal: " + e.getMessage());
+                    scrollToBottom();
                 });
             }
         }).start();
@@ -670,5 +883,25 @@ public class AssistActivity extends Activity {
             output.append("Error: ").append(e.getMessage());
         }
         return output.toString().trim();
+    }
+
+    private int dp(int val) {
+        return (int) (val * getResources().getDisplayMetrics().density);
+    }
+
+    private int sp() {
+        return 13;
+    }
+
+    private int sp(int val) {
+        return val;
+    }
+
+    private int dp() {
+        return dp(24);
+    }
+
+    private int dp(double val) {
+        return (int) (val * getResources().getDisplayMetrics().density);
     }
 }
