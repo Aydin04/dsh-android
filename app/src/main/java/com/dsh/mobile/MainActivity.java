@@ -1,6 +1,9 @@
 package com.dsh.mobile;
 
-import android.Manifest;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.ClipData;
 import android.content.ClipboardManager;
@@ -21,6 +24,7 @@ import android.view.View;
 import android.view.ViewConfiguration;
 import android.webkit.ConsoleMessage;
 import android.webkit.JavascriptInterface;
+import androidx.core.app.NotificationCompat;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
@@ -210,6 +214,7 @@ public class MainActivity extends AppCompatActivity {
             registerReceiver(engineReceiver, filter);
         }
 
+        createAgentNotificationChannel();
         checkAndRequestPermissions();
     }
 
@@ -1153,6 +1158,31 @@ public class MainActivity extends AppCompatActivity {
                 "      }" +
                 "    }" +
                 "  }, true);" +
+                "  var lastNotifiedText = '';" +
+                "  var checkTimer = null;" +
+                "  function checkAssistantTurn() {" +
+                "    try {" +
+                "      var msgs = document.querySelectorAll('[class*=\"conversation\"] [class*=\"bubble\"], [class*=\"message-item\"], [class*=\"assistant\"]');" +
+                "      if (msgs && msgs.length > 0) {" +
+                "        var lastMsg = msgs[msgs.length - 1];" +
+                "        var text = (lastMsg.innerText || lastMsg.textContent || '').trim();" +
+                "        if (text.length > 5 && text !== lastNotifiedText) {" +
+                "          var isStreaming = lastMsg.querySelector('[class*=\"cursor\"], [class*=\"typing\"], [class*=\"loading\"], [class*=\"spinner\"]');" +
+                "          if (!isStreaming) {" +
+                "            lastNotifiedText = text;" +
+                "            if (window.AndroidBridge && window.AndroidBridge.notifyAgentReply) {" +
+                "              window.AndroidBridge.notifyAgentReply(text);" +
+                "            }" +
+                "          }" +
+                "        }" +
+                "      }" +
+                "    } catch(e) {}" +
+                "  }" +
+                "  var observer = new MutationObserver(function() {" +
+                "    clearTimeout(checkTimer);" +
+                "    checkTimer = setTimeout(checkAssistantTurn, 1000);" +
+                "  });" +
+                "  observer.observe(document.body, { childList: true, subtree: true, characterData: true });" +
                 "})();";
         view.evaluateJavascript(js, null);
     }
@@ -1252,6 +1282,58 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private static final String AGENT_REPLY_CHANNEL_ID = "DSH_AGENT_REPLY_CHANNEL";
+
+    private void createAgentNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                    AGENT_REPLY_CHANNEL_ID,
+                    "Balasan Agent AI",
+                    NotificationManager.IMPORTANCE_HIGH
+            );
+            channel.setDescription("Notifikasi balasan selesai dari Agent DeepSeek Harness.");
+            channel.enableVibration(true);
+            channel.enableLights(true);
+            NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm != null) {
+                nm.createNotificationChannel(channel);
+            }
+        }
+    }
+
+    public void showAgentReplyNotification(String replyText) {
+        if (replyText == null || replyText.trim().isEmpty()) return;
+
+        // Clean markdown tags for clear notification preview
+        String preview = replyText.replaceAll("[#*`_>~]", "").replaceAll("\\s+", " ").trim();
+        if (preview.length() > 140) {
+            preview = preview.substring(0, 137) + "...";
+        }
+
+        Intent openIntent = new Intent(this, MainActivity.class);
+        openIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        PendingIntent pi = PendingIntent.getActivity(
+                this, 1004, openIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0)
+        );
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, AGENT_REPLY_CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_deepseek)
+                .setContentTitle("🤖 DeepSeek Agent Selesai")
+                .setContentText(preview)
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(replyText))
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+                .setAutoCancel(true)
+                .setContentIntent(pi)
+                .setDefaults(Notification.DEFAULT_ALL);
+
+        NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        if (nm != null) {
+            nm.notify(1005, builder.build());
+        }
+    }
+
     public class WebAppInterface {
         @JavascriptInterface
         public String getPlatform() {
@@ -1266,6 +1348,11 @@ public class MainActivity extends AppCompatActivity {
         @JavascriptInterface
         public void processBlobData(String base64Data, String filename, String mimetype) {
             saveDownloadedData(base64Data, filename, mimetype);
+        }
+
+        @JavascriptInterface
+        public void notifyAgentReply(String messagePreview) {
+            showAgentReplyNotification(messagePreview);
         }
     }
 

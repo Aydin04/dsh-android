@@ -199,18 +199,21 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.5.2
-          name: "DSH Mobile v3.5.2 (Pure Calling Bubble & On-Demand Screenshot Injection)"
+          tag_name: v3.5.3
+          name: "DSH Mobile v3.5.3 (Native Agent Reply Push Notification & MIUI Bubbles Integration)"
           body: |
-            ## 🚀 DSH Mobile Release v3.5.2 — Pure Calling Bubble & On-Demand Screenshot
-            - 🫧 **Pure Instant Calling (Murni Memanggil Tanpa Delay)**:
-              - Mengetuk gelembung DeepSeek langsung membuka jendela DSH seketika tanpa mengambil tangkapan layar otomatis.
-            - 📸 **On-Demand Screenshot with Disappearing Animation**:
-              - Di dalam header jendela DSH, terdapat tombol kamera **`📸`** (*Tangkap Layar*).
-              - Saat tombol diklik, jendela floating akan **menghilang sejenak (200ms)** agar layar bersih, mengambil screenshot via root ke `/sdcard/DSH_Screenshots/screenshot_TIMESTAMP.png`, lalu muncul kembali.
-              - Nama file tangkapan layar otomatis disisipkan langsung ke kolom input chat DSH dengan format **`@screenshot_YYYYMMDD_HHmmss.png `** sehingga model AI langsung memproses gambar tersebut!
-            - 🔍 **Compact 80% UI Scale (Dropdown Model Utuh & Rapi)**.
-            - 🗖 **Resizable Window & ⚡ Interactive Root Presets Dropdown**.
+            ## 🚀 DSH Mobile Release v3.5.3 — Agent Push Notification & MIUI Bubbles
+            - 🔔 **Native Background Agent Reply Push Notification**:
+              - Saat Anda mengirim tugas ke Agent lalu me-minimize DSH atau beralih ke aplikasi lain (YouTube, Game, Dokumen), DSH secara otomatis mendeteksi saat AI selesai merespons.
+              - Mengirimkan **Notifikasi Status Bar (Heads-Up)** dengan getaran lembut dan preview teks jawaban AI:
+                > 🤖 **DeepSeek Agent Selesai**  
+                > *"Tugas selesai: [Rangkuman jawaban/hasil analisis]"*
+            - 🫧 **100% Native MIUI/HyperOS Conversation Bubbles Integration**:
+              - Terintegrasi langsung dengan fitur **Conversation Bubbles** dan **Jendela Mengambang (Floating Windows)** bawaan MIUI/HyperOS.
+              - Mengetuk notifikasi atau gelembung langsung membuka kembali jendela chat DSH tepat di percakapan aktif.
+            - 📸 **On-Demand Screenshot with Disappearing Animation & Auto `@screenshot_*.png` Injection**.
+            - 🔍 **Compact 80% UI Scale (Dropdown Model Jelas & Rapi)**.
+            - ⚡ **Interactive Root Presets Dropdown [ON/OFF]**.
             - 📦 **Dual Release Options**:
               - `dsh-mobile-pure.apk` (~110 MB) — Edisi Ringan (Pure DSH).
               - `dsh-mobile-full-atomicroute.apk` (~237 MB) — Edisi Lengkap (Dual-Engine DSH + AtomicRouter).
