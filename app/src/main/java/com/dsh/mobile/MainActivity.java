@@ -1181,13 +1181,19 @@ public class MainActivity extends AppCompatActivity {
                 "    return (stopBtn !== null || spinners.length > 0);" +
                 "  }" +
                 "  function getCleanAssistantAnswer() {" +
-                "    var messages = document.querySelectorAll('article, [data-role=\"assistant\"], [class*=\"assistant\" i], [class*=\"message\" i]');" +
-                "    if (!messages || messages.length === 0) return '';" +
-                "    var lastMsg = messages[messages.length - 1];" +
-                "    var clone = lastMsg.cloneNode(true);" +
-                "    var thinkingNodes = clone.querySelectorAll('[class*=\"thought\" i], [class*=\"thinking\" i], [class*=\"status\" i], [class*=\"step\" i], [class*=\"trajectory\" i], [class*=\"deep\" i]');" +
-                "    thinkingNodes.forEach(function(n) { n.remove(); });" +
-                "    return (clone.innerText || clone.textContent || '').trim();" +
+                "    var containers = document.querySelectorAll('article, [data-role=\"assistant\"], [class*=\"assistant\" i]');" +
+                "    if (!containers || containers.length === 0) {" +
+                "      containers = document.querySelectorAll('[class*=\"message\" i], [class*=\"bubble\" i]');" +
+                "    }" +
+                "    if (!containers || containers.length === 0) return '';" +
+                "    var lastMsg = containers[containers.length - 1];" +
+                "    var contentNode = lastMsg.querySelector('[class*=\"markdown\" i], [class*=\"prose\" i], [class*=\"content\" i], [class*=\"body\" i]') || lastMsg;" +
+                "    var clone = contentNode.cloneNode(true);" +
+                "    var unwanted = clone.querySelectorAll('[class*=\"role\" i], [class*=\"badge\" i], [class*=\"header\" i], [class*=\"thought\" i], [class*=\"thinking\" i], [class*=\"status\" i], [class*=\"step\" i], [class*=\"trajectory\" i], [class*=\"deep\" i], [class*=\"avatar\" i], [class*=\"icon\" i], [class*=\"tools\" i]');" +
+                "    unwanted.forEach(function(n) { n.remove(); });" +
+                "    var text = (clone.innerText || clone.textContent || '').trim();" +
+                "    text = text.replace(/^(ASSISTANT|USER|AGENT|DEEPSEEK)\\s*[:\\n]*/i, '').trim();" +
+                "    return text;" +
                 "  }" +
                 "  function checkTurnCompletion() {" +
                 "    try {" +
@@ -1197,8 +1203,8 @@ public class MainActivity extends AppCompatActivity {
                 "      }" +
                 "      if (isWaitingForAgent) {" +
                 "        var answer = getCleanAssistantAnswer();" +
-                "        if (answer.length > 6 && !answer.toLowerCase().startsWith('deep diving') && !answer.toLowerCase().startsWith('thinking')) {" +
-                "          if (answer !== lastNotifiedText) {" +
+                "        if (answer.length > 4 && !answer.toLowerCase().startsWith('deep diving') && !answer.toLowerCase().startsWith('thinking')) {" +
+                "          if (answer !== lastNotifiedText && answer.toUpperCase() !== 'ASSISTANT') {" +
                 "            lastNotifiedText = answer;" +
                 "            isWaitingForAgent = false;" +
                 "            if (window.AndroidBridge && window.AndroidBridge.notifyAgentReply) {" +
@@ -1209,7 +1215,7 @@ public class MainActivity extends AppCompatActivity {
                 "      }" +
                 "    } catch(e) {}" +
                 "  }" +
-                "  setInterval(checkTurnCompletion, 1000);" +
+                "  setInterval(checkTurnCompletion, 400);" +
                 "})();";
         view.evaluateJavascript(js, null);
     }
@@ -1337,7 +1343,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void showAgentReplyNotification(String replyText) {
-        if (replyText == null || replyText.trim().isEmpty()) return;
+        if (replyText == null) return;
+        replyText = replyText.replaceFirst("(?i)^(ASSISTANT|USER|AGENT|DEEPSEEK)\\s*[:\\n]*", "").trim();
+        if (replyText.isEmpty()) return;
 
         // Clean markdown tags for clear notification preview
         String preview = replyText.replaceAll("[#*`_>~]", "").replaceAll("\\s+", " ").trim();
@@ -1356,19 +1364,22 @@ public class MainActivity extends AppCompatActivity {
                 .setName("DeepSeek Agent")
                 .setIcon(IconCompat.createWithResource(this, R.drawable.ic_deepseek))
                 .setBot(true)
+                .setImportant(true)
                 .build();
 
         NotificationCompat.MessagingStyle messagingStyle = new NotificationCompat.MessagingStyle(agentPerson)
-                .setConversationTitle("DeepSeek Harness")
+                .setConversationTitle("DeepSeek Agent")
                 .addMessage(replyText, System.currentTimeMillis(), agentPerson);
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, AGENT_REPLY_CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_deepseek)
-                .setContentTitle("🤖 DeepSeek Agent Selesai")
+                .setContentTitle("🤖 DeepSeek Agent")
                 .setContentText(preview)
+                .setSubText("Balasan Selesai")
                 .setStyle(messagingStyle)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+                .setShortcutId("dsh_agent_chat")
                 .setAutoCancel(true)
                 .setContentIntent(pi)
                 .setDefaults(Notification.DEFAULT_ALL);

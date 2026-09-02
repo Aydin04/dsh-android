@@ -199,17 +199,20 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.5.6
-          name: "DSH Mobile v3.5.6 (Fixed Deep Diving False Notification & Final Answer Filter)"
+          tag_name: v3.5.7
+          name: "DSH Mobile v3.5.7 (Clean Real Message Text, Zero Delay & Stock Power Gestures)"
           body: |
-            ## 🚀 DSH Mobile Release v3.5.6 — Final Answer Notification Filter
-            - 🎯 **Fixed Premature "Deep diving..." Notification**:
-              - Mengatasi masalah di mana status awal berpikir (*"Deep diving..." / "Thinking..."*) terkirim sebagai notifikasi sebelum jawaban selesai.
-              - Sistem kini secara cerdas menunggu sampai tombol Stop/Generating hilang dan **hanya mengirim notifikasi saat jawaban final teks AI benar-benar telah selesai ditulis**.
+            ## 🚀 DSH Mobile Release v3.5.7 — Pure AI Answer & Clean System Integration
+            - 🎯 **Fixed "ASSISTANT" Label Bug & Extracted Real AI Message**:
+              - Mengatasi bug di mana teks notifikasi hanya memuat label header `"ASSISTANT"`.
+              - Skrip ekstraksi kini langsung mengambil paragraf dan teks isi balasan AI sebenarnya (*actual response body*), membersihkan badge role, serta memformat teks preview menjadi sangat jelas dan rapi.
+            - ⚡ **Ultra-Fast & Realtime Turn Completion (Zero Delay)**:
+              - Interval pemantau respons dipercepat menjadi 400ms sehingga begitu AI selesai menulis balasan, notifikasi langsung terkirim seketika tanpa delay.
+            - 🛡️ **Stock Google Assistant Gestures Restored**:
+              - Menghapus pembajakan tombol power (tahan tombol daya), pill gesture, dan quick settings tile agar kembali 100% normal ke fungsi bawaan HP Anda.
             - 🫧 **Native Android/MIUI Conversation Bubbles Integration**:
-              - Mendukung penuh notifikasi percakapan `MessagingStyle` resmi dengan `DeepSeek Agent` dan `setAllowBubbles(true)` agar MIUI/HyperOS menampilkan preview gelembung samping.
+              - Notifikasi resmi `MessagingStyle` dengan `Person: DeepSeek Agent` dan `setAllowBubbles(true)`.
             - 📸 **On-Demand Screenshot with Disappearing Animation & Auto `@screenshot_*.png` Injection**.
-            - 🔍 **Compact 80% UI Scale (Dropdown Model Jelas & Rapi)**.
             - 📦 **Dual Release Options**:
               - `dsh-mobile-pure.apk` (~110 MB) — Edisi Ringan (Pure DSH).
               - `dsh-mobile-full-atomicroute.apk` (~237 MB) — Edisi Lengkap (Dual-Engine DSH + AtomicRouter).
