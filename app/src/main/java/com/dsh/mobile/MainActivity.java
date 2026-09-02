@@ -1155,40 +1155,27 @@ public class MainActivity extends AppCompatActivity {
         String js = "(function() {" +
                 "  if (window.__dshAgentNotifierPatched) return;" +
                 "  window.__dshAgentNotifierPatched = true;" +
-                "  var isWaitingForAgent = false;" +
-                "  var lastNotifiedText = '';" +
                 "  document.addEventListener('keydown', function(e) {" +
                 "    if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {" +
                 "      var target = e.target;" +
                 "      if (target && (target.tagName === 'TEXTAREA' || target.isContentEditable || target.getAttribute('role') === 'textbox')) {" +
                 "        e.stopPropagation();" +
-                "        isWaitingForAgent = true;" +
                 "      }" +
                 "    }" +
                 "  }, true);" +
-                "  document.addEventListener('click', function(e) {" +
-                "    var btn = e.target.closest('button, [role=\"button\"]');" +
-                "    if (btn) {" +
-                "      var label = (btn.getAttribute('aria-label') || btn.title || btn.innerText || '').toLowerCase();" +
-                "      if (label.includes('send') || label.includes('kirim') || btn.querySelector('svg')) {" +
-                "        isWaitingForAgent = true;" +
-                "      }" +
-                "    }" +
-                "  }, true);" +
-                "  function isGeneratingActive() {" +
-                "    var stopBtn = document.querySelector('button[aria-label*=\"Stop\" i], button[title*=\"Stop\" i], [class*=\"stop\" i], [class*=\"abort\" i]');" +
-                "    var spinners = document.querySelectorAll('[class*=\"cursor\" i], [class*=\"typing\" i], [class*=\"loading\" i], [class*=\"spinner\" i], [class*=\"progress\" i]');" +
-                "    return (stopBtn !== null || spinners.length > 0);" +
-                "  }" +
+                "  var lastNotifiedText = '';" +
+                "  var lastObservedText = '';" +
+                "  var settleTimer = null;" +
                 "  function getCleanAssistantAnswer() {" +
-                "    var allElements = document.querySelectorAll('article, [data-role=\"assistant\"], [class*=\"assistant\" i], [class*=\"message\" i], [class*=\"bubble\" i], [class*=\"turn\" i], [class*=\"prose\" i]');" +
+                "    var allElements = document.querySelectorAll('article, [data-role=\"assistant\"], [class*=\"assistant\" i], [class*=\"message\" i], [class*=\"bubble\" i], [class*=\"turn\" i], [class*=\"prose\" i], .dsh-markdown, p');" +
                 "    var validMessages = [];" +
                 "    for (var i = 0; i < allElements.length; i++) {" +
                 "      var el = allElements[i];" +
-                "      if (el.closest('[class*=\"composer\" i]') || el.querySelector('textarea, input, [role=\"textbox\"]')) continue;" +
+                "      if (el.closest('[class*=\"composer\" i], form, [role=\"form\"]')) continue;" +
+                "      if (el.querySelector('textarea, input, [role=\"textbox\"]')) continue;" +
                 "      if (el.classList.contains('composer') || (el.className && typeof el.className === 'string' && el.className.toLowerCase().includes('composer'))) continue;" +
                 "      var raw = (el.innerText || el.textContent || '').trim().toLowerCase();" +
-                "      if (raw === 'send message' || raw === 'send' || raw === 'kirim' || raw === 'assistant' || raw === 'deep diving...' || raw === 'thinking...') continue;" +
+                "      if (raw === 'send message' || raw === 'send' || raw === 'kirim' || raw === 'assistant' || raw.startsWith('deep diving') || raw.startsWith('thinking')) continue;" +
                 "      validMessages.push(el);" +
                 "    }" +
                 "    if (validMessages.length === 0) return '';" +
@@ -1202,29 +1189,22 @@ public class MainActivity extends AppCompatActivity {
                 "    if (text.toLowerCase() === 'send message' || text.toLowerCase() === 'send' || text.toLowerCase() === 'kirim') return '';" +
                 "    return text;" +
                 "  }" +
-                "  var wasGenerating = false;" +
-                "  var lastNotifiedText = '';" +
-                "  function checkTurnCompletion() {" +
-                "    try {" +
-                "      if (isGeneratingActive()) {" +
-                "        wasGenerating = true;" +
-                "        return;" +
-                "      }" +
-                "      if (wasGenerating) {" +
-                "        var answer = getCleanAssistantAnswer();" +
-                "        if (answer.length > 3 && !answer.toLowerCase().startsWith('deep diving') && !answer.toLowerCase().startsWith('thinking')) {" +
-                "          if (answer !== lastNotifiedText && answer.toUpperCase() !== 'ASSISTANT') {" +
-                "            lastNotifiedText = answer;" +
-                "            wasGenerating = false;" +
-                "            if (window.AndroidBridge && window.AndroidBridge.notifyAgentReply) {" +
-                "              window.AndroidBridge.notifyAgentReply(answer);" +
-                "            }" +
-                "          }" +
+                "  function handleDOMChange() {" +
+                "    var answer = getCleanAssistantAnswer();" +
+                "    if (!answer || answer.length < 4 || answer === lastNotifiedText) return;" +
+                "    lastObservedText = answer;" +
+                "    clearTimeout(settleTimer);" +
+                "    settleTimer = setTimeout(function() {" +
+                "      if (lastObservedText && lastObservedText !== lastNotifiedText && lastObservedText.length > 4) {" +
+                "        lastNotifiedText = lastObservedText;" +
+                "        if (window.AndroidBridge && window.AndroidBridge.notifyAgentReply) {" +
+                "          window.AndroidBridge.notifyAgentReply(lastObservedText);" +
                 "        }" +
                 "      }" +
-                "    } catch(e) {}" +
+                "    }, 1200);" +
                 "  }" +
-                "  setInterval(checkTurnCompletion, 400);" +
+                "  var observer = new MutationObserver(handleDOMChange);" +
+                "  observer.observe(document.body, { childList: true, subtree: true, characterData: true });" +
                 "})();";
         view.evaluateJavascript(js, null);
     }
