@@ -1173,10 +1173,12 @@ public class MainActivity extends AppCompatActivity {
                 "    return !!(stopBtn || busy);" +
                 "  }" +
                 "  function getCleanAssistantAnswer() {" +
-                "    var turnCandidates = document.querySelectorAll('article, [data-role=\"assistant\"], [class*=\"assistant\" i], [class*=\"turn\" i], [class*=\"message\" i], [class*=\"bubble\" i]');" +
+                "    var candidates = document.querySelectorAll('[data-role=\"assistant\"], [class*=\"assistant\" i], [data-author=\"assistant\"], [data-role=\"agent\"], [class*=\"agent\" i], article');" +
                 "    var validTurns = [];" +
-                "    for (var i = 0; i < turnCandidates.length; i++) {" +
-                "      var el = turnCandidates[i];" +
+                "    for (var i = 0; i < candidates.length; i++) {" +
+                "      var el = candidates[i];" +
+                "      if (el.closest('[data-role=\"user\"], [class*=\"user\" i], [class*=\"human\" i], [data-author=\"user\"]')) continue;" +
+                "      if (el.matches('[data-role=\"user\"], [class*=\"user\" i], [class*=\"human\" i], [data-author=\"user\"]')) continue;" +
                 "      if (el.closest('[class*=\"composer\" i], form, [role=\"form\"], [class*=\"header\" i]')) continue;" +
                 "      if (el.querySelector('textarea, input, [role=\"textbox\"]')) continue;" +
                 "      if (el.classList.contains('composer') || (el.className && typeof el.className === 'string' && el.className.toLowerCase().includes('composer'))) continue;" +
@@ -1187,7 +1189,12 @@ public class MainActivity extends AppCompatActivity {
                 "      targetNode = validTurns[validTurns.length - 1];" +
                 "    } else {" +
                 "      var proseList = document.querySelectorAll('[class*=\"prose\" i], [class*=\"markdown\" i], .dsh-markdown');" +
-                "      if (proseList.length > 0) targetNode = proseList[proseList.length - 1];" +
+                "      for (var k = proseList.length - 1; k >= 0; k--) {" +
+                "        var pEl = proseList[k];" +
+                "        if (pEl.closest('[data-role=\"user\"], [class*=\"user\" i], [class*=\"human\" i], [class*=\"composer\" i]')) continue;" +
+                "        targetNode = pEl;" +
+                "        break;" +
+                "      }" +
                 "    }" +
                 "    if (!targetNode) return '';" +
                 "    var clone = targetNode.cloneNode(true);" +
@@ -1208,12 +1215,13 @@ public class MainActivity extends AppCompatActivity {
                 "      isGenerating = true;" +
                 "      return;" +
                 "    }" +
+                "    if (!wasGenerating) return;" +
                 "    var answer = getCleanAssistantAnswer();" +
                 "    if (!answer || answer.length < 5 || answer === lastNotifiedText) return;" +
                 "    clearTimeout(settleTimer);" +
                 "    settleTimer = setTimeout(function() {" +
                 "      var finalAnswer = getCleanAssistantAnswer();" +
-                "      if (finalAnswer && finalAnswer !== lastNotifiedText && finalAnswer.length >= 5 && !checkIsGenerating()) {" +
+                "      if (finalAnswer && finalAnswer !== lastNotifiedText && finalAnswer.length >= 5 && !checkIsGenerating() && wasGenerating) {" +
                 "        lastNotifiedText = finalAnswer;" +
                 "        wasGenerating = false;" +
                 "        isGenerating = false;" +
