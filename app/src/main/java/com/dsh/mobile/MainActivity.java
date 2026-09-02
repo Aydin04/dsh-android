@@ -1202,9 +1202,9 @@ public class MainActivity extends AppCompatActivity {
                 "    for (var j = 0; j < unwanted.length; j++) { unwanted[j].remove(); }" +
                 "    var text = (clone.innerText || clone.textContent || '').trim();" +
                 "    text = text.replace(/^(ASSISTANT|USER|AGENT|DEEPSEEK)\s*[:\n]*/i, '').trim();" +
-                "    text = text.replace(/^(thought for [\d\.]+\s*(?:s|sec|seconds|m|min)?|thinking\s*\([\d\.]+\s*(?:s|sec|seconds|m|min)?\)|[\d\.]+\s*(?:s|sec|seconds|m|min))\s*/i, '').trim();" +
+                "    text = text.replace(/^(thought for [0-9.]+\s*(?:s|sec|seconds|m|min)?|thinking\s*\([0-9.]+\s*(?:s|sec|seconds|m|min)?\)|[0-9.]+\s*(?:s|sec|seconds|m|min))\s*/i, '').trim();" +
                 "    if (!text || text.length < 5) return '';" +
-                "    if (/^[\d\.\s\:\-sm]+$/.test(text)) return '';" +
+                "    if (/^[0-9.\s:\-sm]+$/.test(text)) return '';" +
                 "    if (text.toLowerCase() === 'send message' || text.toLowerCase() === 'send' || text.toLowerCase() === 'kirim' || text.toLowerCase() === 'assistant') return '';" +
                 "    return text;" +
                 "  }" +
