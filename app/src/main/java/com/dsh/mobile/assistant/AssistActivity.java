@@ -25,7 +25,6 @@ import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
@@ -44,7 +43,6 @@ public class AssistActivity extends Activity {
     private static final String DSH_URL = "http://127.0.0.1:3080";
 
     private LinearLayout assistantBottomSheet;
-    private ImageButton btnToggleSidebar;
     private Button btnPresetsDropdown;
     private Button btnCronDropdown;
     private ImageButton btnAttachScreenshot;
@@ -56,7 +54,6 @@ public class AssistActivity extends Activity {
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private File lastScreenshotFile = null;
-    private boolean isSidebarVisible = false;
 
     // Preset States
     private boolean isGameBoostOn = false;
@@ -79,13 +76,12 @@ public class AssistActivity extends Activity {
         setupWebView();
         loadPresetStates();
 
-        // 1. Initial screen capture on assistant launch
+        // 1. Instant fresh screen capture on assistant launch
         takeFreshScreenshotAndShowUI(false);
     }
 
     private void initViews() {
         assistantBottomSheet = findViewById(R.id.assistantBottomSheet);
-        btnToggleSidebar = findViewById(R.id.btnToggleSidebar);
         btnPresetsDropdown = findViewById(R.id.btnPresetsDropdown);
         btnCronDropdown = findViewById(R.id.btnCronDropdown);
         btnAttachScreenshot = findViewById(R.id.btnAttachScreenshot);
@@ -103,15 +99,12 @@ public class AssistActivity extends Activity {
     }
 
     private void setupListeners() {
-        btnToggleSidebar.setOnClickListener(v -> toggleDshSidebar());
-
         btnPresetsDropdown.setOnClickListener(v -> showPresetsDropdownDialog());
 
         btnCronDropdown.setOnClickListener(v -> showCronDropdownDialog());
 
         btnAttachScreenshot.setOnClickListener(v -> {
-            Toast.makeText(this, "📸 Mengambil tangkapan layar bersih...", Toast.LENGTH_SHORT).show();
-            // Hide window, capture screenshot, re-show and inject to DSH
+            Toast.makeText(this, "📸 Mengambil screenshot layar bersih...", Toast.LENGTH_SHORT).show();
             takeFreshScreenshotAndShowUI(true);
         });
 
@@ -137,13 +130,15 @@ public class AssistActivity extends Activity {
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
         settings.setTextZoom(100);
+        settings.setUseWideViewPort(false);
+        settings.setLoadWithOverviewMode(false);
 
         assistantWebView.setWebViewClient(new WebViewClient() {
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
                 assistantWebLoading.setVisibility(View.GONE);
-                injectResponsiveCssAndScripts(view);
+                injectMobileViewportAndEnterKey(view);
             }
 
             @Override
@@ -159,29 +154,21 @@ public class AssistActivity extends Activity {
         assistantWebView.loadUrl(DSH_URL);
     }
 
-    private void injectResponsiveCssAndScripts(WebView view) {
+    private void injectMobileViewportAndEnterKey(WebView view) {
         String js = "javascript:(function() {" +
                 "  try {" +
-                "    var style = document.getElementById('dsh-floating-assistant-responsive');" +
-                "    if (!style) {" +
-                "      style = document.createElement('style');" +
-                "      style.id = 'dsh-floating-assistant-responsive';" +
-                "      style.innerHTML = '" +
-                "        .sidebar, [class*=\"sidebar\"], [class*=\"nav-tree\"], aside { display: none !important; } " +
-                "        [class*=\"details\"], [class*=\"trajectory\"], [class*=\"inspector\"], [class*=\"deliverables\"] { display: none !important; } " +
-                "        [class*=\"conversation\"], [class*=\"composer\"], [class*=\"chat\"], [class*=\"body\"], main, #root { width: 100% !important; max-width: 100% !important; min-width: 100% !important; flex: 1 1 100% !important; } " +
-                "        textarea, [contenteditable=\"true\"] { width: 100% !important; font-size: 14px !important; } " +
-                "      ';" +
-                "      document.head.appendChild(style);" +
-                "    }" +
-                "    window.toggleDshSidebar = function() {" +
-                "      var s = document.getElementById('dsh-floating-assistant-responsive');" +
-                "      if (s) { s.disabled = !s.disabled; }" +
-                "    };" +
+                "    document.addEventListener('keydown', function(e) {" +
+                "      if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey) {" +
+                "        var active = document.activeElement;" +
+                "        if (active && (active.tagName === 'TEXTAREA' || active.isContentEditable)) {" +
+                "          e.stopPropagation();" +
+                "        }" +
+                "      }" +
+                "    }, true);" +
                 "    window.injectDshAttachment = function(filename) {" +
                 "      var textarea = document.querySelector('textarea') || document.querySelector('[contenteditable=\"true\"]');" +
                 "      if (textarea) {" +
-                "        var textToInsert = '@' + filename + ' Jelaskan dan analisis isi layar ini: ';" +
+                "        var textToInsert = '@' + filename + ' Jelaskan isi gambar layar ini: ';" +
                 "        if (textarea.tagName === 'TEXTAREA') {" +
                 "          textarea.value = textToInsert + (textarea.value || '');" +
                 "          textarea.dispatchEvent(new Event('input', { bubbles: true }));" +
@@ -195,12 +182,6 @@ public class AssistActivity extends Activity {
                 "  } catch(e) {}" +
                 "})()";
         view.evaluateJavascript(js, null);
-    }
-
-    private void toggleDshSidebar() {
-        isSidebarVisible = !isSidebarVisible;
-        assistantWebView.evaluateJavascript("javascript:if(window.toggleDshSidebar) { window.toggleDshSidebar(); }", null);
-        Toast.makeText(this, isSidebarVisible ? "📂 Menampilkan Panel/Sidebar DSH" : "💬 Mode Chat Bersih Penuh (100% Lebar)", Toast.LENGTH_SHORT).show();
     }
 
     private void takeFreshScreenshotAndShowUI(boolean autoInjectAfterCapture) {
@@ -227,7 +208,7 @@ public class AssistActivity extends Activity {
                     assistantBottomSheet.setVisibility(View.VISIBLE);
                     if (autoInjectAfterCapture && lastScreenshotFile != null && lastScreenshotFile.exists()) {
                         assistantWebView.evaluateJavascript("javascript:if(window.injectDshAttachment) { window.injectDshAttachment('" + lastScreenshotFile.getName() + "'); }", null);
-                        Toast.makeText(this, "📸 Tangkapan layar siap diinput chat!", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "📸 Tangkapan layar disisipkan ke DSH!", Toast.LENGTH_SHORT).show();
                     }
                 });
             } catch (Exception e) {

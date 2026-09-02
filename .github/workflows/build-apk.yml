@@ -199,17 +199,15 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.4.9
-          name: "DSH Mobile v3.4.9 (Full-Width Chat View Fix, Detail Panel Collapse & Screenshot)"
+          tag_name: v3.5.0
+          name: "DSH Mobile v3.5.0 (Natural Full-Width DSH View & Reliable Screen Capture)"
           body: |
-            ## 🚀 DSH Mobile Release v3.4.9 — Full-Width Chat View & Screenshot Fix
-            - 🛠️ **Fixed Squeezed Chat Column (Halaman Detail Tertutup Otomatis)**:
-              - Mengatasi masalah kolom chat yang mengecil karena terbelah dengan panel inspektur/detail trajectory bawaan web.
-              - Panel detail dan sidebar otomatis disembunyikan sehingga kolom chat DSH kini tampil **penuh 100% lebar layar**, luas, dan nyaman digunakan.
-            - ☰ **Toggle Panel & Sidebar Kapan Saja**:
-              - Tombol `☰` di header atas berfungsi untuk menampilkan/menyembunyikan panel jika ingin melihat rincian tool call atau sesi.
-            - 📸 **Reliable Instant Screen Capture & 1-Tap Injection**:
-              - Tombol `📸` di header menyembunyikan jendela sejenak (150ms), mengambil screenshot layar bersih via root ke `/sdcard/current_screen.png`, lalu menyisipkan `@current_screen.png` ke kolom ketik DSH secara otomatis.
+            ## 🚀 DSH Mobile Release v3.5.0 — Natural Full-Width DSH View Fix
+            - 🛠️ **Fixed Squeezed 40px Chat Column**:
+              - Mengatasi bug di mana kolom chat tertekan menjadi garis sempit 40px di sebelah kiri akibat injeksi CSS yang tidak tepat.
+              - Mengadopsi konfigurasi WebView mobile natural yang sama persis seperti layar utama (`MainActivity`), sehingga seluruh kotak chat, input text, model selector, dan tombol eksekusi tampil **100% penuh dan proporsional**.
+            - 📸 **Reliable Clean Screen Capture & 1-Tap Injection**:
+              - Menekan tombol `📸` di header menyembunyikan jendela asisten sejenak (150ms), mengambil screenshot layar bersih via root ke `/sdcard/current_screen.png`, lalu menyisipkan `@current_screen.png` ke dalam chat DSH secara instan.
             - ⚡ **Interactive Presets Dropdown [ON/OFF]** & **⏰ Cron Scheduler**.
             - 📦 **Dual Release Options**:
               - `dsh-mobile-pure.apk` (~110 MB) — Edisi Ringan (Pure DSH).
