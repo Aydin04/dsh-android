@@ -22,7 +22,7 @@ if (fs.existsSync(sessionPersistencePath)) {
 const fsLocalPath = `${dshRoot}/node_modules/@deepseek-ai/dsh-fs-local/lib/index.js`;
 if (fs.existsSync(fsLocalPath)) {
   let code = fs.readFileSync(fsLocalPath, 'utf8');
-  if (code.includes('await linkFile(tempPath, absolutePath);')) {
+  if (code.includes('try { await linkFile(tempPath, absolutePath); } catch (linkErr) { try { await rename(tempPath, absolutePath); } catch (e) { const { copyFile } = await import("node:fs/promises"); await copyFile(tempPath, absolutePath); } }')) {
     console.log('[PATCH] Patching dsh-fs-local atomic linkFile...');
     code = code.replace(
       'await linkFile(tempPath, absolutePath);',
