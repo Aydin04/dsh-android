@@ -243,7 +243,8 @@ public class LocalEngineService extends Service {
                             if (entry.isDirectory()) {
                                 if (!outputFile.exists()) outputFile.mkdirs();
                             } else {
-                                if (outputFile.exists() && entry.getSize() > 0 && outputFile.length() == entry.getSize()) {
+                                long entryModTime = entry.getLastModifiedDate() != null ? entry.getLastModifiedDate().getTime() : 0;
+                                if (outputFile.exists() && entry.getSize() > 0 && outputFile.length() == entry.getSize() && (entryModTime <= 0 || Math.abs(outputFile.lastModified() - entryModTime) < 3000)) {
                                     libCount++;
                                     continue;
                                 }
@@ -255,6 +256,9 @@ public class LocalEngineService extends Service {
                                     while ((len = tarIn.read(buf)) != -1) {
                                         out.write(buf, 0, len);
                                     }
+                                }
+                                if (entry.getLastModifiedDate() != null) {
+                                    outputFile.setLastModified(entry.getLastModifiedDate().getTime());
                                 }
                             }
                             libCount++;
@@ -299,7 +303,8 @@ public class LocalEngineService extends Service {
                             if (entry.isDirectory()) {
                                 if (!outputFile.exists()) outputFile.mkdirs();
                             } else {
-                                if (outputFile.exists() && entry.getSize() > 0 && outputFile.length() == entry.getSize()) {
+                                long entryModTime = entry.getLastModifiedDate() != null ? entry.getLastModifiedDate().getTime() : 0;
+                                if (outputFile.exists() && entry.getSize() > 0 && outputFile.length() == entry.getSize() && (entryModTime <= 0 || Math.abs(outputFile.lastModified() - entryModTime) < 3000)) {
                                     skipped++;
                                     continue;
                                 }
@@ -312,6 +317,9 @@ public class LocalEngineService extends Service {
                                     while ((len = tarIn.read(buf)) != -1) {
                                         out.write(buf, 0, len);
                                     }
+                                }
+                                if (entry.getLastModifiedDate() != null) {
+                                    outputFile.setLastModified(entry.getLastModifiedDate().getTime());
                                 }
                             }
                             count++;
@@ -385,7 +393,8 @@ public class LocalEngineService extends Service {
                                 if (entry.isDirectory()) {
                                     if (!outputFile.exists()) outputFile.mkdirs();
                                 } else {
-                                    if (outputFile.exists() && entry.getSize() > 0 && outputFile.length() == entry.getSize()) {
+                                    long entryModTime = entry.getLastModifiedDate() != null ? entry.getLastModifiedDate().getTime() : 0;
+                                if (outputFile.exists() && entry.getSize() > 0 && outputFile.length() == entry.getSize() && (entryModTime <= 0 || Math.abs(outputFile.lastModified() - entryModTime) < 3000)) {
                                         aSkipped++;
                                         continue;
                                     }
