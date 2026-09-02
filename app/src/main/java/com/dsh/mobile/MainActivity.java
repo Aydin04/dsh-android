@@ -1157,8 +1157,7 @@ public class MainActivity extends AppCompatActivity {
             StringBuilder sb = new StringBuilder();
             String line;
             while ((line = reader.readLine()) != null) {
-                sb.append(line).append("
-");
+                sb.append(line).append('\n');
             }
             view.evaluateJavascript(sb.toString(), null);
         } catch (Exception e) {
