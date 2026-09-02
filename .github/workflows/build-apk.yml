@@ -199,23 +199,21 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.4.1
-          name: "DSH Mobile v3.4.1 (Direct Image Attachments, Screenshot & Assistant)"
+          tag_name: v3.4.2
+          name: "DSH Mobile v3.4.2 (Clean Screen Context, AI Streaming & Modern Assistant)"
           body: |
-            ## 🚀 DSH Mobile Release v3.4.1 — Direct Image Attachments & Assistant
-            - 🖼️ **Direct Image Attachment from Gallery (Kirim Gambar Langsung)**:
-              - Menambahkan tombol langsung untuk memilih foto dari galeri HP (`🖼️ Pilih Gambar`) tanpa perlu repot mengetik simbol `@` atau path file manual.
-            - 📸 **1-Tap Screenshot Attachment**:
-              - Tombol `📸 Screenshot Layar` untuk langsung menangkap layar saat ini via root dan melampirkannya ke prompt AI dalam satu klik.
-            - 👁️ **Visual Preview Thumbnail Bar**:
-              - Menampilkan thumbnail gambar terlampir dengan tombol hapus/ganti sebelum dikirim.
-            - 🤖 **Native Android Digital Assistant (`AssistActivity`)**:
-              - Terdaftar sebagai asisten digital sistem Android (`android.intent.action.ASSIST`).
-              - Dapat dipanggil via tahan tombol Power, Home Gesture, atau Quick Settings Tile.
-            - ⚡ **Dual Mode Session (Temporary vs Persistent)**:
-              - Mode **⚡ Temp**: Sesi *in-memory* sekali pakai yang otomatis di-reset saat popup ditutup.
-              - Mode **📌 Main**: Menyambung langsung ke sesi aktif utama DSH.
-            - ⏰ **Assistant Scheduler & AlarmManager (`AssistantAlarmReceiver`)**.
+            ## 🚀 DSH Mobile Release v3.4.2 — Clean Screen Context & Modern Assistant
+            - 📸 **Clean Background Screen Capture**:
+              - Tangkapan layar diambil secara bersih di latar belakang **sebelum popup asisten muncul**, sehingga tampilan jendela asisten tidak akan ikut terfoto sama sekali.
+              - Dilengkapi tombol silang `✕` untuk menghapus lampiran screenshot jika ingin mengetik pesan biasa.
+            - ⚡ **Direct AI Gateway Connection & Live Streaming**:
+              - Menghubungkan popup asisten langsung ke endpoint `/v1/chat/completions` dengan dukungan *Server-Sent Events (SSE) Live Token Streaming* dan *Progress Indicator*.
+            - 🎨 **Modern DeepSeek Aesthetic**:
+              - Desain rounded bottom-sheet modern dengan tema Dark Slate (`#16161E`), input bar capsule dengan tombol `+` menu tambahan, voice mic, dan send glow effect.
+            - 🎛️ **Interactive Presets Dropdown [ON/OFF]**:
+              - Menu dropdown dengan status aktif/nonaktif real-time: `🟢 [ON] 🎮 Game Boost`, `🟢 [ON] 🔋 Battery Saver`, `🧹 Deep Clean RAM`, `✈️ Airplane Mode`.
+            - ⏰ **Interactive Cron & Scheduler Dropdown**:
+              - Menu dropdown untuk menjadwalkan tugas otomatis (Mode Pesawat 10m, Clean RAM tiap jam, dll).
             - 📦 **Dual Release Options**:
               - `dsh-mobile-pure.apk` (~110 MB) — Edisi Ringan (Pure DSH).
               - `dsh-mobile-full-atomicroute.apk` (~237 MB) — Edisi Lengkap (Dual-Engine DSH + AtomicRouter).

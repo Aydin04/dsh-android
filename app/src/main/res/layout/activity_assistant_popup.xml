@@ -11,21 +11,24 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
-        android:background="#1A1B26"
+        android:background="#16161E"
         android:orientation="vertical"
         android:paddingStart="16dp"
-        android:paddingTop="8dp"
+        android:paddingTop="10dp"
         android:paddingEnd="16dp"
-        android:paddingBottom="16dp">
+        android:paddingBottom="16dp"
+        android:visibility="invisible">
 
+        <!-- Top Drag Handle Pill -->
         <View
-            android:layout_width="36dp"
+            android:layout_width="40dp"
             android:layout_height="4dp"
             android:layout_gravity="center_horizontal"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="2dp"
             android:layout_marginBottom="12dp"
-            android:background="#414868" />
+            android:background="#3B4261" />
 
+        <!-- Header Bar -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -33,8 +36,8 @@
             android:orientation="horizontal">
 
             <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
+                android:layout_width="26dp"
+                android:layout_height="26dp"
                 android:src="@drawable/ic_deepseek"
                 android:contentDescription="Assistant Logo" />
 
@@ -44,176 +47,118 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
                 android:layout_weight="1"
-                android:text="🤖 DSH Assistant"
+                android:text="DSH Assistant"
                 android:textColor="#FFFFFF"
                 android:textSize="16sp"
                 android:textStyle="bold" />
 
+            <!-- Mode Selector (Temp vs Main) -->
             <Button
                 android:id="@+id/btnModeToggle"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="wrap_content"
-                android:layout_height="36dp"
+                android:layout_height="34dp"
                 android:layout_marginEnd="6dp"
-                android:paddingStart="10dp"
-                android:paddingEnd="10dp"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
                 android:text="⚡ Temp"
                 android:textColor="#F778BA"
-                android:textSize="12sp"
+                android:textSize="11sp"
                 app:strokeColor="#F778BA" />
 
+            <!-- Presets Menu Dropdown Button -->
+            <Button
+                android:id="@+id/btnPresetsDropdown"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="34dp"
+                android:layout_marginEnd="6dp"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:text="⚡ Presets"
+                android:textColor="#BB9AF7"
+                android:textSize="11sp"
+                app:strokeColor="#BB9AF7" />
+
+            <!-- Cron / Scheduler Dropdown Button -->
+            <Button
+                android:id="@+id/btnCronDropdown"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="34dp"
+                android:layout_marginEnd="6dp"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:text="⏰ Cron"
+                android:textColor="#7AA2F7"
+                android:textSize="11sp"
+                app:strokeColor="#7AA2F7" />
+
+            <!-- Expand Button -->
             <ImageButton
                 android:id="@+id/btnExpandFull"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@android:drawable/ic_menu_crop"
                 android:tint="#7AA2F7"
                 android:contentDescription="Buka Full DSH" />
 
+            <!-- Close Button -->
             <ImageButton
                 android:id="@+id/btnCloseAssistant"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@android:drawable/ic_menu_close_clear_cancel"
                 android:tint="#787C99"
                 android:contentDescription="Tutup" />
         </LinearLayout>
 
-        <HorizontalScrollView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="8dp"
-            android:scrollbars="none">
-
-            <LinearLayout
-                android:id="@+id/actionPillsLayout"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
-
-                <Button
-                    android:id="@+id/pillScreenshot"
-                    style="@style/Widget.MaterialComponents.Button.TextButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="32dp"
-                    android:layout_marginEnd="6dp"
-                    android:backgroundTint="#24283B"
-                    android:paddingStart="8dp"
-                    android:paddingEnd="8dp"
-                    android:text="📸 Screenshot Layar"
-                    android:textColor="#73DACA"
-                    android:textSize="11sp" />
-
-                <Button
-                    android:id="@+id/pillPickImage"
-                    style="@style/Widget.MaterialComponents.Button.TextButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="32dp"
-                    android:layout_marginEnd="6dp"
-                    android:backgroundTint="#24283B"
-                    android:paddingStart="8dp"
-                    android:paddingEnd="8dp"
-                    android:text="🖼️ Pilih Gambar"
-                    android:textColor="#7AA2F7"
-                    android:textSize="11sp" />
-
-                <Button
-                    android:id="@+id/pillPresetGame"
-                    style="@style/Widget.MaterialComponents.Button.TextButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="32dp"
-                    android:layout_marginEnd="6dp"
-                    android:backgroundTint="#24283B"
-                    android:paddingStart="8dp"
-                    android:paddingEnd="8dp"
-                    android:text="🎮 Game Boost"
-                    android:textColor="#BB9AF7"
-                    android:textSize="11sp" />
-
-                <Button
-                    android:id="@+id/pillSchedule"
-                    style="@style/Widget.MaterialComponents.Button.TextButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="32dp"
-                    android:layout_marginEnd="6dp"
-                    android:backgroundTint="#24283B"
-                    android:paddingStart="8dp"
-                    android:paddingEnd="8dp"
-                    android:text="⏰ Jadwal / Alarm"
-                    android:textColor="#E0AF68"
-                    android:textSize="11sp" />
-
-                <Button
-                    android:id="@+id/pillCleanRam"
-                    style="@style/Widget.MaterialComponents.Button.TextButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="32dp"
-                    android:layout_marginEnd="6dp"
-                    android:backgroundTint="#24283B"
-                    android:paddingStart="8dp"
-                    android:paddingEnd="8dp"
-                    android:text="🧹 Clean RAM"
-                    android:textColor="#9ECE6A"
-                    android:textSize="11sp" />
-
-                <Button
-                    android:id="@+id/pillToggleWifi"
-                    style="@style/Widget.MaterialComponents.Button.TextButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="32dp"
-                    android:layout_marginEnd="6dp"
-                    android:backgroundTint="#24283B"
-                    android:paddingStart="8dp"
-                    android:paddingEnd="8dp"
-                    android:text="📡 WiFi"
-                    android:textColor="#2AC3DE"
-                    android:textSize="11sp" />
-
-                <Button
-                    android:id="@+id/pillAirplane"
-                    style="@style/Widget.MaterialComponents.Button.TextButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="32dp"
-                    android:layout_marginEnd="6dp"
-                    android:backgroundTint="#24283B"
-                    android:paddingStart="8dp"
-                    android:paddingEnd="8dp"
-                    android:text="✈️ Airplane"
-                    android:textColor="#F778BA"
-                    android:textSize="11sp" />
-            </LinearLayout>
-        </HorizontalScrollView>
-
+        <!-- Response / Conversation Bubble Area -->
         <ScrollView
             android:id="@+id/responseScrollView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
             android:layout_marginBottom="10dp"
-            android:maxHeight="260dp"
+            android:maxHeight="240dp"
             android:scrollbars="vertical">
 
-            <TextView
-                android:id="@+id/tvAssistantResponse"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="#24283B"
-                android:lineSpacingExtra="3dp"
-                android:padding="12dp"
-                android:text="Halo! Saya asisten DSH Anda. Tanyakan apa saja, jalankan perintah sistem, atau kirim gambar langsung dari galeri / screenshot."
-                android:textColor="#C0CAF5"
-                android:textSize="14sp" />
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvAssistantResponse"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="#1F2335"
+                    android:lineSpacingExtra="3dp"
+                    android:padding="12dp"
+                    android:text="Tangkapan layar siap! Tanyakan apa saja tentang layar ini, salin teks, atau beri perintah sistem."
+                    android:textColor="#C0CAF5"
+                    android:textSize="14sp" />
+
+                <!-- Streaming / Typing Status Indicator -->
+                <ProgressBar
+                    android:id="@+id/pbGeneratingIndicator"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="3dp"
+                    android:indeterminate="true"
+                    android:visibility="gone" />
+            </LinearLayout>
         </ScrollView>
 
-        <!-- Image Attachment Preview Thumbnail Bar -->
+        <!-- Attachment Preview Bar (with Discard Button) -->
         <LinearLayout
             android:id="@+id/layoutAttachedImagePreview"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
-            android:background="#24283B"
+            android:background="#1F2335"
             android:gravity="center_vertical"
             android:orientation="horizontal"
             android:padding="6dp"
@@ -221,11 +166,11 @@
 
             <ImageView
                 android:id="@+id/ivAttachedThumbnail"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
                 android:scaleType="centerCrop"
                 android:src="@drawable/ic_deepseek"
-                android:contentDescription="Thumbnail Gambar" />
+                android:contentDescription="Thumbnail Lampiran" />
 
             <TextView
                 android:id="@+id/tvAttachedImageName"
@@ -235,35 +180,43 @@
                 android:layout_weight="1"
                 android:ellipsize="middle"
                 android:singleLine="true"
-                android:text="📸 screenshot.png terlampir"
+                android:text="📸 Tangkapan Layar Terlampir"
                 android:textColor="#73DACA"
-                android:textSize="13sp" />
+                android:textSize="12sp" />
 
             <ImageButton
                 android:id="@+id/btnRemoveAttachedImage"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@android:drawable/ic_menu_close_clear_cancel"
                 android:tint="#F778BA"
                 android:contentDescription="Hapus Lampiran" />
         </LinearLayout>
 
+        <!-- Modern Input Bar (Matching DeepSeek Official Theme) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:background="#1F2335"
             android:gravity="center_vertical"
-            android:orientation="horizontal">
+            android:orientation="horizontal"
+            android:paddingStart="6dp"
+            android:paddingTop="2dp"
+            android:paddingEnd="6dp"
+            android:paddingBottom="2dp">
 
+            <!-- Plus Menu Button (for Actions, Image, OCR, Presets) -->
             <ImageButton
-                android:id="@+id/btnAttachImage"
+                android:id="@+id/btnPlusMenu"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:src="@android:drawable/ic_menu_gallery"
+                android:src="@android:drawable/ic_input_add"
                 android:tint="#7AA2F7"
-                android:contentDescription="Lampirkan Gambar" />
+                android:contentDescription="Menu Tambahan" />
 
+            <!-- Voice Mic Button -->
             <ImageButton
                 android:id="@+id/btnVoiceInput"
                 android:layout_width="40dp"
@@ -273,6 +226,7 @@
                 android:tint="#BB9AF7"
                 android:contentDescription="Voice Input" />
 
+            <!-- Chat Text Input Field -->
             <EditText
                 android:id="@+id/etAssistantInput"
                 android:layout_width="0dp"
@@ -280,16 +234,17 @@
                 android:layout_marginStart="4dp"
                 android:layout_marginEnd="4dp"
                 android:layout_weight="1"
-                android:background="#24283B"
-                android:hint="Ketik pesan atau jelaskan gambar..."
+                android:background="@android:color/transparent"
+                android:hint="Tanya sesuatu atau perintah sistem..."
                 android:imeOptions="actionSend"
                 android:inputType="textCapSentences|textMultiLine"
                 android:maxLines="3"
-                android:padding="10dp"
+                android:padding="8dp"
                 android:textColor="#FFFFFF"
                 android:textColorHint="#565F89"
                 android:textSize="14sp" />
 
+            <!-- Send Action Button with Glow -->
             <ImageButton
                 android:id="@+id/btnAssistantSend"
                 android:layout_width="40dp"
