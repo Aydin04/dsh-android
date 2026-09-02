@@ -1152,8 +1152,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void injectChatEnterKeyHandler(WebView view) {
-        try (InputStream in = getAssets().open("assistant_notifier.js");
-             BufferedReader reader = new BufferedReader(new InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8))) {
+        try (java.io.InputStream in = getAssets().open("assistant_notifier.js");
+             java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8))) {
             StringBuilder sb = new StringBuilder();
             String line;
             while ((line = reader.readLine()) != null) {
@@ -1161,7 +1161,7 @@ public class MainActivity extends AppCompatActivity {
             }
             view.evaluateJavascript(sb.toString(), null);
         } catch (Exception e) {
-            Log.e(TAG, "Failed to inject assistant notifier asset: " + e.getMessage());
+            android.util.Log.e("DSH_MAIN", "Failed to inject assistant notifier asset: " + e.getMessage());
         }
     }
 
