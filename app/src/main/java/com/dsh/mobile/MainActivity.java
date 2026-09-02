@@ -1181,18 +1181,25 @@ public class MainActivity extends AppCompatActivity {
                 "    return (stopBtn !== null || spinners.length > 0);" +
                 "  }" +
                 "  function getCleanAssistantAnswer() {" +
-                "    var containers = document.querySelectorAll('article, [data-role=\"assistant\"], [class*=\"assistant\" i]');" +
-                "    if (!containers || containers.length === 0) {" +
-                "      containers = document.querySelectorAll('[class*=\"message\" i], [class*=\"bubble\" i]');" +
+                "    var allElements = document.querySelectorAll('article, [data-role=\"assistant\"], [class*=\"assistant\" i], [class*=\"message\" i], [class*=\"bubble\" i], [class*=\"turn\" i], [class*=\"prose\" i]');" +
+                "    var validMessages = [];" +
+                "    for (var i = 0; i < allElements.length; i++) {" +
+                "      var el = allElements[i];" +
+                "      if (el.closest('[class*=\"composer\" i]') || el.querySelector('textarea, input, [role=\"textbox\"]')) continue;" +
+                "      if (el.classList.contains('composer') || (el.className && typeof el.className === 'string' && el.className.toLowerCase().includes('composer'))) continue;" +
+                "      var raw = (el.innerText || el.textContent || '').trim().toLowerCase();" +
+                "      if (raw === 'send message' || raw === 'send' || raw === 'kirim' || raw === 'assistant' || raw === 'deep diving...' || raw === 'thinking...') continue;" +
+                "      validMessages.push(el);" +
                 "    }" +
-                "    if (!containers || containers.length === 0) return '';" +
-                "    var lastMsg = containers[containers.length - 1];" +
+                "    if (validMessages.length === 0) return '';" +
+                "    var lastMsg = validMessages[validMessages.length - 1];" +
                 "    var contentNode = lastMsg.querySelector('[class*=\"markdown\" i], [class*=\"prose\" i], [class*=\"content\" i], [class*=\"body\" i]') || lastMsg;" +
                 "    var clone = contentNode.cloneNode(true);" +
-                "    var unwanted = clone.querySelectorAll('[class*=\"role\" i], [class*=\"badge\" i], [class*=\"header\" i], [class*=\"thought\" i], [class*=\"thinking\" i], [class*=\"status\" i], [class*=\"step\" i], [class*=\"trajectory\" i], [class*=\"deep\" i], [class*=\"avatar\" i], [class*=\"icon\" i], [class*=\"tools\" i]');" +
-                "    unwanted.forEach(function(n) { n.remove(); });" +
+                "    var unwanted = clone.querySelectorAll('[class*=\"role\" i], [class*=\"badge\" i], [class*=\"header\" i], [class*=\"thought\" i], [class*=\"thinking\" i], [class*=\"status\" i], [class*=\"step\" i], [class*=\"trajectory\" i], [class*=\"deep\" i], [class*=\"avatar\" i], [class*=\"icon\" i], [class*=\"tools\" i], button, svg, [class*=\"composer\" i]');" +
+                "    for (var j = 0; j < unwanted.length; j++) { unwanted[j].remove(); }" +
                 "    var text = (clone.innerText || clone.textContent || '').trim();" +
                 "    text = text.replace(/^(ASSISTANT|USER|AGENT|DEEPSEEK)\\s*[:\\n]*/i, '').trim();" +
+                "    if (text.toLowerCase() === 'send message' || text.toLowerCase() === 'send' || text.toLowerCase() === 'kirim') return '';" +
                 "    return text;" +
                 "  }" +
                 "  function checkTurnCompletion() {" +
@@ -1203,7 +1210,7 @@ public class MainActivity extends AppCompatActivity {
                 "      }" +
                 "      if (isWaitingForAgent) {" +
                 "        var answer = getCleanAssistantAnswer();" +
-                "        if (answer.length > 4 && !answer.toLowerCase().startsWith('deep diving') && !answer.toLowerCase().startsWith('thinking')) {" +
+                "        if (answer.length > 5 && !answer.toLowerCase().startsWith('deep diving') && !answer.toLowerCase().startsWith('thinking')) {" +
                 "          if (answer !== lastNotifiedText && answer.toUpperCase() !== 'ASSISTANT') {" +
                 "            lastNotifiedText = answer;" +
                 "            isWaitingForAgent = false;" +
@@ -1345,7 +1352,7 @@ public class MainActivity extends AppCompatActivity {
     public void showAgentReplyNotification(String replyText) {
         if (replyText == null) return;
         replyText = replyText.replaceFirst("(?i)^(ASSISTANT|USER|AGENT|DEEPSEEK)\\s*[:\\n]*", "").trim();
-        if (replyText.isEmpty()) return;
+        if (replyText.isEmpty() || replyText.equalsIgnoreCase("send message") || replyText.equalsIgnoreCase("send") || replyText.equalsIgnoreCase("kirim") || replyText.equalsIgnoreCase("assistant")) return;
 
         // Clean markdown tags for clear notification preview
         String preview = replyText.replaceAll("[#*`_>~]", "").replaceAll("\\s+", " ").trim();

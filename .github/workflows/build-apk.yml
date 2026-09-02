@@ -199,19 +199,17 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.5.7
-          name: "DSH Mobile v3.5.7 (Clean Real Message Text, Zero Delay & Stock Power Gestures)"
+          tag_name: v3.5.8
+          name: "DSH Mobile v3.5.8 (Composer Excluded — Genuine AI Message Preview in Bubbles)"
           body: |
-            ## 🚀 DSH Mobile Release v3.5.7 — Pure AI Answer & Clean System Integration
-            - 🎯 **Fixed "ASSISTANT" Label Bug & Extracted Real AI Message**:
-              - Mengatasi bug di mana teks notifikasi hanya memuat label header `"ASSISTANT"`.
-              - Skrip ekstraksi kini langsung mengambil paragraf dan teks isi balasan AI sebenarnya (*actual response body*), membersihkan badge role, serta memformat teks preview menjadi sangat jelas dan rapi.
-            - ⚡ **Ultra-Fast & Realtime Turn Completion (Zero Delay)**:
-              - Interval pemantau respons dipercepat menjadi 400ms sehingga begitu AI selesai menulis balasan, notifikasi langsung terkirim seketika tanpa delay.
-            - 🛡️ **Stock Google Assistant Gestures Restored**:
-              - Menghapus pembajakan tombol power (tahan tombol daya), pill gesture, dan quick settings tile agar kembali 100% normal ke fungsi bawaan HP Anda.
+            ## 🚀 DSH Mobile Release v3.5.8 — Genuine AI Message Preview
+            - 🎯 **Fixed "Send message" False Preview Bug**:
+              - Mengatasi bug di mana teks tombol input/composer (*"Send message"*) terbaca sebagai balasan AI.
+              - Area form composer dan input kini dikecualikan secara ketat sehingga yang diekstrak dan dikirimkan ke **MIUI Conversation Bubble** serta notifikasi status bar adalah **100% teks isi balasan asli AI**.
             - 🫧 **Native Android/MIUI Conversation Bubbles Integration**:
-              - Notifikasi resmi `MessagingStyle` dengan `Person: DeepSeek Agent` dan `setAllowBubbles(true)`.
+              - Menampilkan gelembung percakapan mengambang MIUI dengan preview 1-2 baris jawaban asli agent.
+            - ⚡ **Ultra-Fast Turn Completion (400ms Polling)**.
+            - 🛡️ **Stock Google Assistant Gestures Restored**.
             - 📸 **On-Demand Screenshot with Disappearing Animation & Auto `@screenshot_*.png` Injection**.
             - 📦 **Dual Release Options**:
               - `dsh-mobile-pure.apk` (~110 MB) — Edisi Ringan (Pure DSH).
