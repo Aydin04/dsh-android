@@ -199,20 +199,20 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.4.6
-          name: "DSH Mobile v3.4.6 (Multi-turn Chat, Direct Root Execution & Instant Screenshot)"
+          tag_name: v3.4.7
+          name: "DSH Mobile v3.4.7 (Official DSH Chat Box, Token Counter & Clean Theme)"
           body: |
-            ## 🚀 DSH Mobile Release v3.4.6 — Multi-turn Chat & Direct Root Execution
-            - 💬 **Full Multi-turn Conversation & History**:
-              - Mendukung percakapan tanya-jawab berlanjut tanpa batas (tidak lagi terhenti pada 1 kali tanya).
-              - Tampilan chat bubble modern (User Bubble kanan, Agent Bubble kiri lengkap dengan avatar DeepSeek, model tag `🤖`, dan tombol salin 📋).
+            ## 🚀 DSH Mobile Release v3.4.7 — Official DSH Chat Box & Token Counter
+            - 🎨 **Official DSH Chat Box Architecture**:
+              - Kotak input kini 100% mengadopsi struktur resmi dashboard DeepSeek: input text area di bagian atas, dan sub-toolbar di bagian dalam bawah (`🤖 Model Selector Pill`, `Tokens: 0 Badge`, `➕ Action Button`, `🎤 Voice Mic`, dan `➤ Submit Button`).
+            - 📊 **Real-Time Token Usage Counter (`Tokens: 142`)**:
+              - Menampilkan akumulasi penggunaan token secara live saat model AI melakukan streaming jawaban.
+            - 💬 **Clean DSH Dark Theme Multi-turn Conversation**:
+              - Menggunakan palet resmi GitHub/DeepSeek Dark (`#0D1117`, `#161B22`, `#21262D`, `#30363D`).
+              - Tanpa sidebar atau elemen navigasi yang mengganggu — murni tampilan chat terfokus.
             - ⚡ **Direct Autonomous Root Execution**:
-              - Saat Anda meminta perintah sistem (misal: *"aktifkan mode pesawat"*, *"matikan wifi"*, *"clean ram"*), agent tidak lagi memberikan tutorial teks, melainkan **langsung mengeksekusi perintah root tersebut di Android secara otomatis**!
-            - 📸 **Instant Zero-Lag Screen Capture**:
-              - Pengambilan tangkapan layar langsung diproses pada milidetik pertama saat tombol asisten ditekan tanpa buffer lag, dan file lama otomatis dibersihkan.
-            - 💾 **1-Tap Save Temporary Session (`💾`)**:
-              - Mode Temporary tetap bisa digunakan untuk chat multi-turn santai. Jika ada percakapan penting yang ingin disimpan, tekan tombol `💾` di header untuk menyimpan transkrip ke `/sdcard/DSH_Sessions/`.
-            - 🤖 **Dynamic Model Selector (`🤖 default ▼`)** & **⚡ Presets Dropdown [ON/OFF]**.
+              - Mode pesawat, wifi, dan clean RAM dieksekusi seketika via root.
+            - 📸 **Instant Zero-Lag Screen Capture & 💾 Session Saver**.
             - 📦 **Dual Release Options**:
               - `dsh-mobile-pure.apk` (~110 MB) — Edisi Ringan (Pure DSH).
               - `dsh-mobile-full-atomicroute.apk` (~237 MB) — Edisi Lengkap (Dual-Engine DSH + AtomicRouter).

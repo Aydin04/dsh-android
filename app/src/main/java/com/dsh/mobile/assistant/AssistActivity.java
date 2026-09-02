@@ -87,11 +87,12 @@ public class AssistActivity extends Activity {
     private ImageView ivAttachedThumbnail;
     private TextView tvAttachedImageName;
     private ImageButton btnRemoveAttachedImage;
-
     private ImageButton btnPlusMenu;
     private ImageButton btnVoiceInput;
     private EditText etAssistantInput;
     private ImageButton btnAssistantSend;
+    private TextView tvTokenBadge;
+    private int cumulativeTokens = 0;
 
     private boolean isTemporaryMode = true;
     private String selectedModel = "default";
@@ -174,6 +175,7 @@ public class AssistActivity extends Activity {
         btnVoiceInput = findViewById(R.id.btnVoiceInput);
         etAssistantInput = findViewById(R.id.etAssistantInput);
         btnAssistantSend = findViewById(R.id.btnAssistantSend);
+        tvTokenBadge = findViewById(R.id.tvTokenBadge);
     }
 
     private void loadSettings() {
@@ -789,6 +791,9 @@ public class AssistActivity extends Activity {
                                             handler.post(() -> {
                                                 layoutThinkingStatus.setVisibility(View.GONE);
                                                 assistantTv.setText(fullRes.toString());
+                                                if (tvTokenBadge != null) {
+                                                    tvTokenBadge.setText("Tokens: " + (cumulativeTokens + currentTokens));
+                                                }
                                                 scrollToBottom();
                                             });
                                         }
