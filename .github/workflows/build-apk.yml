@@ -199,21 +199,18 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.4.8
-          name: "DSH Mobile v3.4.8 (Official DSH Dashboard in Floating, Sidebar Toggle & Presets)"
+          tag_name: v3.4.9
+          name: "DSH Mobile v3.4.9 (Full-Width Chat View Fix, Detail Panel Collapse & Screenshot)"
           body: |
-            ## 🚀 DSH Mobile Release v3.4.8 — Official DSH Dashboard in Floating
-            - 🌐 **Direct Authentic DSH Web Dashboard Integration**:
-              - Floating Assistant kini langsung menampilkan antarmuka web resmi DeepSeek Harness (DSH).
-              - 100% otentik: seluruh tool call execution, rendering Markdown kaya, live streaming, dan plugins bawaan DSH berjalan sempurna.
-            - ☰ **Collapsible Sidebar (Tombol Hamburger)**:
-              - Sidebar navigasi kiri disembunyikan secara default agar layar floating lega dan fokus ke chat.
-              - Tombol hamburger `☰` di header atas dapat ditekan kapan saja untuk memunculkan atau menyembunyikan sidebar sesi DSH.
-            - ⚡ **Interactive Presets Dropdown [ON/OFF]**:
-              - Tombol `⚡ Presets` di header untuk kontrol root instan (`🎮 Game Boost`, `🔋 Battery Saver`, `🧹 Clean RAM`, `✈️ Airplane Mode`, `📡 WiFi Radio`).
-            - ⏰ **Interactive Cron & Scheduler Dropdown**.
-            - 📸 **Instant Zero-Lag Screen Capture & 1-Tap Injection**:
-              - Tombol `📸` langsung menyisipkan tangkapan layar terkini ke kolom chat DSH.
+            ## 🚀 DSH Mobile Release v3.4.9 — Full-Width Chat View & Screenshot Fix
+            - 🛠️ **Fixed Squeezed Chat Column (Halaman Detail Tertutup Otomatis)**:
+              - Mengatasi masalah kolom chat yang mengecil karena terbelah dengan panel inspektur/detail trajectory bawaan web.
+              - Panel detail dan sidebar otomatis disembunyikan sehingga kolom chat DSH kini tampil **penuh 100% lebar layar**, luas, dan nyaman digunakan.
+            - ☰ **Toggle Panel & Sidebar Kapan Saja**:
+              - Tombol `☰` di header atas berfungsi untuk menampilkan/menyembunyikan panel jika ingin melihat rincian tool call atau sesi.
+            - 📸 **Reliable Instant Screen Capture & 1-Tap Injection**:
+              - Tombol `📸` di header menyembunyikan jendela sejenak (150ms), mengambil screenshot layar bersih via root ke `/sdcard/current_screen.png`, lalu menyisipkan `@current_screen.png` ke kolom ketik DSH secara otomatis.
+            - ⚡ **Interactive Presets Dropdown [ON/OFF]** & **⏰ Cron Scheduler**.
             - 📦 **Dual Release Options**:
               - `dsh-mobile-pure.apk` (~110 MB) — Edisi Ringan (Pure DSH).
               - `dsh-mobile-full-atomicroute.apk` (~237 MB) — Edisi Lengkap (Dual-Engine DSH + AtomicRouter).

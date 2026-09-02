@@ -8,8 +8,6 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -81,8 +79,8 @@ public class AssistActivity extends Activity {
         setupWebView();
         loadPresetStates();
 
-        // 1. Take fresh instant screenshot before showing popup
-        takeFreshScreenshotAndShowUI();
+        // 1. Initial screen capture on assistant launch
+        takeFreshScreenshotAndShowUI(false);
     }
 
     private void initViews() {
@@ -111,7 +109,11 @@ public class AssistActivity extends Activity {
 
         btnCronDropdown.setOnClickListener(v -> showCronDropdownDialog());
 
-        btnAttachScreenshot.setOnClickListener(v -> injectScreenshotIntoDshChat());
+        btnAttachScreenshot.setOnClickListener(v -> {
+            Toast.makeText(this, "📸 Mengambil tangkapan layar bersih...", Toast.LENGTH_SHORT).show();
+            // Hide window, capture screenshot, re-show and inject to DSH
+            takeFreshScreenshotAndShowUI(true);
+        });
 
         btnExpandFull.setOnClickListener(v -> {
             Intent mainIntent = new Intent(this, MainActivity.class);
@@ -141,7 +143,7 @@ public class AssistActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
                 assistantWebLoading.setVisibility(View.GONE);
-                injectSidebarToggleScript(view);
+                injectResponsiveCssAndScripts(view);
             }
 
             @Override
@@ -157,20 +159,37 @@ public class AssistActivity extends Activity {
         assistantWebView.loadUrl(DSH_URL);
     }
 
-    private void injectSidebarToggleScript(WebView view) {
+    private void injectResponsiveCssAndScripts(WebView view) {
         String js = "javascript:(function() {" +
                 "  try {" +
-                "    var style = document.getElementById('dsh-floating-assistant-style');" +
+                "    var style = document.getElementById('dsh-floating-assistant-responsive');" +
                 "    if (!style) {" +
                 "      style = document.createElement('style');" +
-                "      style.id = 'dsh-floating-assistant-style';" +
-                "      style.innerHTML = '.sidebar, [class*=\"sidebar\"], [class*=\"nav-tree\"], aside { display: none !important; }';" +
+                "      style.id = 'dsh-floating-assistant-responsive';" +
+                "      style.innerHTML = '" +
+                "        .sidebar, [class*=\"sidebar\"], [class*=\"nav-tree\"], aside { display: none !important; } " +
+                "        [class*=\"details\"], [class*=\"trajectory\"], [class*=\"inspector\"], [class*=\"deliverables\"] { display: none !important; } " +
+                "        [class*=\"conversation\"], [class*=\"composer\"], [class*=\"chat\"], [class*=\"body\"], main, #root { width: 100% !important; max-width: 100% !important; min-width: 100% !important; flex: 1 1 100% !important; } " +
+                "        textarea, [contenteditable=\"true\"] { width: 100% !important; font-size: 14px !important; } " +
+                "      ';" +
                 "      document.head.appendChild(style);" +
                 "    }" +
                 "    window.toggleDshSidebar = function() {" +
-                "      var s = document.getElementById('dsh-floating-assistant-style');" +
-                "      if (s) {" +
-                "        s.disabled = !s.disabled;" +
+                "      var s = document.getElementById('dsh-floating-assistant-responsive');" +
+                "      if (s) { s.disabled = !s.disabled; }" +
+                "    };" +
+                "    window.injectDshAttachment = function(filename) {" +
+                "      var textarea = document.querySelector('textarea') || document.querySelector('[contenteditable=\"true\"]');" +
+                "      if (textarea) {" +
+                "        var textToInsert = '@' + filename + ' Jelaskan dan analisis isi layar ini: ';" +
+                "        if (textarea.tagName === 'TEXTAREA') {" +
+                "          textarea.value = textToInsert + (textarea.value || '');" +
+                "          textarea.dispatchEvent(new Event('input', { bubbles: true }));" +
+                "        } else {" +
+                "          textarea.innerText = textToInsert + (textarea.innerText || '');" +
+                "          textarea.dispatchEvent(new Event('input', { bubbles: true }));" +
+                "        }" +
+                "        textarea.focus();" +
                 "      }" +
                 "    };" +
                 "  } catch(e) {}" +
@@ -181,11 +200,15 @@ public class AssistActivity extends Activity {
     private void toggleDshSidebar() {
         isSidebarVisible = !isSidebarVisible;
         assistantWebView.evaluateJavascript("javascript:if(window.toggleDshSidebar) { window.toggleDshSidebar(); }", null);
-        Toast.makeText(this, isSidebarVisible ? "📂 Menampilkan Sidebar DSH" : "💬 Menyembunyikan Sidebar DSH", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, isSidebarVisible ? "📂 Menampilkan Panel/Sidebar DSH" : "💬 Mode Chat Bersih Penuh (100% Lebar)", Toast.LENGTH_SHORT).show();
     }
 
-    private void takeFreshScreenshotAndShowUI() {
-        new Thread(() -> {
+    private void takeFreshScreenshotAndShowUI(boolean autoInjectAfterCapture) {
+        if (autoInjectAfterCapture) {
+            assistantBottomSheet.setVisibility(View.INVISIBLE);
+        }
+
+        handler.postDelayed(() -> new Thread(() -> {
             try {
                 File targetDir = new File(getExternalFilesDir(null) != null ? getExternalFilesDir(null) : getFilesDir(), "dsh_screenshots");
                 if (!targetDir.exists()) targetDir.mkdirs();
@@ -197,35 +220,20 @@ public class AssistActivity extends Activity {
 
                 lastScreenshotFile = new File(targetDir, "current_screen.png");
 
-                // Execute screencap instantly
-                runRootCommand("screencap -p " + lastScreenshotFile.getAbsolutePath());
+                // Execute screencap via root
+                runRootCommand("screencap -p " + lastScreenshotFile.getAbsolutePath() + " && cp " + lastScreenshotFile.getAbsolutePath() + " /sdcard/current_screen.png 2>/dev/null || true");
 
-                handler.post(() -> assistantBottomSheet.setVisibility(View.VISIBLE));
+                handler.post(() -> {
+                    assistantBottomSheet.setVisibility(View.VISIBLE);
+                    if (autoInjectAfterCapture && lastScreenshotFile != null && lastScreenshotFile.exists()) {
+                        assistantWebView.evaluateJavascript("javascript:if(window.injectDshAttachment) { window.injectDshAttachment('" + lastScreenshotFile.getName() + "'); }", null);
+                        Toast.makeText(this, "📸 Tangkapan layar siap diinput chat!", Toast.LENGTH_SHORT).show();
+                    }
+                });
             } catch (Exception e) {
                 handler.post(() -> assistantBottomSheet.setVisibility(View.VISIBLE));
             }
-        }).start();
-    }
-
-    private void injectScreenshotIntoDshChat() {
-        if (lastScreenshotFile != null && lastScreenshotFile.exists()) {
-            String js = "javascript:(function() {" +
-                    "  try {" +
-                    "    var textarea = document.querySelector('textarea') || document.querySelector('[contenteditable=\"true\"]');" +
-                    "    if (textarea) {" +
-                    "      var text = '@" + lastScreenshotFile.getName() + " Jelaskan isi layar ini dan jalankan instruksi/salin teks yang diminta. ';" +
-                    "      textarea.value = text;" +
-                    "      textarea.dispatchEvent(new Event('input', { bubbles: true }));" +
-                    "      textarea.focus();" +
-                    "    }" +
-                    "  } catch(e) {}" +
-                    "})()";
-            assistantWebView.evaluateJavascript(js, null);
-            Toast.makeText(this, "📸 Tangkapan layar disisipkan ke chat DSH!", Toast.LENGTH_SHORT).show();
-        } else {
-            Toast.makeText(this, "Mengambil tangkapan layar baru...", Toast.LENGTH_SHORT).show();
-            takeFreshScreenshotAndShowUI();
-        }
+        }).start(), autoInjectAfterCapture ? 150 : 0);
     }
 
     private void showPresetsDropdownDialog() {
