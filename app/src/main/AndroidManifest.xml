@@ -116,6 +116,16 @@
                 android:value="Local Node.js execution engine for DeepSeek Harness AI Agent." />
         </service>
 
+        <!-- Floating DeepSeek Assistant Bubble Service -->
+        <service
+            android:name=".assistant.FloatingBubbleService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Floating ChatHead Assistant for DeepSeek Harness." />
+        </service>
     </application>
 
 </manifest>

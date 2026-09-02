@@ -38,6 +38,10 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
+
+import com.dsh.mobile.assistant.FloatingBubbleService;
+
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.File;
@@ -91,6 +95,7 @@ public class MainActivity extends AppCompatActivity {
     private Button btnShowAllLogs;
     private LinearLayout logActionsLayout;
     private Button btnNode;
+    private Button btnBubbleToggle;
 
     private static final int PERMISSION_REQ_CODE = 101;
     private static final int MANAGE_STORAGE_REQ_CODE = 102;
@@ -170,6 +175,7 @@ public class MainActivity extends AppCompatActivity {
         btnLogs = findViewById(R.id.btnLogs);
         btnConfigDoc = findViewById(R.id.btnConfigDoc);
         btnNode = findViewById(R.id.btnNode);
+        btnBubbleToggle = findViewById(R.id.btnBubbleToggle);
 
         progressBarPercent = findViewById(R.id.progressBarPercent);
         tvProgressPercent = findViewById(R.id.tvProgressPercent);
@@ -319,6 +325,10 @@ public class MainActivity extends AppCompatActivity {
         btnRootToggle.setOnClickListener(v -> requestRootSuperuserAccess());
 
         btnDesktopMode.setOnClickListener(v -> toggleDesktopMode());
+
+        if (btnBubbleToggle != null) {
+            btnBubbleToggle.setOnClickListener(v -> toggleFloatingBubble());
+        }
 
         boolean hasAtomicRouter = false;
         try {
@@ -473,6 +483,30 @@ public class MainActivity extends AppCompatActivity {
         getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .edit().putBoolean(KEY_DESKTOP_MODE, isDesktopMode).apply();
         webView.reload();
+    }
+
+    private void toggleFloatingBubble() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
+            new AlertDialog.Builder(this)
+                    .setTitle("🫧 Izin Floating Bubble")
+                    .setMessage("Untuk menampilkan gelembung DeepSeek mengambang di atas aplikasi lain, silakan aktifkan izin 'Tampilkan di atas aplikasi lain'.")
+                    .setPositiveButton("Beri Izin", (d, w) -> {
+                        Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName()));
+                        startActivity(intent);
+                    })
+                    .setNegativeButton("Batal", null)
+                    .show();
+            return;
+        }
+
+        Intent bubbleIntent = new Intent(this, FloatingBubbleService.class);
+        bubbleIntent.setAction(FloatingBubbleService.ACTION_TOGGLE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(bubbleIntent);
+        } else {
+            startService(bubbleIntent);
+        }
+        Toast.makeText(this, "🫧 Floating Bubble DeepSeek Diaktifkan!", Toast.LENGTH_SHORT).show();
     }
 
     private void applyModeSettings() {

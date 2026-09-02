@@ -199,16 +199,19 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.5.0
-          name: "DSH Mobile v3.5.0 (Natural Full-Width DSH View & Reliable Screen Capture)"
+          tag_name: v3.5.1
+          name: "DSH Mobile v3.5.1 (Movable Floating DeepSeek Bubble & Compact UI Scale)"
           body: |
-            ## 🚀 DSH Mobile Release v3.5.0 — Natural Full-Width DSH View Fix
-            - 🛠️ **Fixed Squeezed 40px Chat Column**:
-              - Mengatasi bug di mana kolom chat tertekan menjadi garis sempit 40px di sebelah kiri akibat injeksi CSS yang tidak tepat.
-              - Mengadopsi konfigurasi WebView mobile natural yang sama persis seperti layar utama (`MainActivity`), sehingga seluruh kotak chat, input text, model selector, dan tombol eksekusi tampil **100% penuh dan proporsional**.
-            - 📸 **Reliable Clean Screen Capture & 1-Tap Injection**:
-              - Menekan tombol `📸` di header menyembunyikan jendela asisten sejenak (150ms), mengambil screenshot layar bersih via root ke `/sdcard/current_screen.png`, lalu menyisipkan `@current_screen.png` ke dalam chat DSH secara instan.
-            - ⚡ **Interactive Presets Dropdown [ON/OFF]** & **⏰ Cron Scheduler**.
+            ## 🚀 DSH Mobile Release v3.5.1 — Movable Floating Bubble (ChatHead)
+            - 🫧 **Movable Floating DeepSeek Bubble (ChatHead)**:
+              - Gelembung logo DeepSeek mengambang yang elegan dan transparan di atas semua aplikasi.
+              - **Bebas Digeser (Draggable)**: Dapat dipindahkan ke mana saja di tepi layar tanpa mengganggu aktivitas lain (nonton YouTube, game, browsing).
+              - **1-Tap Expand & Minimize**: Ketuk gelembung untuk membuka jendela DSH mini, dan ketuk tombol minimize `✕` untuk kembali menjadi gelembung kecil.
+            - 🔍 **Compact 80% UI Scale (Dropdown Model Jelas & Tidak Terpotong)**:
+              - Menyetel skala rendering menjadi 80% kompak sehingga seluruh teks chat, tombol, dan **menu dropdown pemilihan model** (`Gemini 3.7 Flash`, dll.) tampil utuh, jelas, dan proporsional tanpa terpotong!
+            - 🗖 **Resizable Window**: Tombol `🗖` di header untuk memperbesar/memperkecil ukuran jendela floating sesuai kebutuhan.
+            - 📸 **Clean Screen Capture & Auto-Inject `@current_screen.png`**.
+            - ⚡ **Interactive Root Presets Dropdown [ON/OFF]** (`🎮 Game Boost`, `🔋 Battery Saver`, `🧹 Clean RAM`, `✈️ Airplane Mode`, `📡 WiFi Radio`).
             - 📦 **Dual Release Options**:
               - `dsh-mobile-pure.apk` (~110 MB) — Edisi Ringan (Pure DSH).
               - `dsh-mobile-full-atomicroute.apk` (~237 MB) — Edisi Lengkap (Dual-Engine DSH + AtomicRouter).

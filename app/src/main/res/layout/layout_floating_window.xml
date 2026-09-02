@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/windowRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_floating_card"
+    android:elevation="12dp"
+    android:orientation="vertical"
+    android:padding="6dp">
+
+    <!-- Header Drag & Controls Bar -->
+    <LinearLayout
+        android:id="@+id/windowHeaderBar"
+        android:layout_width="match_parent"
+        android:layout_height="36dp"
+        android:background="#161B22"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="8dp"
+        android:paddingEnd="6dp">
+
+        <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:src="@drawable/ic_deepseek"
+            android:contentDescription="DSH Logo" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:text="DSH Floating"
+            android:textColor="#E6EDF3"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <!-- Presets Menu Dropdown -->
+        <Button
+            android:id="@+id/btnBubblePresets"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="26dp"
+            android:layout_marginEnd="4dp"
+            android:paddingStart="5dp"
+            android:paddingEnd="5dp"
+            android:text="⚡ Presets"
+            android:textColor="#D2A8FF"
+            android:textSize="9sp"
+            app:strokeColor="#30363D" />
+
+        <!-- Screenshot Button -->
+        <ImageButton
+            android:id="@+id/btnBubbleScreenshot"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:layout_marginEnd="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_camera"
+            android:tint="#7EE787"
+            android:contentDescription="Tangkapan Layar" />
+
+        <!-- Zoom / Size Toggle Button -->
+        <ImageButton
+            android:id="@+id/btnBubbleResize"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:layout_marginEnd="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_crop"
+            android:tint="#79C0FF"
+            android:contentDescription="Ubah Ukuran" />
+
+        <!-- Minimize Button (Back to Bubble) -->
+        <ImageButton
+            android:id="@+id/btnBubbleMinimize"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_close_clear_cancel"
+            android:tint="#8B949E"
+            android:contentDescription="Minimize ke Bubble" />
+    </LinearLayout>
+
+    <!-- Web Content Frame -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="#0D1117">
+
+        <WebView
+            android:id="@+id/bubbleWebView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#0D1117" />
+
+        <ProgressBar
+            android:id="@+id/bubbleWebLoading"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_gravity="center"
+            android:indeterminateTint="#58A6FF" />
+    </FrameLayout>
+</LinearLayout>

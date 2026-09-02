@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/bubbleRoot"
+    android:layout_width="54dp"
+    android:layout_height="54dp"
+    android:background="@drawable/bg_floating_bubble">
+
+    <ImageView
+        android:id="@+id/ivBubbleIcon"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_gravity="center"
+        android:src="@drawable/ic_deepseek"
+        android:contentDescription="DSH Bubble" />
+
+</FrameLayout>
