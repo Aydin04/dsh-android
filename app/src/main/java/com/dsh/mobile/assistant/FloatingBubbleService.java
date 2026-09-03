@@ -182,6 +182,14 @@ public class FloatingBubbleService extends Service {
         });
 
         windowManager.addView(bubbleView, bubbleParams);
+        // Keep windowView attached with 1x1 offscreen layout so WebView JS never freezes in background
+        windowParams.width = 1;
+        windowParams.height = 1;
+        windowParams.flags |= WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
+        windowView.setVisibility(View.INVISIBLE);
+        try {
+            windowManager.addView(windowView, windowParams);
+        } catch (Exception ignored) {}
     }
 
     @SuppressLint({"ClickableViewAccessibility", "SetJavaScriptEnabled"})
@@ -344,8 +352,16 @@ public class FloatingBubbleService extends Service {
         if (!isWindowExpanded) {
             isWindowExpanded = true;
             bubbleView.setVisibility(View.GONE);
+            
+            DisplayMetrics dm = getResources().getDisplayMetrics();
+            int expandedWidth = Math.min(dm.widthPixels - dpToPx(24), dpToPx(380));
+            int expandedHeight = dpToPx(480);
+            
+            windowParams.width = expandedWidth;
+            windowParams.height = expandedHeight;
+            windowParams.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL | WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH;
             try {
-                windowManager.addView(windowView, windowParams);
+                windowManager.updateViewLayout(windowView, windowParams);
             } catch (Exception ignored) {}
             windowView.setVisibility(View.VISIBLE);
         }
@@ -354,9 +370,13 @@ public class FloatingBubbleService extends Service {
     private void collapseWindow() {
         if (isWindowExpanded) {
             isWindowExpanded = false;
-            windowView.setVisibility(View.GONE);
+            windowView.setVisibility(View.INVISIBLE);
+            
+            windowParams.width = 1;
+            windowParams.height = 1;
+            windowParams.flags |= WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
             try {
-                windowManager.removeView(windowView);
+                windowManager.updateViewLayout(windowView, windowParams);
             } catch (Exception ignored) {}
             bubbleView.setVisibility(View.VISIBLE);
         }
