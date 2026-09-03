@@ -199,8 +199,8 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.6.3
-          name: "DSH Mobile v3.6.3 (24/7 Live Background Observer & Permanent Tool Call Fix)"
+          tag_name: v3.6.4
+          name: "DSH Mobile v3.6.4 (Permanent Android FS Patch & Instant Background Notifier)"
           body: |
             ## 🚀 DSH Mobile Release v3.6.0 — Robust Notification Engine & Fast Setup
             - 🎯 **Rock-Solid Mutation Debounce Reply Detector**:
