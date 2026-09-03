@@ -1905,6 +1905,22 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onPause() {
+        super.onPause();
+        if (webView != null) {
+            webView.resumeTimers();
+        }
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (webView != null) {
+            webView.resumeTimers();
+        }
+    }
+
+    @Override
     protected void onDestroy() {
         unregisterReceiver(engineReceiver);
         super.onDestroy();
