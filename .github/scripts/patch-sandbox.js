@@ -18,19 +18,16 @@ if (fs.existsSync(sessionPersistencePath)) {
   }
 }
 
-// 2. Patch dsh-fs-local to fallback linkFile -> rename/copyFile on Android
+// 2. Patch dsh-fs-local for Android storage compatibility (no hardlinks)
 const fsLocalPath = `${dshRoot}/node_modules/@deepseek-ai/dsh-fs-local/lib/index.js`;
 if (fs.existsSync(fsLocalPath)) {
-  let code = fs.readFileSync(fsLocalPath, 'utf8');
-  if (code.includes('try { await linkFile(tempPath, absolutePath); } catch (linkErr) { try { await rename(tempPath, absolutePath); } catch (e) { const { copyFile } = await import("node:fs/promises"); await copyFile(tempPath, absolutePath); } }')) {
-    console.log('[PATCH] Patching dsh-fs-local atomic linkFile...');
-    code = code.replace(
-      'await linkFile(tempPath, absolutePath);',
-      'try { await linkFile(tempPath, absolutePath); } catch (linkErr) { await rename(tempPath, absolutePath); }'
-    );
-    fs.writeFileSync(fsLocalPath, code, 'utf8');
-    console.log('[PATCH SUCCESS] dsh-fs-local linkFile patched!');
-  }
+  let fsCode = fs.readFileSync(fsLocalPath, 'utf8');
+  console.log('[PATCH] Patching dsh-fs-local for Android storage...');
+  fsCode = fsCode.replace('const linkFile = internals.linkFile ?? link;', 'const linkFile = internals.linkFile ?? rename;');
+  fsCode = fsCode.replace(/await linkFile\(tempPath, absolutePath\);/g, 'await rename(tempPath, absolutePath);');
+  fsCode = fsCode.replace('await mkdir(stagingDir, { mode: 448 });', 'try { await mkdir(stagingDir, { mode: 448 }); } catch (_) {}');
+  fs.writeFileSync(fsLocalPath, fsCode, 'utf8');
+  console.log('[PATCH SUCCESS] dsh-fs-local permanently patched for Android storage!');
 }
 
 // 3. Patch dsh-terminal-bash: Hybrid Root SU and PRoot Shell
