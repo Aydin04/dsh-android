@@ -323,3 +323,30 @@ if (fs.existsSync(cordisLoaderPath)) {
     console.log('[PATCH SUCCESS] cordis-plugin-loader patched for profile plugins with __fsExistsSync!');
   }
 }
+
+// 4. Native 0ms Background Broadcast Notification Hook in dsh-agent-loop
+const loopFiles = [
+    path.join(dshRoot, 'node_modules/@deepseek-ai/dsh-agent-loop/lib/index.js'),
+    path.join(dshRoot, 'node_modules/@deepseek-ai/dsh-agent-loop/lib/index.mjs')
+];
+for (const lf of loopFiles) {
+    if (fs.existsSync(lf)) {
+        let code = fs.readFileSync(lf, 'utf-8');
+        if (!code.includes('com.dsh.mobile.NOTIFY_REPLY')) {
+            const target = 'if (toolCalls.length === 0) return { kind: "completed" };';
+            const replacement = `if (toolCalls.length === 0) {
+                try {
+                    const textBlocks = message.content.filter(function(b) { return b && b.type === 'text'; }).map(function(b) { return b.text; }).join('\n').trim();
+                    if (textBlocks.length >= 3) {
+                        var cp = require('node:child_process');
+                        cp.execFile('am', ['broadcast', '-a', 'com.dsh.mobile.NOTIFY_REPLY', '--es', 'reply', textBlocks], { timeout: 3000 }, function() {});
+                    }
+                } catch(e) {}
+                return { kind: "completed" };
+            }`;
+            code = code.replace(target, replacement);
+            fs.writeFileSync(lf, code, 'utf-8');
+            console.log('[PATCH] Patched dsh-agent-loop for native 0ms background broadcast notification');
+        }
+    }
+}
