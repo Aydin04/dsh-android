@@ -324,7 +324,7 @@ if (fs.existsSync(cordisLoaderPath)) {
   }
 }
 
-// 4. Native 0ms Background Broadcast Notification Hook in dsh-agent-loop
+// 4. Native 0ms Background Stdout Notification Hook in dsh-agent-loop
 const loopFiles = [
     path.join(dshRoot, 'node_modules/@deepseek-ai/dsh-agent-loop/lib/index.js'),
     path.join(dshRoot, 'node_modules/@deepseek-ai/dsh-agent-loop/lib/index.mjs')
@@ -332,23 +332,21 @@ const loopFiles = [
 for (const lf of loopFiles) {
     if (fs.existsSync(lf)) {
         let code = fs.readFileSync(lf, 'utf-8');
-        if (!code.includes('com.dsh.mobile.NOTIFY_REPLY')) {
+        if (!code.includes('__DSH_AGENT_REPLY__:')) {
             const target = 'if (toolCalls.length === 0) return { kind: "completed" };';
             const replacement = `if (toolCalls.length === 0) {
                 try {
                     const textBlocks = message.content.filter(function(b) { return b && b.type === "text"; }).map(function(b) { return b.text; }).join("\\n").trim();
-                    if (textBlocks.length >= 3) {
-                        import("node:child_process").then(function(cp) {
-                            var payload = textBlocks.length > 40000 ? textBlocks.slice(0, 40000) : textBlocks;
-                            cp.execFile("am", ["broadcast", "-a", "com.dsh.mobile.NOTIFY_REPLY", "--es", "reply", payload], { timeout: 3000 }, function() {});
-                        }).catch(function() {});
+                    if (textBlocks.length >= 1) {
+                        var payload = textBlocks.length > 30000 ? textBlocks.slice(0, 30000) : textBlocks;
+                        console.log("__DSH_AGENT_REPLY__:" + JSON.stringify({ reply: payload }));
                     }
                 } catch(e) {}
                 return { kind: "completed" };
             }`;
             code = code.replace(target, replacement);
             fs.writeFileSync(lf, code, 'utf-8');
-            console.log('[PATCH] Patched dsh-agent-loop for native 0ms background broadcast notification');
+            console.log('[PATCH] Patched dsh-agent-loop for native 0ms background stdout notification');
         }
     }
 }

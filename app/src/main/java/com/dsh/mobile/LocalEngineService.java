@@ -114,10 +114,20 @@ public class LocalEngineService extends Service {
         }
     }
 
+    private android.os.PowerManager.WakeLock wakeLock;
+
     @Override
     public void onCreate() {
         super.onCreate();
         createNotificationChannel();
+        try {
+            android.os.PowerManager pm = (android.os.PowerManager) getSystemService(Context.POWER_SERVICE);
+            if (pm != null) {
+                wakeLock = pm.newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "DSH::EngineWakeLock");
+                wakeLock.acquire();
+            }
+        } catch (Exception ignored) {}
+
         try {
             android.content.IntentFilter filter = new android.content.IntentFilter("com.dsh.mobile.NOTIFY_REPLY");
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -602,6 +612,19 @@ public class LocalEngineService extends Service {
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(nodeProcess.getInputStream()))) {
                     String line;
                     while ((line = reader.readLine()) != null) {
+                        if (line.startsWith("__DSH_AGENT_REPLY__:")) {
+                            try {
+                                String jsonStr = line.substring("__DSH_AGENT_REPLY__:".length()).trim();
+                                org.json.JSONObject obj = new org.json.JSONObject(jsonStr);
+                                String reply = obj.optString("reply", "");
+                                if (!reply.isEmpty()) {
+                                    showAgentReplyNotification(reply);
+                                }
+                            } catch (Exception err) {
+                                Log.e(TAG, "Failed to parse agent reply from stdout", err);
+                            }
+                            continue;
+                        }
                         emitLog("[DSH Output] " + line);
                     }
                 } catch (Exception e) {
@@ -650,26 +673,49 @@ public class LocalEngineService extends Service {
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
                 .build();
 
-        startForeground(1, notification);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(1, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+        } else {
+            startForeground(1, notification);
+        }
         return START_STICKY;
     }
 
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(
-                    CHANNEL_ID,
-                    "DSH Local Background Engine",
-                    NotificationManager.IMPORTANCE_LOW
-            );
             NotificationManager manager = getSystemService(NotificationManager.class);
             if (manager != null) {
+                NotificationChannel channel = new NotificationChannel(
+                        CHANNEL_ID,
+                        "DSH Local Background Engine",
+                        NotificationManager.IMPORTANCE_LOW
+                );
                 manager.createNotificationChannel(channel);
+
+                NotificationChannel replyChannel = new NotificationChannel(
+                        REPLY_CHANNEL_ID,
+                        "DeepSeek Agent Replies",
+                        NotificationManager.IMPORTANCE_HIGH
+                );
+                replyChannel.setDescription("Notifikasi balasan AI DeepSeek Harness");
+                replyChannel.enableVibration(true);
+                replyChannel.setVibrationPattern(new long[]{0, 200, 100, 200});
+                replyChannel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+                manager.createNotificationChannel(replyChannel);
             }
         }
     }
 
     @Override
     public void onDestroy() {
+        if (wakeLock != null && wakeLock.isHeld()) {
+            try {
+                wakeLock.release();
+            } catch (Exception ignored) {}
+        }
+        try {
+            unregisterReceiver(replyReceiver);
+        } catch (Exception ignored) {}
         if (nodeProcess != null) {
             nodeProcess.destroy();
         }
