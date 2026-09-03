@@ -74,6 +74,7 @@
     var answer = getCleanAssistantAnswer();
     if (!answer || answer.length < 5 || answer === lastNotifiedText) return;
     clearTimeout(settleTimer);
+    // Instant low-latency debounce: 350ms
     settleTimer = setTimeout(function() {
       var finalAnswer = getCleanAssistantAnswer();
       if (finalAnswer && finalAnswer !== lastNotifiedText && finalAnswer.length >= 5 && !checkIsGenerating() && wasGenerating) {
@@ -84,10 +85,10 @@
           window.AndroidBridge.notifyAgentReply(finalAnswer);
         }
       }
-    }, 800);
+    }, 350);
   }
 
   var observer = new MutationObserver(processUpdate);
   observer.observe(document.body, { childList: true, subtree: true, characterData: true });
-  setInterval(processUpdate, 1000);
+  setInterval(processUpdate, 400);
 })();
