@@ -57,10 +57,76 @@ public class LocalEngineService extends Service {
         sendBroadcast(new Intent(ACTION_READY));
     }
 
+
+    private static final String REPLY_CHANNEL_ID = "DSH_AGENT_REPLY_CHANNEL";
+    private final android.content.BroadcastReceiver replyReceiver = new android.content.BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if ("com.dsh.mobile.NOTIFY_REPLY".equals(intent.getAction())) {
+                String reply = intent.getStringExtra("reply");
+                if (reply != null && !reply.trim().isEmpty()) {
+                    showAgentReplyNotification(reply);
+                }
+            }
+        }
+    };
+
+    public void showAgentReplyNotification(String replyText) {
+        if (replyText == null) return;
+        replyText = replyText.replaceFirst("(?i)^(ASSISTANT|USER|AGENT|DEEPSEEK)\\s*[:\\n]*", "").trim();
+        if (replyText.isEmpty()) return;
+
+        NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && nm != null) {
+            NotificationChannel chan = new NotificationChannel(REPLY_CHANNEL_ID, "DeepSeek Agent Replies", NotificationManager.IMPORTANCE_HIGH);
+            chan.setDescription("Notifikasi balasan AI DeepSeek Harness");
+            chan.enableVibration(true);
+            chan.setVibrationPattern(new long[]{0, 200, 100, 200});
+            chan.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+            nm.createNotificationChannel(chan);
+        }
+
+        String preview = replyText.replaceAll("[#*`_>~]", "").replaceAll("\\s+", " ").trim();
+        if (preview.length() > 140) {
+            preview = preview.substring(0, 137) + "...";
+        }
+
+        Intent openIntent = new Intent(this, MainActivity.class);
+        openIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        android.app.PendingIntent pi = android.app.PendingIntent.getActivity(
+                this, 1005, openIntent,
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? android.app.PendingIntent.FLAG_IMMUTABLE : 0)
+        );
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, REPLY_CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_deepseek)
+                .setContentTitle("🤖 DeepSeek Agent")
+                .setContentText(preview)
+                .setSubText("Balasan Selesai")
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(replyText))
+                .setPriority(NotificationCompat.PRIORITY_MAX)
+                .setDefaults(NotificationCompat.DEFAULT_ALL)
+                .setAutoCancel(true)
+                .setContentIntent(pi);
+
+        if (nm != null) {
+            nm.notify(1005, builder.build());
+        }
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
         createNotificationChannel();
+        try {
+            android.content.IntentFilter filter = new android.content.IntentFilter("com.dsh.mobile.NOTIFY_REPLY");
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                registerReceiver(replyReceiver, filter, Context.RECEIVER_EXPORTED);
+            } else {
+                registerReceiver(replyReceiver, filter);
+            }
+        } catch (Exception ignored) {}
+
         new Thread(this::extractAndRunEngine).start();
     }
 
