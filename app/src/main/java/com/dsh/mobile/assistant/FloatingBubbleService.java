@@ -357,8 +357,11 @@ public class FloatingBubbleService extends Service {
             int expandedWidth = Math.min(dm.widthPixels - dpToPx(24), dpToPx(380));
             int expandedHeight = dpToPx(480);
             
+            windowParams.x = dpToPx(12);
+            windowParams.y = dpToPx(60);
             windowParams.width = expandedWidth;
             windowParams.height = expandedHeight;
+            windowParams.alpha = 1.0f;
             windowParams.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL | WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH;
             try {
                 windowManager.updateViewLayout(windowView, windowParams);
