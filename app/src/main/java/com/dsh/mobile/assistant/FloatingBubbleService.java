@@ -286,6 +286,7 @@ public class FloatingBubbleService extends Service {
                 super.onPageFinished(view, url);
                 bubbleWebLoading.setVisibility(View.GONE);
                 injectCompactStyleAndHelpers(view);
+                injectAssistantNotifier(view);
             }
 
             @Override
@@ -297,6 +298,12 @@ public class FloatingBubbleService extends Service {
             }
         });
 
+        bubbleWebView.addJavascriptInterface(new Object() {
+            @android.webkit.JavascriptInterface
+            public void notifyAgentReply(String messagePreview) {
+                showAgentReplyNotification(messagePreview);
+            }
+        }, "AndroidBridge");
         bubbleWebView.setWebChromeClient(new WebChromeClient());
         bubbleWebView.loadUrl(DSH_URL);
     }
@@ -504,4 +511,68 @@ public class FloatingBubbleService extends Service {
     public IBinder onBind(Intent intent) {
         return null;
     }
+
+    private void injectAssistantNotifier(WebView view) {
+        try (java.io.InputStream in = getAssets().open("assistant_notifier.js");
+             java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8))) {
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line).append('\n');
+            }
+            view.evaluateJavascript(sb.toString(), null);
+        } catch (Exception ignored) {}
+    }
+
+    private static final String BUBBLE_REPLY_CHANNEL_ID = "DSH_AGENT_REPLY_CHANNEL";
+
+    public void showAgentReplyNotification(String replyText) {
+        if (replyText == null || replyText.trim().isEmpty()) return;
+        NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && nm != null) {
+            NotificationChannel channel = new NotificationChannel(
+                    BUBBLE_REPLY_CHANNEL_ID,
+                    "DSH Assistant Replies",
+                    NotificationManager.IMPORTANCE_HIGH
+            );
+            channel.setDescription("Notifikasi balasan pesan selesai dari DeepSeek Harness Agent");
+            channel.enableVibration(true);
+            channel.setShowBadge(true);
+            channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+            nm.createNotificationChannel(channel);
+        }
+
+        Intent intent = new Intent(this, MainActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        PendingIntent pendingIntent = PendingIntent.getActivity(
+                this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        androidx.core.app.Person agentPerson = new androidx.core.app.Person.Builder()
+                .setName("DeepSeek Agent")
+                .setKey("DSH_AGENT")
+                .setBot(true)
+                .build();
+
+        NotificationCompat.MessagingStyle messagingStyle = new NotificationCompat.MessagingStyle(agentPerson)
+                .setConversationTitle("DeepSeek Harness")
+                .addMessage(replyText, System.currentTimeMillis(), agentPerson);
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, BUBBLE_REPLY_CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_deepseek)
+                .setContentTitle("DeepSeek Agent Selesai Menjawab")
+                .setContentText(replyText)
+                .setStyle(messagingStyle)
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(true)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .setDefaults(Notification.DEFAULT_ALL);
+
+        if (nm != null) {
+            nm.notify(1001, builder.build());
+        }
+    }
+
 }
