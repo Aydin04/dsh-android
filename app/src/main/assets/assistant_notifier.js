@@ -14,12 +14,25 @@
   var lastNotifiedText = '';
   var settleTimer = null;
   var isGenerating = false;
-  var wasGenerating = false;
+
+  function isVisible(el) {
+    if (!el) return false;
+    if (el.offsetWidth === 0 && el.offsetHeight === 0) return false;
+    var style = window.getComputedStyle ? window.getComputedStyle(el) : null;
+    if (style && (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0')) return false;
+    return true;
+  }
 
   function checkIsGenerating() {
-    var stopBtn = document.querySelector('button[aria-label*="stop" i], button[title*="stop" i], [class*="stop" i], button[aria-label*="hentikan" i]');
-    var busy = document.querySelector('[aria-busy="true"], [data-status="running"], [data-status="busy"], [data-status="generating"], [class*="loading" i], [class*="spinner" i]');
-    return !!(stopBtn || busy);
+    var stopBtns = document.querySelectorAll('button[aria-label*="stop" i], button[title*="stop" i], [class*="stop" i], button[aria-label*="hentikan" i]');
+    for (var i = 0; i < stopBtns.length; i++) {
+      if (isVisible(stopBtns[i])) return true;
+    }
+    var busyEls = document.querySelectorAll('[aria-busy="true"], [data-status="running"], [data-status="busy"], [data-status="generating"], [class*="loading" i], [class*="spinner" i]');
+    for (var j = 0; j < busyEls.length; j++) {
+      if (isVisible(busyEls[j])) return true;
+    }
+    return false;
   }
 
   function isPureTimerOrNumbers(str) {
@@ -66,29 +79,27 @@
   function processUpdate() {
     var currentlyGenerating = checkIsGenerating();
     if (currentlyGenerating) {
-      wasGenerating = true;
       isGenerating = true;
       return;
     }
-    if (!wasGenerating) return;
     var answer = getCleanAssistantAnswer();
     if (!answer || answer.length < 5 || answer === lastNotifiedText) return;
+
     clearTimeout(settleTimer);
-    // Instant low-latency debounce: 350ms
+    // Instant ultra-low latency debounce (200ms)
     settleTimer = setTimeout(function() {
       var finalAnswer = getCleanAssistantAnswer();
-      if (finalAnswer && finalAnswer !== lastNotifiedText && finalAnswer.length >= 5 && !checkIsGenerating() && wasGenerating) {
+      if (finalAnswer && finalAnswer !== lastNotifiedText && finalAnswer.length >= 5 && !checkIsGenerating()) {
         lastNotifiedText = finalAnswer;
-        wasGenerating = false;
         isGenerating = false;
         if (window.AndroidBridge && window.AndroidBridge.notifyAgentReply) {
           window.AndroidBridge.notifyAgentReply(finalAnswer);
         }
       }
-    }, 350);
+    }, 200);
   }
 
   var observer = new MutationObserver(processUpdate);
   observer.observe(document.body, { childList: true, subtree: true, characterData: true });
-  setInterval(processUpdate, 400);
+  setInterval(processUpdate, 250);
 })();
