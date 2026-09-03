@@ -199,10 +199,13 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.6.6
-          name: "DSH Mobile v3.6.6 (Native 0ms Broadcast Notifier & 24/7 Background Engine)"
+          tag_name: v3.6.7
+          name: "DSH Mobile v3.6.7 (Fix agent-loop syntax token error & ESM dynamic import)"
           body: |
-            ## 🚀 DSH Mobile Release v3.6.0 — Robust Notification Engine & Fast Setup
+            ## 🚀 DSH Mobile Release v3.6.7 — Bugfix Agent Loop & Fast Setup
+            - 🛠️ **Fixed Agent Loop SyntaxError**:
+              - Memperbaiki escaping newline literal pada injeksi `dsh-agent-loop` yang sebelumnya menyebabkan `SyntaxError: Invalid or unexpected token` saat boot plugin tree.
+              - Mengganti CommonJS `require('node:child_process')` dengan dynamic ESM `import('node:child_process')`.
             - 🎯 **Rock-Solid Mutation Debounce Reply Detector**:
               - Mengatasi masalah utama di mana query kelas CSS status (`loading`/`progress`) membeku secara permanen karena elemen DOM latar belakang.
               - Diganti dengan sistem **Mutation Debounce Observer**: Memantau saat teks jawaban AI selesai dialirkan (*stream settled*), lalu secara instan mengirimkan notifikasi dan gelembung percakapan MIUI berisi **100% teks isi balasan asli AI**.

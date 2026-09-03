@@ -336,10 +336,12 @@ for (const lf of loopFiles) {
             const target = 'if (toolCalls.length === 0) return { kind: "completed" };';
             const replacement = `if (toolCalls.length === 0) {
                 try {
-                    const textBlocks = message.content.filter(function(b) { return b && b.type === 'text'; }).map(function(b) { return b.text; }).join('\n').trim();
+                    const textBlocks = message.content.filter(function(b) { return b && b.type === "text"; }).map(function(b) { return b.text; }).join("\\n").trim();
                     if (textBlocks.length >= 3) {
-                        var cp = require('node:child_process');
-                        cp.execFile('am', ['broadcast', '-a', 'com.dsh.mobile.NOTIFY_REPLY', '--es', 'reply', textBlocks], { timeout: 3000 }, function() {});
+                        import("node:child_process").then(function(cp) {
+                            var payload = textBlocks.length > 40000 ? textBlocks.slice(0, 40000) : textBlocks;
+                            cp.execFile("am", ["broadcast", "-a", "com.dsh.mobile.NOTIFY_REPLY", "--es", "reply", payload], { timeout: 3000 }, function() {});
+                        }).catch(function() {});
                     }
                 } catch(e) {}
                 return { kind: "completed" };
