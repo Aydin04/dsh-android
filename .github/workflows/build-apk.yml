@@ -199,15 +199,18 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.6.8
-          name: "DSH Mobile v3.6.8 (Direct Pipe Stdout Reply Notifier & Background WakeLock)"
+          tag_name: v3.6.9
+          name: "DSH Mobile v3.6.9 (Auto-Heal Profile Bundles & Background Notifier)"
           body: |
-            ## 🚀 DSH Mobile Release v3.6.8 — Background Notification & WakeLock Engine
+            ## 🚀 DSH Mobile Release v3.6.9 — Auto-Heal Profile Bundles & 24/7 Engine
+            - 🛡️ **Auto-Healing Missing Profile Bundles**:
+              - Mengatasi error fatal `cannot resolve profile bundle "@aydin/dsh-multivers"` ketika ada sisa plugin yang belum terpasang di profile web.
+              - `dsh-app-boot` kini secara otomatis melewati (*gracefully skip*) bundle yang tidak ditemukan alih-alih me-crash engine DSH.
+              - `LocalEngineService` secara otomatis mendeteksi dan membersihkan konfigurasi plugin yang rusak dari `package.json` sebelum booting.
             - 🔔 **Direct Pipe Stdout Reply Notification**:
-              - Mengganti broadcast command `am` yang diblokir oleh sistem keamanan Android (SELinux untrusted_app) dengan direct stream pipe Linux (`process.stdout` -> `LocalEngineService`).
-              - Notifikasi balasan AI sekarang 100% muncul seketika di background status bar tanpa perlu membuka aplikasi!
+              - Notifikasi balasan AI 100% muncul seketika di background status bar tanpa perlu membuka aplikasi (via `process.stdout` pipe).
             - 🔋 **Background CPU Partial WakeLock**:
-              - Menambahkan `PowerManager.PARTIAL_WAKE_LOCK` pada `LocalEngineService` agar proses background Node.js tidak dibekukan atau ditidurkan oleh Android/MIUI saat layar HP mati atau aplikasi di-minimize.
+              - Menjaga CPU tetap hidup saat layar mati agar respons AI selesai di latar belakang.
             - 🎯 **Rock-Solid Mutation Debounce Reply Detector**:
               - Mengatasi masalah utama di mana query kelas CSS status (`loading`/`progress`) membeku secara permanen karena elemen DOM latar belakang.
               - Diganti dengan sistem **Mutation Debounce Observer**: Memantau saat teks jawaban AI selesai dialirkan (*stream settled*), lalu secara instan mengirimkan notifikasi dan gelembung percakapan MIUI berisi **100% teks isi balasan asli AI**.

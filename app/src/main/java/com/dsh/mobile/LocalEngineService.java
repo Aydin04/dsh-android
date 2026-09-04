@@ -521,6 +521,8 @@ public class LocalEngineService extends Service {
             File externalDir = Environment.getExternalStorageDirectory();
             File workspaceDir = (externalDir != null && externalDir.exists()) ? externalDir : new File("/sdcard");
 
+            sanitizeProfileConfigs(filesDir);
+
             emitLog("[SERVER] Launching dsh --profile web --port 3080 ...");
             emitLog("[SERVER] Primary Workspace Directory: " + workspaceDir.getAbsolutePath());
             
@@ -729,5 +731,39 @@ public class LocalEngineService extends Service {
     @Override
     public IBinder onBind(Intent intent) {
         return null;
+    }
+
+    private void sanitizeProfileConfigs(File filesDir) {
+        try {
+            File webPkg = new File(filesDir, ".dsh/profiles/web/package.json");
+            if (webPkg.exists()) {
+                String content = new String(java.nio.file.Files.readAllBytes(webPkg.toPath()), java.nio.charset.StandardCharsets.UTF_8);
+                if (content.contains("multivers")) {
+                    emitLog("[REPAIR] Detected broken multivers plugin in web profile. Sanitizing package.json...");
+                    org.json.JSONObject pkgJson = new org.json.JSONObject(content);
+                    org.json.JSONObject dshObj = pkgJson.optJSONObject("dsh");
+                    if (dshObj != null) {
+                        org.json.JSONObject profObj = dshObj.optJSONObject("profile");
+                        if (profObj != null) {
+                            org.json.JSONArray bundles = profObj.optJSONArray("bundles");
+                            if (bundles != null) {
+                                org.json.JSONArray newBundles = new org.json.JSONArray();
+                                for (int i = 0; i < bundles.length(); i++) {
+                                    String b = bundles.getString(i);
+                                    if (!b.contains("multivers")) {
+                                        newBundles.put(b);
+                                    }
+                                }
+                                profObj.put("bundles", newBundles);
+                                java.nio.file.Files.write(webPkg.toPath(), pkgJson.toString(2).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                                emitLog("[REPAIR SUCCESS] Web profile package.json sanitized successfully!");
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            emitLog("[REPAIR WARN] Could not sanitize profile: " + e.getMessage());
+        }
     }
 }

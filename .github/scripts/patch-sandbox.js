@@ -324,6 +324,33 @@ if (fs.existsSync(cordisLoaderPath)) {
   }
 }
 
+// 14. Patch dsh-app-boot to gracefully skip missing profile bundles instead of crashing
+const dshAppBootPath = `${dshRoot}/node_modules/@deepseek-ai/dsh-app-boot/lib/index.js`;
+if (fs.existsSync(dshAppBootPath)) {
+  let bCode = fs.readFileSync(dshAppBootPath, 'utf8');
+  if (bCode.includes('cannot resolve profile bundle')) {
+    console.log('[PATCH] Patching dsh-app-boot to handle unresolvable profile bundles gracefully...');
+    bCode = bCode.replace(
+      'throw new Error(`${binName}: cannot resolve profile bundle ${JSON.stringify(packageName)} from the dsh installation or ${profileDir}; run \'dsh plugin --profile ${basename(profileDir)} install\' if its dependency is not installed`);',
+      'console.warn(`[WARN] Skipping unresolvable profile bundle: ${packageName}`); return void 0;'
+    );
+    bCode = bCode.replace(
+      'const declared = JSON.parse(readFileSync(join(packageDir, "package.json"), "utf8")).dsh?.bundle?.patch;\n\t\tif (declared === void 0) throw new Error(`${binName}: profile bundle ${JSON.stringify(packageName)} declares no dsh.bundle in its package.json`);',
+      'if (!packageDir) return null;\n\t\tlet declared;\n\t\ttry { declared = JSON.parse(readFileSync(join(packageDir, "package.json"), "utf8")).dsh?.bundle?.patch; } catch (_) { return null; }\n\t\tif (declared === void 0) return null;'
+    );
+    bCode = bCode.replace(
+      'const patchPath = join(packageDir, declared);',
+      'if (!packageDir || declared === void 0) return null;\n\t\tconst patchPath = join(packageDir, declared);'
+    );
+    bCode = bCode.replace(
+      ');\n\tconst patchPath = join(dir, PROFILE_PATCH_FILENAME);',
+      ').filter(Boolean);\n\tconst patchPath = join(dir, PROFILE_PATCH_FILENAME);'
+    );
+    fs.writeFileSync(dshAppBootPath, bCode, 'utf8');
+    console.log('[PATCH SUCCESS] dsh-app-boot patched for robust bundle resolution!');
+  }
+}
+
 // 4. Native 0ms Background Stdout Notification Hook in dsh-agent-loop
 const loopFiles = [
     path.join(dshRoot, 'node_modules/@deepseek-ai/dsh-agent-loop/lib/index.js'),
