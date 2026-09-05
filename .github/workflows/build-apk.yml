@@ -134,8 +134,12 @@ jobs:
 
           find /tmp/global_dsh -type f \( -name "*.d.ts" -o -name "*.map" -o -name "*.md" -o -name "LICENSE*" -o -name "CHANGELOG*" \) -delete || true
           find /tmp/global_dsh -type d \( -name "test" -o -name "tests" -o -name "docs" -o -name "example" -o -name "examples" \) -prune -exec rm -rf {} + || true
-          
-          tar -czf $GITHUB_WORKSPACE/app/src/main/assets/engine/dsh-core.tar.gz -C /tmp/global_dsh/lib/node_modules/@deepseek-ai dsh
+
+          echo "4. Packaging DSH Engine into Single-File ASAR Image (Zero-Extract Virtual FS)..."
+          npm install -g @electron/asar --no-audit --no-fund
+          mkdir -p $GITHUB_WORKSPACE/app/src/main/assets/engine
+          node $GITHUB_WORKSPACE/.github/scripts/package-asar.js $GITHUB_WORKSPACE/app/src/main/assets/engine/dsh.asar
+          ls -lh $GITHUB_WORKSPACE/app/src/main/assets/engine/dsh.asar
 
       - name: Setup Gradle 8.5
         uses: gradle/actions/setup-gradle@v3
@@ -170,10 +174,10 @@ jobs:
             find node_modules -type f -name "*.node" | grep -v "arm64" | xargs rm -f 2>/dev/null || true
             
             find . -type f \( -name "*.map" -o -name "*.d.ts" -o -name "*.flow" -o -name "LICENSE*" -o -name "CHANGELOG*" \) -delete || true
-            cd /tmp/atomic_pack
-            tar -cf /tmp/atomic-router.tar atomic-router
-            xz -z -6 -T0 /tmp/atomic-router.tar
-            mv /tmp/atomic-router.tar.xz $GITHUB_WORKSPACE/app/src/main/assets/engine/atomic-router.tar.xz
+            cd $GITHUB_WORKSPACE
+            echo "Packaging AtomicRouter into Single-File ASAR Image..."
+            node $GITHUB_WORKSPACE/.github/scripts/package-atomic-asar.js $GITHUB_WORKSPACE/app/src/main/assets/engine/atomic-router.asar
+            ls -lh $GITHUB_WORKSPACE/app/src/main/assets/engine/atomic-router.asar
           fi
           ls -lh $GITHUB_WORKSPACE/app/src/main/assets/engine/
 
@@ -199,8 +203,8 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.7.0
-          name: "DSH Mobile v3.7.0 (Self-Healing Runtime & Auto Permission Guard)"
+          tag_name: v3.8.0
+          name: "DSH Mobile v3.8.0 (Single-File ASAR Image & Zero-Extract Architecture)"
           body: |
             ## 🚀 DSH Mobile Release v3.7.0 — Self-Healing Engine & Auto Permission Guard
             - 🛡️ **Self-Healing Core Module Guard**:

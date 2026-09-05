@@ -250,7 +250,13 @@ public class LocalEngineService extends Service {
                         fw.write("#!/system/bin/sh\n");
                         fw.write("export HOME=\"" + filesDir.getAbsolutePath() + "\"\n");
                         fw.write("export LD_LIBRARY_PATH=\"" + libDir.getAbsolutePath() + "\"\n");
-                        fw.write("exec \"" + nodeFile.getAbsolutePath() + "\" \"" + filesDir.getAbsolutePath() + "/dsh/node_modules/pnpm/bin/pnpm.cjs\" \"$@\"\n");
+                        File asarLoader = new File(filesDir, "asar-engine/asar-preload.mjs");
+                        File dshAsar = new File(filesDir, "engine/dsh.asar");
+                        if (dshAsar.exists() && asarLoader.exists()) {
+                            fw.write("exec \"" + nodeFile.getAbsolutePath() + "\" --import \"" + asarLoader.getAbsolutePath() + "\" \"" + dshAsar.getAbsolutePath() + "/node_modules/pnpm/bin/pnpm.cjs\" \"$@\"\n");
+                        } else {
+                            fw.write("exec \"" + nodeFile.getAbsolutePath() + "\" \"" + filesDir.getAbsolutePath() + "/dsh/node_modules/pnpm/bin/pnpm.cjs\" \"$@\"\n");
+                        }
                     } catch (Exception ignored) {}
                     pnpmShimFile.setReadable(true, false);
                     pnpmShimFile.setExecutable(true, false);
@@ -346,139 +352,50 @@ public class LocalEngineService extends Service {
                 }
             }
 
-            // 3. Extract compressed DSH Core packages (dsh-core.tar.gz / dsh-core.tar)
+            // 3. Prepare ASAR Virtual FS Engine & Shims
+            File engineDir = new File(filesDir, "engine");
+            if (!engineDir.exists()) engineDir.mkdirs();
+            File asarEngineDir = new File(filesDir, "asar-engine");
+            if (!asarEngineDir.exists()) asarEngineDir.mkdirs();
+
+            // Extract ASAR Hook Scripts
+            copyAssetDir("asar-engine", asarEngineDir);
+
+            // Check if packaged as Single-File ASAR Image
+            File dshAsar = new File(engineDir, "dsh.asar");
+            File atomicAsar = new File(engineDir, "atomic-router.asar");
             File dshDir = new File(filesDir, "dsh");
             File dshBin = new File(dshDir, "lib/bin.js");
-            File appBootDir = new File(dshDir, "node_modules/@deepseek-ai/dsh-app-boot");
-            boolean needsExtraction = !dshBin.exists() || !appBootDir.exists() || isNewAppVersion;
-
-            if (needsExtraction) {
-                if (dshBin.exists() && !appBootDir.exists()) {
-                    emitLog("[SELF-HEAL] Detected missing @deepseek-ai/dsh-app-boot module! Auto-healing DSH core packages...");
-                }
-                String dshAsset = "engine/dsh-core.tar.gz";
-                boolean isGzip = true;
-                try {
-                    String[] engineAssets = getAssets().list("engine");
-                    if (engineAssets != null) {
-                        List<String> assetList = Arrays.asList(engineAssets);
-                        if (assetList.contains("dsh-core.tar.gz")) {
-                            dshAsset = "engine/dsh-core.tar.gz";
-                            isGzip = true;
-                        } else if (assetList.contains("dsh-core.tar")) {
-                            dshAsset = "engine/dsh-core.tar";
-                            isGzip = false;
-                        }
-                    }
-                } catch (Exception ignored) {}
-
-                emitLog("[EXTRACT] Extracting DeepSeek Harness packages from " + dshAsset + "...");
-                try (InputStream rawIn = getAssets().open(dshAsset)) {
-                    InputStream inStream = isGzip ? new GzipCompressorInputStream(rawIn) : rawIn;
-                    try (TarArchiveInputStream tarIn = new TarArchiveInputStream(inStream)) {
-                        TarArchiveEntry entry;
-                        int count = 0;
-                        int skipped = 0;
-                        while ((entry = tarIn.getNextTarEntry()) != null) {
-                            File outputFile = new File(filesDir, entry.getName());
-                            if (entry.isDirectory()) {
-                                if (!outputFile.exists()) outputFile.mkdirs();
-                            } else {
-                                long entryModTime = entry.getLastModifiedDate() != null ? entry.getLastModifiedDate().getTime() : 0;
-                                if (outputFile.exists() && entry.getSize() > 0 && outputFile.length() == entry.getSize() && (entryModTime <= 0 || Math.abs(outputFile.lastModified() - entryModTime) < 3000)) {
-                                    skipped++;
-                                    continue;
-                                }
-                                File parent = outputFile.getParentFile();
-                                if (parent != null && !parent.exists()) parent.mkdirs();
-
-                                try (OutputStream out = new FileOutputStream(outputFile)) {
-                                    byte[] buf = new byte[32768];
-                                    int len;
-                                    while ((len = tarIn.read(buf)) != -1) {
-                                        out.write(buf, 0, len);
-                                    }
-                                }
-                                if (entry.getLastModifiedDate() != null) {
-                                    outputFile.setLastModified(entry.getLastModifiedDate().getTime());
-                                }
-                            }
-                            count++;
-                            if (count % 2000 == 0) {
-                                emitLog("[EXTRACT] Unpacked " + count + " files (skipped " + skipped + " identical)...");
-                            }
-                        }
-                        emitLog("[EXTRACT] Extracted " + count + " files (skipped " + skipped + " cached).");
-                    }
-                }
-            } else {
-                emitLog("[EXTRACT] DSH packages cached at " + dshDir.getAbsolutePath());
-            }
-
-            // 3b. Extract AtomicRouter engine if bundled in assets
             File atomicDir = new File(filesDir, "atomic-router");
-            File atomicBin = new File(atomicDir, "bin/omniroute.mjs");
-            if (!atomicBin.exists() || isNewAppVersion) {
-                try {
-                    String[] engineAssets = getAssets().list("engine");
-                    List<String> assetList = engineAssets != null ? Arrays.asList(engineAssets) : Collections.emptyList();
-                    
-                    List<InputStream> parts = new ArrayList<>();
-                    String compType = "gzip"; // "gzip", "xz", "raw"
-                    
-                    // Check for multi-part chunks or single compressed assets
-                    List<String> partNames = new ArrayList<>();
-                    for (String name : assetList) {
-                        if (name.startsWith("atomic-router.part_") || name.startsWith("atomic-part-")) {
-                            partNames.add(name);
-                        }
-                    }
-                    Collections.sort(partNames);
-                    
-                    if (!partNames.isEmpty()) {
-                        emitLog("[EXTRACT] Found " + partNames.size() + " split chunks for AtomicRouter. Combining streams...");
-                        for (String part : partNames) {
-                            parts.add(getAssets().open("engine/" + part));
-                        }
-                        if (partNames.get(0).endsWith(".xz")) {
-                            compType = "xz";
-                        }
-                    } else if (assetList.contains("atomic-router.tar.xz") || assetList.contains("atomic-router.xz")) {
-                        String xzName = assetList.contains("atomic-router.tar.xz") ? "atomic-router.tar.xz" : "atomic-router.xz";
-                        parts.add(getAssets().open("engine/" + xzName));
-                        compType = "xz";
-                    } else if (assetList.contains("atomic-router.tar.gz")) {
-                        parts.add(getAssets().open("engine/atomic-router.tar.gz"));
-                        compType = "gzip";
-                    } else if (assetList.contains("atomic-router.tar")) {
-                        parts.add(getAssets().open("engine/atomic-router.tar"));
-                        compType = "raw";
-                    }
 
-                    if (!parts.isEmpty()) {
-                        InputStream combinedIn = new SequenceInputStream(Collections.enumeration(parts));
-                        InputStream inStream;
-                        if ("xz".equals(compType)) {
-                            inStream = new org.tukaani.xz.XZInputStream(new java.io.BufferedInputStream(combinedIn));
-                        } else if ("gzip".equals(compType)) {
-                            inStream = new GzipCompressorInputStream(new java.io.BufferedInputStream(combinedIn));
-                        } else {
-                            inStream = combinedIn;
-                        }
+            List<String> assetList = Collections.emptyList();
+            try {
+                String[] ea = getAssets().list("engine");
+                if (ea != null) assetList = Arrays.asList(ea);
+            } catch (Exception ignored) {}
+
+            boolean hasDshAsarAsset = assetList.contains("dsh.asar");
+            if (hasDshAsarAsset) {
+                emitLog("[ASAR ENGINE] Detected Single-File dsh.asar! Copying archive without extracting loose files...");
+                copyAssetFile("engine/dsh.asar", dshAsar);
+                emitLog("[ASAR ENGINE SUCCESS] dsh.asar ready (" + (dshAsar.length() / (1024 * 1024)) + " MB). Cleaner immune!");
+            } else {
+                // Fallback extraction of dsh-core.tar.gz for backward compatibility
+                File appBootDir = new File(dshDir, "node_modules/@deepseek-ai/dsh-app-boot");
+                boolean needsExtraction = !dshBin.exists() || !appBootDir.exists() || isNewAppVersion;
+                if (needsExtraction) {
+                    emitLog("[EXTRACT] Unpacking dsh-core archive...");
+                    String dshAsset = assetList.contains("dsh-core.tar.gz") ? "engine/dsh-core.tar.gz" : "engine/dsh-core.tar";
+                    boolean isGzip = dshAsset.endsWith(".gz");
+                    try (InputStream rawIn = getAssets().open(dshAsset)) {
+                        InputStream inStream = isGzip ? new GzipCompressorInputStream(rawIn) : rawIn;
                         try (TarArchiveInputStream tarIn = new TarArchiveInputStream(inStream)) {
                             TarArchiveEntry entry;
-                            int aCount = 0;
-                            int aSkipped = 0;
                             while ((entry = tarIn.getNextTarEntry()) != null) {
                                 File outputFile = new File(filesDir, entry.getName());
                                 if (entry.isDirectory()) {
                                     if (!outputFile.exists()) outputFile.mkdirs();
                                 } else {
-                                    long entryModTime = entry.getLastModifiedDate() != null ? entry.getLastModifiedDate().getTime() : 0;
-                                if (outputFile.exists() && entry.getSize() > 0 && outputFile.length() == entry.getSize() && (entryModTime <= 0 || Math.abs(outputFile.lastModified() - entryModTime) < 3000)) {
-                                        aSkipped++;
-                                        continue;
-                                    }
                                     File parent = outputFile.getParentFile();
                                     if (parent != null && !parent.exists()) parent.mkdirs();
                                     try (OutputStream out = new FileOutputStream(outputFile)) {
@@ -489,19 +406,50 @@ public class LocalEngineService extends Service {
                                         }
                                     }
                                 }
-                                aCount++;
-                                if (aCount % 2000 == 0) {
-                                    emitLog("[EXTRACT ATOMIC] Unpacked " + aCount + " files (skipped " + aSkipped + " cached)...");
+                            }
+                        }
+                    } catch (Exception e) {
+                        emitLog("[EXTRACT ERROR] " + e.getMessage());
+                    }
+                }
+            }
+
+            // AtomicRouter ASAR vs TAR
+            boolean hasAtomicAsarAsset = assetList.contains("atomic-router.asar");
+            if (hasAtomicAsarAsset) {
+                emitLog("[ASAR ENGINE] Detected Single-File atomic-router.asar! Copying archive...");
+                copyAssetFile("engine/atomic-router.asar", atomicAsar);
+                emitLog("[ASAR ENGINE SUCCESS] atomic-router.asar ready (" + (atomicAsar.length() / (1024 * 1024)) + " MB).");
+            } else if (assetList.contains("atomic-router.tar.xz") || assetList.contains("atomic-router.tar.gz")) {
+                if (!new File(atomicDir, "server.js").exists() || isNewAppVersion) {
+                    emitLog("[EXTRACT] Extracting AtomicRouter tar...");
+                    String aAsset = assetList.contains("atomic-router.tar.xz") ? "engine/atomic-router.tar.xz" : "engine/atomic-router.tar.gz";
+                    boolean isXz = aAsset.endsWith(".xz");
+                    try (InputStream rawIn = getAssets().open(aAsset)) {
+                        InputStream inStream = isXz ? new org.tukaani.xz.XZInputStream(rawIn) : new GzipCompressorInputStream(rawIn);
+                        try (TarArchiveInputStream tarIn = new TarArchiveInputStream(inStream)) {
+                            TarArchiveEntry entry;
+                            while ((entry = tarIn.getNextTarEntry()) != null) {
+                                File outputFile = new File(filesDir, entry.getName());
+                                if (entry.isDirectory()) {
+                                    if (!outputFile.exists()) outputFile.mkdirs();
+                                } else {
+                                    File parent = outputFile.getParentFile();
+                                    if (parent != null && !parent.exists()) parent.mkdirs();
+                                    try (OutputStream out = new FileOutputStream(outputFile)) {
+                                        byte[] buf = new byte[32768];
+                                        int len;
+                                        while ((len = tarIn.read(buf)) != -1) {
+                                            out.write(buf, 0, len);
+                                        }
+                                    }
                                 }
                             }
-                            emitLog("[EXTRACT SUCCESS] Extracted " + aCount + " AtomicRouter files (skipped " + aSkipped + " cached).");
                         }
+                    } catch (Exception err) {
+                        emitLog("[ATOMIC EXTRACT ERROR] " + err.getMessage());
                     }
-                } catch (Exception err) {
-                    emitLog("[ATOMIC EXTRACT ERROR] " + err.getClass().getSimpleName() + ": " + err.getMessage());
                 }
-            } else {
-                emitLog("[EXTRACT] AtomicRouter cached at " + atomicDir.getAbsolutePath());
             }
 
             prefs.edit().putInt("EXTRACTED_VERSION", currentVersionCode).apply();
@@ -540,18 +488,32 @@ public class LocalEngineService extends Service {
                     ":/system/xbin" + 
                     ":/data/data/com.termux/files/usr/bin";
 
-            String nodePath = new File(dshDir, "node_modules").getAbsolutePath() + 
-                    ":" + new File(filesDir, ".dsh/profiles/web/node_modules").getAbsolutePath() +
+            String nodePath = (dshAsar.exists() ? (dshAsar.getAbsolutePath() + "/node_modules:") : (new File(dshDir, "node_modules").getAbsolutePath() + ":")) + 
+                    new File(filesDir, ".dsh/profiles/web/node_modules").getAbsolutePath() +
                     ":" + new File(filesDir, "node_modules").getAbsolutePath();
 
-            ProcessBuilder pb = new ProcessBuilder(
-                    nodeFile.getAbsolutePath(),
-                    "--max-old-space-size=512",
-                    dshBin.getAbsolutePath(),
-                    "--profile", "web",
-                    "--no-open",
-                    "--port", "3080"
-            );
+            File asarPreload = new File(filesDir, "asar-engine/asar-preload.mjs");
+            boolean useAsar = dshAsar.exists() && asarPreload.exists();
+
+            List<String> dshCmd = new ArrayList<>();
+            dshCmd.add(nodeFile.getAbsolutePath());
+            dshCmd.add("--max-old-space-size=512");
+            if (useAsar) {
+                emitLog("[SERVER] Launching in ASAR Zero-Extract Mode via " + dshAsar.getAbsolutePath());
+                dshCmd.add("--import");
+                dshCmd.add(asarPreload.getAbsolutePath());
+                dshCmd.add(dshAsar.getAbsolutePath() + "/lib/bin.js");
+            } else {
+                emitLog("[SERVER] Launching in Directory Mode via " + dshBin.getAbsolutePath());
+                dshCmd.add(dshBin.getAbsolutePath());
+            }
+            dshCmd.add("--profile");
+            dshCmd.add("web");
+            dshCmd.add("--no-open");
+            dshCmd.add("--port");
+            dshCmd.add("3080");
+
+            ProcessBuilder pb = new ProcessBuilder(dshCmd);
             pb.directory(workspaceDir.exists() ? workspaceDir : filesDir);
             pb.environment().put("HOME", filesDir.getAbsolutePath());
             pb.environment().put("DSH_EXTERNAL_STORAGE", workspaceDir.getAbsolutePath());
@@ -565,29 +527,32 @@ public class LocalEngineService extends Service {
             nodeProcess = pb.start();
             emitLog("[SERVER] DSH process spawned. Streaming logs:");
 
-            // Spawn AtomicRouter if installed
+            // Spawn AtomicRouter if installed (ASAR or Directory)
             File atomicServerJs = new File(atomicDir, "server.js");
-            if (atomicServerJs.exists() || atomicBin.exists()) {
+            File atomicBin = new File(atomicDir, "bin/omniroute.mjs");
+            boolean useAtomicAsar = atomicAsar.exists() && asarPreload.exists();
+            if (useAtomicAsar || atomicServerJs.exists() || atomicBin.exists()) {
                 emitLog("[ATOMIC] Launching AtomicRouter on port 20128...");
                 try {
-                    ProcessBuilder atomicPb;
-                    if (atomicServerJs.exists()) {
-                        atomicPb = new ProcessBuilder(
-                                nodeFile.getAbsolutePath(),
-                                "--max-old-space-size=512",
-                                atomicServerJs.getAbsolutePath()
-                        );
+                    List<String> atomicCmd = new ArrayList<>();
+                    atomicCmd.add(nodeFile.getAbsolutePath());
+                    atomicCmd.add("--max-old-space-size=512");
+                    if (useAtomicAsar) {
+                        atomicCmd.add("--import");
+                        atomicCmd.add(asarPreload.getAbsolutePath());
+                        atomicCmd.add(atomicAsar.getAbsolutePath() + "/server.js");
+                    } else if (atomicServerJs.exists()) {
+                        atomicCmd.add(atomicServerJs.getAbsolutePath());
                     } else {
-                        atomicPb = new ProcessBuilder(
-                                nodeFile.getAbsolutePath(),
-                                "--max-old-space-size=512",
-                                atomicBin.getAbsolutePath(),
-                                "serve",
-                                "--port", "20128",
-                                "--no-open"
-                        );
+                        atomicCmd.add(atomicBin.getAbsolutePath());
+                        atomicCmd.add("serve");
+                        atomicCmd.add("--port");
+                        atomicCmd.add("20128");
+                        atomicCmd.add("--no-open");
                     }
-                    atomicPb.directory(atomicDir);
+
+                    ProcessBuilder atomicPb = new ProcessBuilder(atomicCmd);
+                    atomicPb.directory(workspaceDir.exists() ? workspaceDir : filesDir);
                     atomicPb.environment().put("HOME", filesDir.getAbsolutePath());
                     atomicPb.environment().put("DATA_DIR", new File(filesDir, ".atomic-router").getAbsolutePath());
                     atomicPb.environment().put("REQUIRE_API_KEY", "false");
@@ -596,7 +561,8 @@ public class LocalEngineService extends Service {
                     atomicPb.environment().put("PORT", "20128");
                     atomicPb.environment().put("HOSTNAME", "127.0.0.1");
                     atomicPb.environment().put("LD_LIBRARY_PATH", libDir.getAbsolutePath());
-                    atomicPb.environment().put("NODE_PATH", new File(atomicDir, "node_modules").getAbsolutePath() + ":" + nodePath);
+                    String atomicNodePath = (useAtomicAsar ? (atomicAsar.getAbsolutePath() + "/node_modules:") : (new File(atomicDir, "node_modules").getAbsolutePath() + ":")) + nodePath;
+                    atomicPb.environment().put("NODE_PATH", atomicNodePath);
                     atomicPb.environment().put("PATH", enrichedPath);
                     atomicPb.redirectErrorStream(true);
 
@@ -781,6 +747,46 @@ public class LocalEngineService extends Service {
             }
         } catch (Exception e) {
             emitLog("[REPAIR WARN] Could not sanitize profile: " + e.getMessage());
+        }
+    }
+
+    private boolean copyAssetFile(String assetPath, File outFile) {
+        try {
+            if (outFile.exists() && outFile.length() > 0) return true;
+            File parent = outFile.getParentFile();
+            if (parent != null && !parent.exists()) parent.mkdirs();
+            try (InputStream in = getAssets().open(assetPath);
+                 OutputStream out = new FileOutputStream(outFile)) {
+                byte[] buf = new byte[65536];
+                int len;
+                while ((len = in.read(buf)) != -1) {
+                    out.write(buf, 0, len);
+                }
+            }
+            return true;
+        } catch (Exception e) {
+            emitLog("[COPY ASSET ERROR] " + assetPath + ": " + e.getMessage());
+            return false;
+        }
+    }
+
+    private void copyAssetDir(String assetDir, File outDir) {
+        try {
+            String[] list = getAssets().list(assetDir);
+            if (list == null || list.length == 0) return;
+            if (!outDir.exists()) outDir.mkdirs();
+            for (String file : list) {
+                String subAsset = assetDir + "/" + file;
+                File subOut = new File(outDir, file);
+                String[] subList = getAssets().list(subAsset);
+                if (subList != null && subList.length > 0) {
+                    copyAssetDir(subAsset, subOut);
+                } else {
+                    copyAssetFile(subAsset, subOut);
+                }
+            }
+        } catch (Exception e) {
+            emitLog("[COPY DIR ERROR] " + assetDir + ": " + e.getMessage());
         }
     }
 }
