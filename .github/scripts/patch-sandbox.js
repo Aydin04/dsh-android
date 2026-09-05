@@ -378,17 +378,57 @@ for (const lf of loopFiles) {
     }
 }
 
-// 15. Patch dsh-web-app startup command to tolerate unknown options & --no-open flag
+// 15. Patch dsh-web-app startup command to tolerate unknown options & --no-open flag, and log startup options
 const webAppStartupPath = `${dshRoot}/node_modules/@deepseek-ai/dsh-web-app/lib/startup.js`;
 if (fs.existsSync(webAppStartupPath)) {
   let code = fs.readFileSync(webAppStartupPath, 'utf8');
   if (code.includes('new Command().name("dsh --profile web")')) {
-    console.log('[PATCH] Patching dsh-web-app startup for permissive CLI options...');
+    console.log('[PATCH] Patching dsh-web-app startup for permissive CLI options and logs...');
     code = code.replace(
       'new Command().name("dsh --profile web")',
       'new Command().name("dsh --profile web").allowUnknownOption().option("--no-open", "do not open browser")'
     );
+    code = code.replace(
+      'function apply(ctx) {',
+      'function apply(ctx) {\n\tconsole.log("[WEB-STARTUP] apply() called");'
+    );
+    code = code.replace(
+      'if (values !== void 0) ctx.provide(WEB_STARTUP_SERVICE, values);',
+      'console.log("[WEB-STARTUP] Parsed values:", JSON.stringify(values));\n\tif (values !== void 0) ctx.provide(WEB_STARTUP_SERVICE, values);'
+    );
     fs.writeFileSync(webAppStartupPath, code, 'utf8');
-    console.log('[PATCH SUCCESS] dsh-web-app startup patched for permissive CLI options!');
+    console.log('[PATCH SUCCESS] dsh-web-app startup patched!');
+  }
+}
+
+// 16. Patch dsh-host-webserver to log binding state and errors
+const webserverPaths = [
+  `${dshRoot}/node_modules/@deepseek-ai/dsh-host-webserver/lib/index.js`,
+  `/tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh-host-webserver/lib/index.js`
+];
+for (const wsPath of webserverPaths) {
+  if (fs.existsSync(wsPath)) {
+    let wsCode = fs.readFileSync(wsPath, 'utf8');
+    console.log(`[PATCH] Patching dsh-host-webserver at ${wsPath}...`);
+    if (wsCode.includes('this.listenedPort = this.server.address().port;')) {
+      wsCode = wsCode.replace(
+        'this.listenedPort = this.server.address().port;',
+        'this.listenedPort = this.server.address().port;\n\t\t\t\tconsole.log(`[WEBSERVER SUCCESS] Bound and actively listening on http://${this.config.host}:${this.listenedPort}`);'
+      );
+    }
+    if (wsCode.includes('this.server.once("error", reject);')) {
+      wsCode = wsCode.replace(
+        'this.server.once("error", reject);',
+        'this.server.once("error", (err) => { console.error("[WEBSERVER BIND ERROR]", err); reject(err); });'
+      );
+    }
+    if (wsCode.includes('constructor(ctx, config) {')) {
+      wsCode = wsCode.replace(
+        'constructor(ctx, config) {',
+        'constructor(ctx, config) {\n\t\tconsole.log("[WEBSERVER] HttpServerService created with config:", JSON.stringify(config));'
+      );
+    }
+    fs.writeFileSync(wsPath, wsCode, 'utf8');
+    console.log(`[PATCH SUCCESS] dsh-host-webserver patched!`);
   }
 }

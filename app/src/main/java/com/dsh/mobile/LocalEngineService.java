@@ -539,6 +539,7 @@ public class LocalEngineService extends Service {
             ProcessBuilder pb = new ProcessBuilder(dshCmd);
             pb.directory(workspaceDir.exists() ? workspaceDir : filesDir);
             pb.environment().put("HOME", filesDir.getAbsolutePath());
+            pb.environment().put("DSH_HOME", new File(filesDir, ".dsh").getAbsolutePath());
             pb.environment().put("DSH_EXTERNAL_STORAGE", workspaceDir.getAbsolutePath());
             pb.environment().put("LD_LIBRARY_PATH", libDir.getAbsolutePath());
             pb.environment().put("NODE_PATH", nodePath);
@@ -651,11 +652,14 @@ public class LocalEngineService extends Service {
             int consecutiveSuccess = 0;
             String lastProbeStatus = "starting...";
             for (int i = 1; i <= 90; i++) {
+                HttpURLConnection conn = null;
                 try {
                     URL url = new URL("http://127.0.0.1:3080/");
-                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                    conn.setConnectTimeout(1000);
-                    conn.setReadTimeout(1000);
+                    conn = (HttpURLConnection) url.openConnection();
+                    conn.setConnectTimeout(800);
+                    conn.setReadTimeout(800);
+                    conn.setUseCaches(false);
+                    conn.setRequestProperty("Connection", "close");
                     int code = conn.getResponseCode();
                     lastProbeStatus = "HTTP " + code;
                     if (code >= 200 && code < 400) {
@@ -671,11 +675,20 @@ public class LocalEngineService extends Service {
                 } catch (Exception e) {
                     consecutiveSuccess = 0;
                     lastProbeStatus = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+                } finally {
+                    if (conn != null) {
+                        try { conn.disconnect(); } catch (Exception ignored) {}
+                    }
                 }
+
                 if (i % 5 == 0) {
                     emitLog("[WAIT] Waiting for server on http://127.0.0.1:3080/ (" + i + "s, probe: " + lastProbeStatus + ")...");
                 }
                 Thread.sleep(1000);
+            }
+
+            if (!isEngineReady) {
+                emitLog("[TIMEOUT] DSH Engine did not open port 3080 within 90s. Last probe: " + lastProbeStatus);
             }
 
         } catch (Exception e) {
