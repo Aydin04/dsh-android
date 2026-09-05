@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import asar from "@electron/asar";
+import * as asar from "@electron/asar";
 
 async function main() {
   const atomicSourceDir = "/tmp/atomic_pack/atomic-router";
