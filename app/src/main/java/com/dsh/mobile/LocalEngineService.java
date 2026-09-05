@@ -162,6 +162,14 @@ public class LocalEngineService extends Service {
                 emitLog("[UPDATE] Detected new app version (" + currentVersionCode + "). Updating engine bundles...");
             }
 
+            // Create sandbox-isolated empty openssl.cnf to prevent OpenSSL permission denied on Termux path
+            File opensslCnf = new File(filesDir, "openssl.cnf");
+            if (!opensslCnf.exists()) {
+                try {
+                    opensslCnf.createNewFile();
+                } catch (Exception ignored) {}
+            }
+
             // 1. Extract Node.js binary
             File nodeFile = new File(binDir, "node");
             if (!nodeFile.exists() || nodeFile.length() == 0) {
@@ -459,6 +467,7 @@ public class LocalEngineService extends Service {
             try {
                 ProcessBuilder testPb = new ProcessBuilder(nodeFile.getAbsolutePath(), "-v");
                 testPb.environment().put("LD_LIBRARY_PATH", libDir.getAbsolutePath());
+                testPb.environment().put("OPENSSL_CONF", new File(filesDir, "openssl.cnf").getAbsolutePath());
                 testPb.redirectErrorStream(true);
                 Process testProc = testPb.start();
 
@@ -522,6 +531,7 @@ public class LocalEngineService extends Service {
             pb.environment().put("PATH", enrichedPath);
             pb.environment().put("DSH_PERMISSION_MODE", "danger-full-access");
             pb.environment().put("TMPDIR", filesDir.getAbsolutePath());
+            pb.environment().put("OPENSSL_CONF", new File(filesDir, "openssl.cnf").getAbsolutePath());
             pb.redirectErrorStream(true);
 
             nodeProcess = pb.start();
@@ -564,6 +574,7 @@ public class LocalEngineService extends Service {
                     String atomicNodePath = (useAtomicAsar ? (atomicAsar.getAbsolutePath() + "/node_modules:") : (new File(atomicDir, "node_modules").getAbsolutePath() + ":")) + nodePath;
                     atomicPb.environment().put("NODE_PATH", atomicNodePath);
                     atomicPb.environment().put("PATH", enrichedPath);
+                    atomicPb.environment().put("OPENSSL_CONF", new File(filesDir, "openssl.cnf").getAbsolutePath());
                     atomicPb.redirectErrorStream(true);
 
                     atomicProcess = atomicPb.start();
