@@ -213,6 +213,11 @@ public class MainActivity extends AppCompatActivity {
         setupDraggableFloatingBar();
         if (floatingDraggableContainer != null) {
             floatingDraggableContainer.setVisibility(View.VISIBLE);
+            floatingDraggableContainer.bringToFront();
+        }
+        if (btnToggleBar != null) {
+            btnToggleBar.setVisibility(View.VISIBLE);
+            btnToggleBar.bringToFront();
         }
         setupWebView();
 

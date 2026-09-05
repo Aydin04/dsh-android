@@ -207,8 +207,8 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.8.7
-          name: "DSH Mobile v3.8.7 (ASAR Full Native FS Sync Patch & Zero-Extract Engine)"
+          tag_name: v3.8.8
+          name: "DSH Mobile v3.8.8 (ASAR Universal ESM Resolver, CJS Interop & Top Z-Index Toolbar)"
           body: |
             ## 🚀 DSH Mobile Release v3.7.0 — Self-Healing Engine & Auto Permission Guard
             - 🛡️ **Self-Healing Core Module Guard**:

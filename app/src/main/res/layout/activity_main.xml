@@ -17,6 +17,176 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+
+    <!-- Aesthetic Splash & Live Booting Layout -->
+    <LinearLayout
+        android:id="@+id/loadingLayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#0D1117"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="24dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageView
+            android:id="@+id/imgLogo"
+            android:layout_width="96dp"
+            android:layout_height="96dp"
+            android:layout_marginBottom="16dp"
+            android:contentDescription="DeepSeek"
+            android:src="@drawable/ic_deepseek" />
+
+        <TextView
+            android:id="@+id/loadingText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="DeepSeek Harness"
+            android:textColor="#FFFFFF"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/subText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="On-Device Autonomous AI Agent"
+            android:textColor="#8B949E"
+            android:textSize="13sp" />
+
+        <!-- 0-100% Progress Bar Container -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp">
+
+            <ProgressBar
+                android:id="@+id/progressBarPercent"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="0dp"
+                android:layout_height="8dp"
+                android:layout_weight="1"
+                android:max="100"
+                android:progress="10"
+                android:progressBackgroundTint="#21262D"
+                android:progressTint="#4D6BFE" />
+
+            <TextView
+                android:id="@+id/tvProgressPercent"
+                android:layout_width="48dp"
+                android:layout_height="wrap_content"
+                android:gravity="end"
+                android:text="10%"
+                android:textColor="#58A6FF"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- Aesthetic Single Line Rotating Log Status -->
+        <TextView
+            android:id="@+id/tvCurrentLogLine"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:ellipsize="middle"
+            android:gravity="center"
+            android:paddingHorizontal="16dp"
+            android:singleLine="true"
+            android:text="[INIT] Memulai Engine..."
+            android:textColor="#3FB950"
+            android:textSize="12sp"
+            android:fontFamily="monospace" />
+
+        <!-- Hidden detailed console (accessible on click or error) -->
+        <ScrollView
+            android:id="@+id/logScrollView"
+            android:layout_width="match_parent"
+            android:layout_height="140dp"
+            android:layout_marginTop="16dp"
+            android:background="#05070a"
+            android:padding="8dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/debugLogs"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="monospace"
+                android:text="[INIT] Initializing Android environment...\n"
+                android:textColor="#3fb950"
+                android:textSize="11sp" />
+        </ScrollView>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btnConfig"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:background="?attr/selectableItemBackground"
+                android:text="🌐 Hubungkan Node / VPS"
+                android:textColor="#58A6FF"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/btnShowAllLogs"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:layout_marginStart="8dp"
+                android:background="?attr/selectableItemBackground"
+                android:text="📋 Detail Log"
+                android:textColor="#8B949E"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/logActionsLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <Button
+                android:id="@+id/btnCopyLog"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="4dp"
+                android:layout_weight="1"
+                android:text="Copy Logs"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/btnRetry"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_weight="1"
+                android:text="Restart Engine"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/btnCloseLogs"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_weight="1"
+                android:text="Tutup"
+                android:textSize="12sp" />
+        </LinearLayout>
+    </LinearLayout>
+
     <!-- Draggable Floating Container -->
     <LinearLayout
         android:id="@+id/floatingDraggableContainer"
@@ -240,174 +410,4 @@
             android:src="@android:drawable/ic_menu_manage"
             app:tint="#58a6ff" />
     </LinearLayout>
-
-    <!-- Aesthetic Splash & Live Booting Layout -->
-    <LinearLayout
-        android:id="@+id/loadingLayout"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="#0D1117"
-        android:gravity="center"
-        android:orientation="vertical"
-        android:padding="24dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
-
-        <ImageView
-            android:id="@+id/imgLogo"
-            android:layout_width="96dp"
-            android:layout_height="96dp"
-            android:layout_marginBottom="16dp"
-            android:contentDescription="DeepSeek"
-            android:src="@drawable/ic_deepseek" />
-
-        <TextView
-            android:id="@+id/loadingText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="DeepSeek Harness"
-            android:textColor="#FFFFFF"
-            android:textSize="20sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/subText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="On-Device Autonomous AI Agent"
-            android:textColor="#8B949E"
-            android:textSize="13sp" />
-
-        <!-- 0-100% Progress Bar Container -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="28dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingHorizontal="16dp">
-
-            <ProgressBar
-                android:id="@+id/progressBarPercent"
-                style="?android:attr/progressBarStyleHorizontal"
-                android:layout_width="0dp"
-                android:layout_height="8dp"
-                android:layout_weight="1"
-                android:max="100"
-                android:progress="10"
-                android:progressBackgroundTint="#21262D"
-                android:progressTint="#4D6BFE" />
-
-            <TextView
-                android:id="@+id/tvProgressPercent"
-                android:layout_width="48dp"
-                android:layout_height="wrap_content"
-                android:gravity="end"
-                android:text="10%"
-                android:textColor="#58A6FF"
-                android:textSize="13sp"
-                android:textStyle="bold" />
-        </LinearLayout>
-
-        <!-- Aesthetic Single Line Rotating Log Status -->
-        <TextView
-            android:id="@+id/tvCurrentLogLine"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:ellipsize="middle"
-            android:gravity="center"
-            android:paddingHorizontal="16dp"
-            android:singleLine="true"
-            android:text="[INIT] Memulai Engine..."
-            android:textColor="#3FB950"
-            android:textSize="12sp"
-            android:fontFamily="monospace" />
-
-        <!-- Hidden detailed console (accessible on click or error) -->
-        <ScrollView
-            android:id="@+id/logScrollView"
-            android:layout_width="match_parent"
-            android:layout_height="140dp"
-            android:layout_marginTop="16dp"
-            android:background="#05070a"
-            android:padding="8dp"
-            android:visibility="gone">
-
-            <TextView
-                android:id="@+id/debugLogs"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:fontFamily="monospace"
-                android:text="[INIT] Initializing Android environment...\n"
-                android:textColor="#3fb950"
-                android:textSize="11sp" />
-        </ScrollView>
-
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:orientation="horizontal">
-
-            <Button
-                android:id="@+id/btnConfig"
-                android:layout_width="wrap_content"
-                android:layout_height="36dp"
-                android:background="?attr/selectableItemBackground"
-                android:text="🌐 Hubungkan Node / VPS"
-                android:textColor="#58A6FF"
-                android:textSize="12sp" />
-
-            <Button
-                android:id="@+id/btnShowAllLogs"
-                android:layout_width="wrap_content"
-                android:layout_height="36dp"
-                android:layout_marginStart="8dp"
-                android:background="?attr/selectableItemBackground"
-                android:text="📋 Detail Log"
-                android:textColor="#8B949E"
-                android:textSize="12sp" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/logActionsLayout"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:orientation="horizontal"
-            android:visibility="gone">
-
-            <Button
-                android:id="@+id/btnCopyLog"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="4dp"
-                android:layout_weight="1"
-                android:text="Copy Logs"
-                android:textSize="12sp" />
-
-            <Button
-                android:id="@+id/btnRetry"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
-                android:layout_weight="1"
-                android:text="Restart Engine"
-                android:textSize="12sp" />
-
-            <Button
-                android:id="@+id/btnCloseLogs"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
-                android:layout_weight="1"
-                android:text="Tutup"
-                android:textSize="12sp" />
-        </LinearLayout>
-    </LinearLayout>
-
 </androidx.constraintlayout.widget.ConstraintLayout>
