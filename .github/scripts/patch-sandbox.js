@@ -377,3 +377,18 @@ for (const lf of loopFiles) {
         }
     }
 }
+
+// 15. Patch dsh-web-app startup command to tolerate unknown options & --no-open flag
+const webAppStartupPath = `${dshRoot}/node_modules/@deepseek-ai/dsh-web-app/lib/startup.js`;
+if (fs.existsSync(webAppStartupPath)) {
+  let code = fs.readFileSync(webAppStartupPath, 'utf8');
+  if (code.includes('new Command().name("dsh --profile web")')) {
+    console.log('[PATCH] Patching dsh-web-app startup for permissive CLI options...');
+    code = code.replace(
+      'new Command().name("dsh --profile web")',
+      'new Command().name("dsh --profile web").allowUnknownOption().option("--no-open", "do not open browser")'
+    );
+    fs.writeFileSync(webAppStartupPath, code, 'utf8');
+    console.log('[PATCH SUCCESS] dsh-web-app startup patched for permissive CLI options!');
+  }
+}

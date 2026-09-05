@@ -531,7 +531,8 @@ public class LocalEngineService extends Service {
             }
             dshCmd.add("--profile");
             dshCmd.add("web");
-            dshCmd.add("--no-open");
+            dshCmd.add("--host");
+            dshCmd.add("127.0.0.1");
             dshCmd.add("--port");
             dshCmd.add("3080");
 
@@ -648,17 +649,19 @@ public class LocalEngineService extends Service {
 
             // 6. Monitor port readiness for 3080
             int consecutiveSuccess = 0;
-            for (int i = 1; i <= 60; i++) {
+            String lastProbeStatus = "starting...";
+            for (int i = 1; i <= 90; i++) {
                 try {
                     URL url = new URL("http://127.0.0.1:3080/");
                     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                     conn.setConnectTimeout(1000);
                     conn.setReadTimeout(1000);
                     int code = conn.getResponseCode();
-                    if (code == 200) {
+                    lastProbeStatus = "HTTP " + code;
+                    if (code >= 200 && code < 400) {
                         consecutiveSuccess++;
-                        if (consecutiveSuccess >= 2) {
-                            emitLog("[READY] DeepSeek Harness Engine ready on port 3080!");
+                        if (consecutiveSuccess >= 1) {
+                            emitLog("[READY] DeepSeek Harness Engine ready on port 3080 (" + lastProbeStatus + ")!");
                             emitReady();
                             break;
                         }
@@ -667,9 +670,10 @@ public class LocalEngineService extends Service {
                     }
                 } catch (Exception e) {
                     consecutiveSuccess = 0;
+                    lastProbeStatus = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
                 }
                 if (i % 5 == 0) {
-                    emitLog("[WAIT] Waiting for server on http://127.0.0.1:3080/ (" + i + "s)...");
+                    emitLog("[WAIT] Waiting for server on http://127.0.0.1:3080/ (" + i + "s, probe: " + lastProbeStatus + ")...");
                 }
                 Thread.sleep(1000);
             }
