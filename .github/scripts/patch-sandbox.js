@@ -39,7 +39,18 @@ if (fs.existsSync(terminalBashPath)) {
     const shellResolver = `
 import { existsSync as __termExistsSync } from "node:fs";
 function __getAndroidTerminalShell() {
-  for (const sh of ["/data/user/0/com.dsh.mobile/files/bin/bash", "/data/user/0/com.dsh.mobile/files/bin/sh", "/data/data/com.dsh.mobile/files/bin/bash", "/data/data/com.dsh.mobile/files/bin/sh", "/data/user/0/com.aydin.dsh/files/bin/bash", "/data/data/com.aydin.dsh/files/bin/bash"]) {
+  for (const sh of [
+    "/data/user/0/com.dsh.mobile/files/usr/bin/bash",
+    "/data/user/0/com.dsh.mobile/files/usr/bin/sh",
+    "/data/data/com.dsh.mobile/files/usr/bin/bash",
+    "/data/data/com.dsh.mobile/files/usr/bin/sh",
+    "/data/data/com.termux/files/usr/bin/bash",
+    "/data/data/com.termux/files/usr/bin/sh",
+    "/data/user/0/com.dsh.mobile/files/bin/bash",
+    "/data/user/0/com.dsh.mobile/files/bin/sh",
+    "/data/data/com.dsh.mobile/files/bin/bash",
+    "/data/data/com.dsh.mobile/files/bin/sh"
+  ]) {
     if (__termExistsSync(sh)) return sh;
   }
   const isRoot = __termExistsSync("/data/user/0/com.dsh.mobile/files/root_enabled.flag") || 
@@ -68,7 +79,18 @@ const bashSandboxPath = `${dshRoot}/node_modules/@deepseek-ai/dsh-bash-sandbox/l
 const hybridResolver = `
 import { existsSync as __fsExistsSync } from "node:fs";
 function __resolveAndroidShellArgv(command) {
-  for (const sh of ["/data/user/0/com.dsh.mobile/files/bin/bash", "/data/user/0/com.dsh.mobile/files/bin/sh", "/data/data/com.dsh.mobile/files/bin/bash", "/data/data/com.dsh.mobile/files/bin/sh", "/data/user/0/com.aydin.dsh/files/bin/bash", "/data/data/com.aydin.dsh/files/bin/bash"]) {
+  for (const sh of [
+    "/data/user/0/com.dsh.mobile/files/usr/bin/bash",
+    "/data/user/0/com.dsh.mobile/files/usr/bin/sh",
+    "/data/data/com.dsh.mobile/files/usr/bin/bash",
+    "/data/data/com.dsh.mobile/files/usr/bin/sh",
+    "/data/data/com.termux/files/usr/bin/bash",
+    "/data/data/com.termux/files/usr/bin/sh",
+    "/data/user/0/com.dsh.mobile/files/bin/bash",
+    "/data/user/0/com.dsh.mobile/files/bin/sh",
+    "/data/data/com.dsh.mobile/files/bin/bash",
+    "/data/data/com.dsh.mobile/files/bin/sh"
+  ]) {
     try {
       if (__fsExistsSync(sh)) {
         return [sh, "-c", command];
@@ -140,7 +162,7 @@ if (fs.existsSync(workerThreadPath)) {
   }
 }
 
-// 6. Patch dsh-tool-fs-search to use packaged rg binary safely
+// 6. Patch dsh-tool-fs-search to use packaged rg binary safely and support symlinks & hidden files
 const toolFsSearchPath = `${dshRoot}/node_modules/@deepseek-ai/dsh-tool-fs-search/lib/index.js`;
 if (fs.existsSync(toolFsSearchPath)) {
   let code = fs.readFileSync(toolFsSearchPath, 'utf8');
@@ -149,9 +171,13 @@ if (fs.existsSync(toolFsSearchPath)) {
       'return (await import("@vscode/ripgrep")).rgPath;',
       'try { const { existsSync } = await import("node:fs"); if (existsSync("/data/user/0/com.dsh.mobile/files/bin/rg")) return "/data/user/0/com.dsh.mobile/files/bin/rg"; if (existsSync("/data/data/com.dsh.mobile/files/bin/rg")) return "/data/data/com.dsh.mobile/files/bin/rg"; if (existsSync("/data/user/0/com.aydin.dsh/files/bin/rg")) return "/data/user/0/com.aydin.dsh/files/bin/rg"; return (await import("@vscode/ripgrep")).rgPath; } catch (e) { throw e; }'
     );
-    fs.writeFileSync(toolFsSearchPath, code, 'utf8');
-    console.log('[PATCH SUCCESS] dsh-tool-fs-search patched!');
   }
+  // Ensure rg follows symlinks (-L) and includes hidden files on Android
+  if (code.includes('["--json",')) {
+    code = code.replace('["--json",', '["--json", "-L", "--hidden",');
+  }
+  fs.writeFileSync(toolFsSearchPath, code, 'utf8');
+  console.log('[PATCH SUCCESS] dsh-tool-fs-search patched with -L symlink and hidden support!');
 }
 
 // 7. Patch dsh-host-directory-picker-browse to set default browsing root to /sdcard

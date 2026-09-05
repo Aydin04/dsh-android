@@ -135,11 +135,11 @@ jobs:
           find /tmp/global_dsh -type f \( -name "*.d.ts" -o -name "*.map" -o -name "*.md" -o -name "LICENSE*" -o -name "CHANGELOG*" \) -delete || true
           find /tmp/global_dsh -type d \( -name "test" -o -name "tests" -o -name "docs" -o -name "example" -o -name "examples" \) -prune -exec rm -rf {} + || true
 
-          echo "4. Packaging DSH Engine into Single-File ASAR Image (Zero-Extract Virtual FS)..."
-          npm install --no-save @electron/asar --no-audit --no-fund
+          echo "4. Merging hoisted sibling packages into dsh and packaging dsh-core.tar.gz..."
+          node $GITHUB_WORKSPACE/.github/scripts/package-asar.js /tmp/dummy.asar || true
           mkdir -p $GITHUB_WORKSPACE/app/src/main/assets/engine
-          node $GITHUB_WORKSPACE/.github/scripts/package-asar.js $GITHUB_WORKSPACE/app/src/main/assets/engine/dsh.asar
-          ls -lh $GITHUB_WORKSPACE/app/src/main/assets/engine/dsh.asar
+          tar -czf $GITHUB_WORKSPACE/app/src/main/assets/engine/dsh-core.tar.gz -C /tmp/global_dsh/lib/node_modules/@deepseek-ai dsh
+          ls -lh $GITHUB_WORKSPACE/app/src/main/assets/engine/dsh-core.tar.gz
 
       - name: Setup Gradle 8.5
         uses: gradle/actions/setup-gradle@v3

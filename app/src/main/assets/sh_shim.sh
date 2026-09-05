@@ -38,7 +38,25 @@ if [ -f "$ROOT_FLAG_FILE" ] || [ -f "$ROOT_FLAG_ALT" ] || [ "$(id -u 2>/dev/null
     done
 fi
 
-# 2. Non-root / Standard: If proot with Alpine rootfs exists, run command inside proot
+# 2. Termux Environment (Embedded in app or Termux app)
+TERMUX_PATHS="/data/user/0/com.dsh.mobile/files/usr /data/data/com.dsh.mobile/files/usr /data/data/com.termux/files/usr"
+for tp in $TERMUX_PATHS; do
+    if [ -x "$tp/bin/bash" ] || [ -x "$tp/bin/sh" ]; then
+        export PREFIX="$tp"
+        export PATH="$tp/bin:$tp/bin/applets:$PATH"
+        export LD_LIBRARY_PATH="$tp/lib:$LD_LIBRARY_PATH"
+        export HOME="/data/user/0/com.dsh.mobile/files/home"
+        export TMPDIR="/data/user/0/com.dsh.mobile/files/tmp"
+        [ ! -d "$HOME" ] && mkdir -p "$HOME" 2>/dev/null || true
+        [ ! -d "$TMPDIR" ] && mkdir -p "$TMPDIR" 2>/dev/null || true
+        
+        SH_BIN="$tp/bin/bash"
+        [ ! -x "$SH_BIN" ] && SH_BIN="$tp/bin/sh"
+        exec "$SH_BIN" "$@"
+    fi
+done
+
+# 3. Non-root / Standard: If proot with Alpine rootfs exists, run command inside proot
 if [ -x "$PROOT" ] && [ -d "$ROOTFS/bin" ]; then
     APP_FILES="/data/user/0/com.dsh.mobile/files"
     [ ! -d "$APP_FILES" ] && APP_FILES="/data/data/com.dsh.mobile/files"
@@ -58,6 +76,6 @@ if [ -x "$PROOT" ] && [ -d "$ROOTFS/bin" ]; then
         -w /sdcard /bin/sh "$@"
 fi
 
-# 3. Fallback: Host Android /system/bin/sh
+# 4. Fallback: Host Android /system/bin/sh
 exec /system/bin/sh "$@"
 

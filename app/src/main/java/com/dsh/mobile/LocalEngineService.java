@@ -377,7 +377,7 @@ public class LocalEngineService extends Service {
             }
             copyAssetDir("asar-engine", asarEngineDir);
 
-            // Check if packaged as Single-File ASAR Image
+            // Package Architecture: High-Performance Native Archive with Self-Healing Integrity Check
             File dshAsar = new File(engineDir, "dsh.asar");
             File atomicAsar = new File(engineDir, "atomic-router.asar");
             File dshDir = new File(filesDir, "dsh");
@@ -390,44 +390,96 @@ public class LocalEngineService extends Service {
                 if (ea != null) assetList = Arrays.asList(ea);
             } catch (Exception ignored) {}
 
-            boolean hasDshAsarAsset = assetList.contains("dsh.asar");
-            if (hasDshAsarAsset) {
-                emitLog("[ASAR ENGINE] Detected Single-File dsh.asar! Copying archive without extracting loose files...");
-                copyAssetFile("engine/dsh.asar", dshAsar);
-                emitLog("[ASAR ENGINE SUCCESS] dsh.asar ready (" + (dshAsar.length() / (1024 * 1024)) + " MB). Cleaner immune!");
-            } else {
-                // Fallback extraction of dsh-core.tar.gz for backward compatibility
-                File appBootDir = new File(dshDir, "node_modules/@deepseek-ai/dsh-app-boot");
-                boolean needsExtraction = !dshBin.exists() || !appBootDir.exists() || isNewAppVersion;
-                if (needsExtraction) {
-                    emitLog("[EXTRACT] Unpacking dsh-core archive...");
-                    String dshAsset = assetList.contains("dsh-core.tar.gz") ? "engine/dsh-core.tar.gz" : "engine/dsh-core.tar";
-                    boolean isGzip = dshAsset.endsWith(".gz");
-                    try (InputStream rawIn = getAssets().open(dshAsset)) {
-                        InputStream inStream = isGzip ? new GzipCompressorInputStream(rawIn) : rawIn;
-                        try (TarArchiveInputStream tarIn = new TarArchiveInputStream(inStream)) {
-                            TarArchiveEntry entry;
-                            while ((entry = tarIn.getNextTarEntry()) != null) {
-                                File outputFile = new File(filesDir, entry.getName());
-                                if (entry.isDirectory()) {
-                                    if (!outputFile.exists()) outputFile.mkdirs();
-                                } else {
-                                    File parent = outputFile.getParentFile();
-                                    if (parent != null && !parent.exists()) parent.mkdirs();
-                                    try (OutputStream out = new FileOutputStream(outputFile)) {
-                                        byte[] buf = new byte[32768];
-                                        int len;
-                                        while ((len = tarIn.read(buf)) != -1) {
-                                            out.write(buf, 0, len);
+            // Canary Integrity Check: Check essential files to detect corruption or cleaner deletion
+            boolean dshCanaryValid = dshBin.exists() &&
+                    new File(dshDir, "package.json").exists() &&
+                    new File(dshDir, "node_modules/@deepseek-ai/dsh-app-boot/lib/index.js").exists() &&
+                    new File(dshDir, "node_modules/@deepseek-ai/dsh-host-webserver/lib/index.js").exists() &&
+                    new File(dshDir, "node_modules/@deepseek-ai/dsh-terminal-bash/lib/index.js").exists();
+
+            boolean needsExtraction = !dshCanaryValid || isNewAppVersion;
+
+            if (needsExtraction && (assetList.contains("dsh-core.tar.gz") || assetList.contains("dsh-core.tar"))) {
+                if (!dshCanaryValid && !isNewAppVersion) {
+                    emitLog("[INTEGRITY] File hilang terdeteksi pada DSH engine! Melakukan self-healing auto-extract...");
+                } else {
+                    emitLog("[EXTRACT] Memulai instalasi/update cepat DSH Core engine...");
+                }
+
+                String dshAsset = assetList.contains("dsh-core.tar.gz") ? "engine/dsh-core.tar.gz" : "engine/dsh-core.tar";
+                File tempTar = new File(filesDir, "temp_dsh_archive.tar.gz");
+
+                try {
+                    // Copy archive to private storage for high-speed native extraction
+                    try (InputStream in = getAssets().open(dshAsset);
+                         OutputStream out = new FileOutputStream(tempTar)) {
+                        byte[] buf = new byte[65536];
+                        int len;
+                        while ((len = in.read(buf)) != -1) {
+                            out.write(buf, 0, len);
+                        }
+                    }
+
+                    // Attempt ultra-fast extraction via Android native toybox/tar (C++ level)
+                    boolean nativeExtractSuccess = false;
+                    for (String tarBin : Arrays.asList("/system/bin/toybox", "/system/bin/tar", "toybox", "tar")) {
+                        try {
+                            List<String> cmd = new ArrayList<>();
+                            cmd.add(tarBin);
+                            if (tarBin.contains("toybox")) {
+                                cmd.add("tar");
+                            }
+                            cmd.add("-xzf");
+                            cmd.add(tempTar.getAbsolutePath());
+                            cmd.add("-C");
+                            cmd.add(filesDir.getAbsolutePath());
+
+                            Process p = new ProcessBuilder(cmd).redirectErrorStream(true).start();
+                            int exit = p.waitFor();
+                            if (exit == 0 && dshBin.exists()) {
+                                nativeExtractSuccess = true;
+                                emitLog("[EXTRACT SUCCESS] Native tar extraction selesai secepat kilat (exit 0)!");
+                                break;
+                            }
+                        } catch (Exception ignored) {}
+                    }
+
+                    // Fallback to Java Tar stream only if native tar binary is unavailable on device
+                    if (!nativeExtractSuccess) {
+                        emitLog("[EXTRACT FALLBACK] Menggunakan Java decompression fallback...");
+                        boolean isGzip = dshAsset.endsWith(".gz");
+                        try (InputStream rawIn = new FileInputStream(tempTar)) {
+                            InputStream inStream = isGzip ? new GzipCompressorInputStream(rawIn) : rawIn;
+                            try (TarArchiveInputStream tarIn = new TarArchiveInputStream(inStream)) {
+                                TarArchiveEntry entry;
+                                while ((entry = tarIn.getNextTarEntry()) != null) {
+                                    File outputFile = new File(filesDir, entry.getName());
+                                    if (entry.isDirectory()) {
+                                        if (!outputFile.exists()) outputFile.mkdirs();
+                                    } else {
+                                        File parent = outputFile.getParentFile();
+                                        if (parent != null && !parent.exists()) parent.mkdirs();
+                                        try (OutputStream out = new FileOutputStream(outputFile)) {
+                                            byte[] buf = new byte[65536];
+                                            int len;
+                                            while ((len = tarIn.read(buf)) != -1) {
+                                                out.write(buf, 0, len);
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
-                    } catch (Exception e) {
-                        emitLog("[EXTRACT ERROR] " + e.getMessage());
                     }
+                } catch (Exception e) {
+                    emitLog("[EXTRACT ERROR] " + e.getMessage());
+                } finally {
+                    try { tempTar.delete(); } catch (Exception ignored) {}
                 }
+            } else if (assetList.contains("dsh.asar")) {
+                // Backward compatibility if dsh.asar asset exists
+                emitLog("[ASAR ENGINE] Detected Single-File dsh.asar! Copying archive...");
+                copyAssetFile("engine/dsh.asar", dshAsar);
             }
 
             // AtomicRouter ASAR vs TAR
@@ -505,13 +557,14 @@ public class LocalEngineService extends Service {
                     ":/system/xbin" + 
                     ":/data/data/com.termux/files/usr/bin";
 
-            String nodePath = (dshAsar.exists() ? (dshAsar.getAbsolutePath() + "/node_modules:") : (new File(dshDir, "node_modules").getAbsolutePath() + ":")) + 
+            String nodePath = (new File(dshDir, "node_modules").getAbsolutePath() + ":") + 
+                    (dshAsar.exists() ? (dshAsar.getAbsolutePath() + "/node_modules:") : "") +
                     new File(filesDir, ".dsh/profiles/web/node_modules").getAbsolutePath() +
                     ":" + new File(filesDir, "node_modules").getAbsolutePath();
 
             File asarPreload = new File(filesDir, "asar-engine/asar-preload.mjs");
             File asarRegister = new File(filesDir, "asar-engine/asar-register.cjs");
-            boolean useAsar = dshAsar.exists() && asarPreload.exists();
+            boolean useAsar = !dshBin.exists() && dshAsar.exists() && asarPreload.exists();
 
             List<String> dshCmd = new ArrayList<>();
             dshCmd.add(nodeFile.getAbsolutePath());
@@ -526,7 +579,7 @@ public class LocalEngineService extends Service {
                 dshCmd.add(asarPreload.getAbsolutePath());
                 dshCmd.add(dshAsar.getAbsolutePath() + "/lib/bin.js");
             } else {
-                emitLog("[SERVER] Launching in Directory Mode via " + dshBin.getAbsolutePath());
+                emitLog("[SERVER] Launching in Native Engine Directory Mode via " + dshBin.getAbsolutePath());
                 dshCmd.add(dshBin.getAbsolutePath());
             }
             dshCmd.add("--profile");
