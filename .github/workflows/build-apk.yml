@@ -174,6 +174,8 @@ jobs:
             find node_modules -type f -name "*.node" | grep -v "arm64" | xargs rm -f 2>/dev/null || true
             
             find . -type f \( -name "*.map" -o -name "*.d.ts" -o -name "*.flow" -o -name "LICENSE*" -o -name "CHANGELOG*" \) -delete || true
+            find . -type l -exec rm -f {} + || true
+            find . -type d -name ".bin" -prune -exec rm -rf {} + || true
             cd $GITHUB_WORKSPACE
             echo "Packaging AtomicRouter into Single-File ASAR Image..."
             node $GITHUB_WORKSPACE/.github/scripts/package-atomic-asar.js $GITHUB_WORKSPACE/app/src/main/assets/engine/atomic-router.asar
