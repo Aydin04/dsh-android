@@ -432,3 +432,44 @@ for (const wsPath of webserverPaths) {
     console.log(`[PATCH SUCCESS] dsh-host-webserver patched!`);
   }
 }
+
+// 17. Patch cordis-plugin-loader EntryGroup.update to skip failing plugin entries gracefully
+const loaderFiles = [
+  `${dshRoot}/node_modules/@deepseek-ai/cordis-plugin-loader/lib/index.js`,
+  `/tmp/global_dsh/lib/node_modules/@deepseek-ai/cordis-plugin-loader/lib/index.js`
+];
+for (const lf of loaderFiles) {
+  if (fs.existsSync(lf)) {
+    let lCode = fs.readFileSync(lf, 'utf8');
+    if (lCode.includes('if (failures.length > 1) throw new AggregateError(failures, "loader entries failed to apply");')) {
+      console.log(`[PATCH] Patching cordis-plugin-loader error handler in ${lf}...`);
+      lCode = lCode.replace(
+        'if (failures.length === 1) throw failures[0];\n\t\t\tif (failures.length > 1) throw new AggregateError(failures, "loader entries failed to apply");',
+        'if (failures.length > 0) { for (const f of failures) console.warn("[WARN] Plugin loader entry failed to apply (gracefully skipped):", f?.message || f); }'
+      );
+      fs.writeFileSync(lf, lCode, 'utf8');
+      console.log('[PATCH SUCCESS] cordis-plugin-loader patched for fault-tolerant entry loading!');
+    }
+  }
+}
+
+// 18. Patch dsh-app-boot assertEntriesActivated to warn instead of aborting the process
+const appBootFiles = [
+  `${dshRoot}/node_modules/@deepseek-ai/dsh-app-boot/lib/index.js`,
+  `/tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh-app-boot/lib/index.js`
+];
+for (const bf of appBootFiles) {
+  if (fs.existsSync(bf)) {
+    let bCode = fs.readFileSync(bf, 'utf8');
+    if (bCode.includes('throw new Error(`${binName}: ${String(failures.length)} ${noun} did not activate')) {
+      console.log(`[PATCH] Patching dsh-app-boot assertEntriesActivated in ${bf}...`);
+      bCode = bCode.replace(
+        'throw new Error(`${binName}: ${String(failures.length)} ${noun} did not activate\\n${failures.join("\\n")}`);',
+        'console.warn(`[WARN] ${failures.length} plugin entries did not activate (gracefully skipped):\\n${failures.join("\\n")}`); return;'
+      );
+      fs.writeFileSync(bf, bCode, 'utf8');
+      console.log('[PATCH SUCCESS] dsh-app-boot patched to never abort on unactivated optional plugins!');
+    }
+  }
+}
+

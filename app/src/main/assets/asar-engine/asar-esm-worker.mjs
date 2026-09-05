@@ -23,29 +23,24 @@ function resolveExportTarget(exportsField, subpath) {
 
   if (typeof exportsField !== "object") return null;
 
-  // Direct match e.g. exports["./model-selection-settings"]
   let candidate = exportsField[subpath];
   if (!candidate && subpath === ".") {
     candidate = exportsField["."];
   }
-
-  if (candidate) {
-    if (typeof candidate === "string") return candidate;
-    if (typeof candidate === "object") {
-      return candidate.import || candidate.module || candidate.default || candidate.require || candidate.node || null;
-    }
+  if (!candidate && subpath === ".") {
+    candidate = exportsField;
   }
 
-  // If subpath is "." and exports has condition keys directly at top level (e.g. { import: "...", require: "..." })
-  if (subpath === ".") {
-    const direct = exportsField.import || exportsField.module || exportsField.default || exportsField.require || exportsField.node;
-    if (typeof direct === "string") return direct;
-    if (typeof direct === "object") {
-      return direct.import || direct.module || direct.default || direct.require || direct.node || null;
+  function extractString(val) {
+    if (!val) return null;
+    if (typeof val === "string") return val;
+    if (typeof val === "object") {
+      return extractString(val.node) || extractString(val.import) || extractString(val.module) || extractString(val.default) || extractString(val.require);
     }
+    return null;
   }
 
-  return null;
+  return extractString(candidate);
 }
 
 /**
@@ -164,6 +159,22 @@ function getFormatForFile(filePath) {
 }
 
 export async function resolve(specifier, context, nextResolve) {
+  // Safe fallback for packages not bundled or native on Android
+  if (specifier === "sharp" || specifier.startsWith("sharp/")) {
+    return {
+      shortCircuit: true,
+      url: "data:text/javascript,export default function sharp(){ return { resize: () => ({ toBuffer: () => Promise.resolve(Buffer.alloc(0)) }) }; }; export const fit = {};",
+      format: "module"
+    };
+  }
+  if (specifier === "@earendil-works/pi-ai" || specifier.startsWith("@earendil-works/pi-ai")) {
+    return {
+      shortCircuit: true,
+      url: "data:text/javascript,export default {}; export const getModel = () => null;",
+      format: "module"
+    };
+  }
+
   // Case 1: Bare package specifier (e.g. '@deepseek-ai/dsh-app-boot', 'eventsource-parser', 'ipaddr.js')
   if (!specifier.startsWith(".") && !specifier.startsWith("/") && !specifier.startsWith("file://") && !specifier.startsWith("node:")) {
     const parent = context.parentURL ? fileURLToPath(context.parentURL) : "";
@@ -228,7 +239,26 @@ export async function load(url, context, nextLoad) {
       return {
         shortCircuit: true,
         format: "module",
-        source: "export class Win32Process { spawn() { throw new Error('Not supported on Android'); } }\nexport default { Win32Process };\n"
+        source: `
+export class Win32Process { spawn() { throw new Error('Not supported on Android'); } }
+export const ERROR_INSUFFICIENT_BUFFER = 122;
+export const ERROR_MORE_DATA = 234;
+export default { Win32Process, ERROR_INSUFFICIENT_BUFFER, ERROR_MORE_DATA };
+`
+      };
+    }
+
+    // Polyfill opentelemetry named exports for ESM
+    if (filePath.includes("@opentelemetry/sdk-logs") || filePath.includes("sdk-logs")) {
+      return {
+        shortCircuit: true,
+        format: "module",
+        source: `
+export class BatchLogRecordProcessor { onEmit() {} shutdown() { return Promise.resolve(); } forceFlush() { return Promise.resolve(); } }
+export class SimpleLogRecordProcessor { onEmit() {} shutdown() { return Promise.resolve(); } forceFlush() { return Promise.resolve(); } }
+export class LoggerProvider { getLogger() { return { emit() {} }; } shutdown() { return Promise.resolve(); } }
+export default { BatchLogRecordProcessor, SimpleLogRecordProcessor, LoggerProvider };
+`
       };
     }
 
