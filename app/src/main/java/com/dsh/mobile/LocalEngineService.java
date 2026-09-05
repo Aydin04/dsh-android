@@ -349,8 +349,13 @@ public class LocalEngineService extends Service {
             // 3. Extract compressed DSH Core packages (dsh-core.tar.gz / dsh-core.tar)
             File dshDir = new File(filesDir, "dsh");
             File dshBin = new File(dshDir, "lib/bin.js");
+            File appBootDir = new File(dshDir, "node_modules/@deepseek-ai/dsh-app-boot");
+            boolean needsExtraction = !dshBin.exists() || !appBootDir.exists() || isNewAppVersion;
 
-            if (!dshBin.exists() || isNewAppVersion) {
+            if (needsExtraction) {
+                if (dshBin.exists() && !appBootDir.exists()) {
+                    emitLog("[SELF-HEAL] Detected missing @deepseek-ai/dsh-app-boot module! Auto-healing DSH core packages...");
+                }
                 String dshAsset = "engine/dsh-core.tar.gz";
                 boolean isGzip = true;
                 try {
@@ -735,11 +740,23 @@ public class LocalEngineService extends Service {
 
     private void sanitizeProfileConfigs(File filesDir) {
         try {
+            // 1. Enforce strict chmod 600 on .credentials.yaml to prevent credentials-local 777 crash
+            File creds = new File(filesDir, ".dsh/.credentials.yaml");
+            if (creds.exists()) {
+                creds.setReadable(true, true);
+                creds.setWritable(true, true);
+                creds.setExecutable(false, false);
+                try {
+                    Runtime.getRuntime().exec("chmod 600 " + creds.getAbsolutePath()).waitFor();
+                } catch (Exception ignored) {}
+            }
+
+            // 2. Sanitize web profile package.json if broken bundles exist
             File webPkg = new File(filesDir, ".dsh/profiles/web/package.json");
             if (webPkg.exists()) {
                 String content = new String(java.nio.file.Files.readAllBytes(webPkg.toPath()), java.nio.charset.StandardCharsets.UTF_8);
-                if (content.contains("multivers")) {
-                    emitLog("[REPAIR] Detected broken multivers plugin in web profile. Sanitizing package.json...");
+                if (content.contains("multivers") && !content.contains("@aydin0411/dsh-multivers")) {
+                    emitLog("[REPAIR] Detected outdated multivers bundle reference in web profile. Sanitizing...");
                     org.json.JSONObject pkgJson = new org.json.JSONObject(content);
                     org.json.JSONObject dshObj = pkgJson.optJSONObject("dsh");
                     if (dshObj != null) {

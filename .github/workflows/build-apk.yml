@@ -199,18 +199,17 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.6.9
-          name: "DSH Mobile v3.6.9 (Auto-Heal Profile Bundles & Background Notifier)"
+          tag_name: v3.7.0
+          name: "DSH Mobile v3.7.0 (Self-Healing Runtime & Auto Permission Guard)"
           body: |
-            ## 🚀 DSH Mobile Release v3.6.9 — Auto-Heal Profile Bundles & 24/7 Engine
-            - 🛡️ **Auto-Healing Missing Profile Bundles**:
-              - Mengatasi error fatal `cannot resolve profile bundle "@aydin/dsh-multivers"` ketika ada sisa plugin yang belum terpasang di profile web.
-              - `dsh-app-boot` kini secara otomatis melewati (*gracefully skip*) bundle yang tidak ditemukan alih-alih me-crash engine DSH.
-              - `LocalEngineService` secara otomatis mendeteksi dan membersihkan konfigurasi plugin yang rusak dari `package.json` sebelum booting.
-            - 🔔 **Direct Pipe Stdout Reply Notification**:
-              - Notifikasi balasan AI 100% muncul seketika di background status bar tanpa perlu membuka aplikasi (via `process.stdout` pipe).
-            - 🔋 **Background CPU Partial WakeLock**:
-              - Menjaga CPU tetap hidup saat layar mati agar respons AI selesai di latar belakang.
+            ## 🚀 DSH Mobile Release v3.7.0 — Self-Healing Engine & Auto Permission Guard
+            - 🛡️ **Self-Healing Core Module Guard**:
+              - Mengatasi error fatal `ERR_MODULE_NOT_FOUND: Cannot find package '@deepseek-ai/dsh-app-boot'` yang terjadi saat pembersih sampah HP/MIUI Cleaner menghapus file secara diam-diam.
+              - `LocalEngineService` sekarang secara aktif memvalidasi modul inti sebelum booting. Jika ada modul yang terhapus, engine secara instan meregenerasi paket dari arsip APK dalam hitungan detik!
+            - 🔑 **Automatic Credentials Permission Lock (chmod 600)**:
+              - Secara otomatis mengunci izin file `.credentials.yaml` ke `600` setiap kali aplikasi dijalankan. Menghilangkan error `credentials-local 777` selamanya.
+            - 🪐 **Built-in Compatibility for @aydin0411/dsh-multivers v1.1.0**:
+              - Mendukung penuh plugin MULTIVERS terbaru dengan Antigravity ContentBlock tool result pruner dan 429 adaptive retry backoff.
             - 🎯 **Rock-Solid Mutation Debounce Reply Detector**:
               - Mengatasi masalah utama di mana query kelas CSS status (`loading`/`progress`) membeku secara permanen karena elemen DOM latar belakang.
               - Diganti dengan sistem **Mutation Debounce Observer**: Memantau saat teks jawaban AI selesai dialirkan (*stream settled*), lalu secara instan mengirimkan notifikasi dan gelembung percakapan MIUI berisi **100% teks isi balasan asli AI**.
