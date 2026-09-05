@@ -23,18 +23,18 @@ async function main() {
           if (sub !== "dsh") {
             const src = path.join(deepseekDir, sub);
             const dst = path.join(targetNm, "@deepseek-ai", sub);
-            if (!fs.existsSync(dst)) {
+            if (fs.existsSync(src)) {
               fs.mkdirSync(path.dirname(dst), { recursive: true });
-              try { fs.cpSync(src, dst, { recursive: true }); } catch (_) {}
+              try { fs.cpSync(src, dst, { recursive: true, force: true }); } catch (_) {}
             }
           }
         }
       } else {
         const src = path.join(globalNm, item);
         const dst = path.join(targetNm, item);
-        if (!fs.existsSync(dst)) {
+        if (fs.existsSync(src)) {
           fs.mkdirSync(path.dirname(dst), { recursive: true });
-          try { fs.cpSync(src, dst, { recursive: true }); } catch (_) {}
+          try { fs.cpSync(src, dst, { recursive: true, force: true }); } catch (_) {}
         }
       }
     }

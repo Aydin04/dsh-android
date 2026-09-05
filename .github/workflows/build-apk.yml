@@ -109,18 +109,17 @@ jobs:
             cp -f $GITHUB_WORKSPACE/.github/scripts/node-pty-utils.js /tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh/node_modules/node-pty/lib/utils.js
           fi
 
-          # Safe Koffi Android Adapter to prevent crash on Android
-          if [ -d "/tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh/node_modules/koffi" ]; then
-            cp -f $GITHUB_WORKSPACE/.github/scripts/koffi-adapter.js /tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh/node_modules/koffi/src/koffi/index.js
-          fi
-
-          # Safe Cordis HMR Adapter to prevent --expose-internals crash on Android
-          if [ -d "/tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/cordis-plugin-hmr" ]; then
-            cp -f $GITHUB_WORKSPACE/.github/scripts/cordis-hmr-adapter.js /tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/cordis-plugin-hmr/lib/index.js
-          fi
-
           # Install ripgrep linux-arm64 specifically for android-arm64 execution
           npm install --prefix /tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh @vscode/ripgrep-linux-arm64@1.18.0 --no-audit --no-fund || true
+
+          echo "4. Merging hoisted sibling packages into dsh before patching..."
+          node $GITHUB_WORKSPACE/.github/scripts/package-asar.js /tmp/dummy.asar || true
+
+          # Safe Koffi Android Adapter to prevent crash on Android (copy to all locations)
+          find /tmp/global_dsh -type d -path "*/node_modules/koffi/src/koffi" -exec cp -f $GITHUB_WORKSPACE/.github/scripts/koffi-adapter.js {}/index.js \; || true
+
+          # Safe Cordis HMR Adapter to prevent --expose-internals crash on Android
+          find /tmp/global_dsh -type d -path "*/cordis-plugin-hmr/lib" -exec cp -f $GITHUB_WORKSPACE/.github/scripts/cordis-hmr-adapter.js {}/index.js \; || true
 
           # Safe Android Sandbox, Hardlink, Shell & Ripgrep Patch
           node $GITHUB_WORKSPACE/.github/scripts/patch-sandbox.js
@@ -135,8 +134,7 @@ jobs:
           find /tmp/global_dsh -type f \( -name "*.d.ts" -o -name "*.map" -o -name "*.md" -o -name "LICENSE*" -o -name "CHANGELOG*" \) -delete || true
           find /tmp/global_dsh -type d \( -name "test" -o -name "tests" -o -name "docs" -o -name "example" -o -name "examples" \) -prune -exec rm -rf {} + || true
 
-          echo "4. Merging hoisted sibling packages into dsh and packaging dsh-core.tar.gz..."
-          node $GITHUB_WORKSPACE/.github/scripts/package-asar.js /tmp/dummy.asar || true
+          echo "5. Packaging finalized dsh-core.tar.gz..."
           mkdir -p $GITHUB_WORKSPACE/app/src/main/assets/engine
           tar -czf $GITHUB_WORKSPACE/app/src/main/assets/engine/dsh-core.tar.gz -C /tmp/global_dsh/lib/node_modules/@deepseek-ai dsh
           ls -lh $GITHUB_WORKSPACE/app/src/main/assets/engine/dsh-core.tar.gz

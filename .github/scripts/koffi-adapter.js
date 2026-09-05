@@ -24,24 +24,28 @@ for (const p of possiblePaths) {
 if (!native2) {
   const dummyFn = () => ({});
   native2 = {
-    version: "3.1.6",
+    version: "3.2.1",
     load: () => new Proxy({}, { get: () => dummyFn }),
     register: dummyFn,
     pointer: (type) => ({ size: 8, alignment: 8 }),
     struct: (name, fields) => {
       let size = 8;
-      if (name === "STARTUPINFOW") size = 104;
-      else if (name === "PROCESS_INFORMATION") size = 24;
+      const n = String(name || "");
+      if (n.includes("STARTUPINFOW")) size = 104;
+      else if (n.includes("PROCESS_INFORMATION")) size = 24;
       return { size, alignment: 8, members: fields || {} };
     },
     opaque: () => ({ size: 8, alignment: 8 }),
     array: (type, len) => ({ size: (type?.size || 1) * len }),
-    introspect: () => ({ size: 8, alignment: 8, members: {} }),
-    type: () => ({ size: 8, alignment: 8, members: {} }),
-    sizeof: () => 8,
+    introspect: (spec) => ({ size: (spec && spec.size) ? spec.size : 8, alignment: 8, members: {} }),
+    type: (spec) => ({ size: (spec && spec.size) ? spec.size : 8, alignment: 8, members: {} }),
+    sizeof: (spec) => (spec && spec.size ? spec.size : 8),
     alignof: () => 8,
     offsetof: () => 0,
-    alloc: () => ({})
+    alloc: () => ({}),
+    encode: () => {},
+    decode: () => ({}),
+    address: () => 0n
   };
 } else {
   let introspect = native2.introspect ?? native2.type;
@@ -51,4 +55,4 @@ if (!native2) {
 }
 
 export default native2;
-export const { load, register, pointer, struct, opaque, array, sizeof, alignof, offsetof, alloc } = native2;
+export const { load, register, pointer, struct, opaque, array, sizeof, alignof, offsetof, alloc, encode, decode, address } = native2;

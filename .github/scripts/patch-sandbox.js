@@ -230,25 +230,64 @@ if (fs.existsSync(sandboxLocalPath)) {
 }
 
 // 9b. Patch dsh-win32-process on disk: It is a Windows-only module that causes koffi layout mismatch on Android/Linux
-const win32ProcessPaths = [
-  `${dshRoot}/node_modules/@deepseek-ai/dsh-win32-process/lib/index.js`,
-  `/tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh-win32-process/lib/index.js`
-];
-for (const wp of win32ProcessPaths) {
-  if (fs.existsSync(wp)) {
-    console.log(`[PATCH] Replacing ${wp} with safe Android stub...`);
-    const stubCode = `
+const win32ProcessStub = `
 export class Win32Process { spawn() { throw new Error("Win32Process not supported on Android"); } }
 export class Win32Error extends Error {}
 export const ERROR_INSUFFICIENT_BUFFER = 122;
 export const ERROR_MORE_DATA = 234;
 export const allocPtrSlot = () => ({});
-export default { Win32Process, Win32Error, ERROR_INSUFFICIENT_BUFFER, ERROR_MORE_DATA, allocPtrSlot };
+export const allocUint32 = () => ({});
+export const decodePtr = () => null;
+export const decodeUint32 = () => 0;
+export const drainPipe = async () => Buffer.alloc(0);
+export const extendWin32ProcessBindings = () => ({});
+export const isNullPtr = () => true;
+export const spawnInheritedJobProcess = () => { throw new Error("Not supported"); };
+export const spawnPipedProcess = () => { throw new Error("Not supported"); };
+export const throwLastError = () => {};
+export const throwWin32 = () => {};
+export const waitForProcessExit = async () => 0;
+export default {
+  Win32Process,
+  Win32Error,
+  ERROR_INSUFFICIENT_BUFFER,
+  ERROR_MORE_DATA,
+  allocPtrSlot,
+  allocUint32,
+  decodePtr,
+  decodeUint32,
+  drainPipe,
+  extendWin32ProcessBindings,
+  isNullPtr,
+  spawnInheritedJobProcess,
+  spawnPipedProcess,
+  throwLastError,
+  throwWin32,
+  waitForProcessExit
+};
 `;
-    fs.writeFileSync(wp, stubCode, 'utf8');
-    console.log(`[PATCH SUCCESS] ${wp} replaced with safe Android stub!`);
-  }
+
+function patchAllWin32ProcessFiles(dir) {
+  if (!fs.existsSync(dir)) return;
+  try {
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const ent of entries) {
+      const full = path.join(dir, ent.name);
+      if (ent.isDirectory()) {
+        if (ent.name === 'dsh-win32-process') {
+          const idx = path.join(full, 'lib/index.js');
+          if (fs.existsSync(idx)) {
+            fs.writeFileSync(idx, win32ProcessStub, 'utf8');
+            console.log(`[PATCH SUCCESS] Replaced ${idx} with comprehensive safe Android stub!`);
+          }
+        } else {
+          patchAllWin32ProcessFiles(full);
+        }
+      }
+    }
+  } catch (_) {}
 }
+patchAllWin32ProcessFiles('/tmp/global_dsh');
 
 // 10. Inject System Prompt Context
 const sandboxPolicyPath = `${dshRoot}/node_modules/@deepseek-ai/dsh-sandbox-policy/lib/index.js`;
@@ -480,43 +519,59 @@ for (const wsPath of webserverPaths) {
   }
 }
 
-// 17. Patch cordis-plugin-loader EntryGroup.update to skip failing plugin entries gracefully
-const loaderFiles = [
-  `${dshRoot}/node_modules/@deepseek-ai/cordis-plugin-loader/lib/index.js`,
-  `/tmp/global_dsh/lib/node_modules/@deepseek-ai/cordis-plugin-loader/lib/index.js`
-];
-for (const lf of loaderFiles) {
-  if (fs.existsSync(lf)) {
-    let lCode = fs.readFileSync(lf, 'utf8');
-    if (lCode.includes('if (failures.length > 1) throw new AggregateError(failures, "loader entries failed to apply");')) {
-      console.log(`[PATCH] Patching cordis-plugin-loader error handler in ${lf}...`);
-      lCode = lCode.replace(
-        'if (failures.length === 1) throw failures[0];\n\t\t\tif (failures.length > 1) throw new AggregateError(failures, "loader entries failed to apply");',
-        'if (failures.length > 0) { for (const f of failures) console.warn("[WARN] Plugin loader entry failed to apply (gracefully skipped):", f?.message || f); }'
-      );
-      fs.writeFileSync(lf, lCode, 'utf8');
-      console.log('[PATCH SUCCESS] cordis-plugin-loader patched for fault-tolerant entry loading!');
+// 17. Patch cordis-plugin-loader EntryGroup.update & await to skip failing plugin entries gracefully
+function patchCordisLoader(filePath) {
+  try {
+    let lCode = fs.readFileSync(filePath, 'utf8');
+    let changed = false;
+    const targetRegex1 = /if\s*\(\s*failures\.length\s*===\s*1\s*\)\s*throw\s+failures\[0\];\s*if\s*\(\s*failures\.length\s*>\s*1\s*\)\s*throw\s+new\s+AggregateError\s*\(\s*failures,\s*"loader entries failed to apply"\s*\);/;
+    if (targetRegex1.test(lCode)) {
+      lCode = lCode.replace(targetRegex1, 'if (failures.length > 0) { for (const f of failures) console.warn("[WARN] Plugin loader entry failed to apply (gracefully skipped):", f?.message || f); }');
+      changed = true;
     }
-  }
+    const targetRegex2 = /if\s*\(\s*failures\.length\s*===\s*1\s*\)\s*throw\s+failures\[0\];\s*if\s*\(\s*failures\.length\s*>\s*1\s*\)\s*throw\s+new\s+AggregateError\s*\(\s*failures,\s*"loader fibers failed"\s*\);/;
+    if (targetRegex2.test(lCode)) {
+      lCode = lCode.replace(targetRegex2, 'if (failures.length > 0) { for (const f of failures) console.warn("[WARN] Loader fiber failed (gracefully skipped):", f?.message || f); }');
+      changed = true;
+    }
+    if (changed) {
+      fs.writeFileSync(filePath, lCode, 'utf8');
+      console.log(`[PATCH SUCCESS] Patched cordis-plugin-loader at ${filePath}!`);
+    }
+  } catch (_) {}
 }
 
 // 18. Patch dsh-app-boot assertEntriesActivated to warn instead of aborting the process
-const appBootFiles = [
-  `${dshRoot}/node_modules/@deepseek-ai/dsh-app-boot/lib/index.js`,
-  `/tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh-app-boot/lib/index.js`
-];
-for (const bf of appBootFiles) {
-  if (fs.existsSync(bf)) {
-    let bCode = fs.readFileSync(bf, 'utf8');
-    if (bCode.includes('throw new Error(`${binName}: ${String(failures.length)} ${noun} did not activate')) {
-      console.log(`[PATCH] Patching dsh-app-boot assertEntriesActivated in ${bf}...`);
-      bCode = bCode.replace(
-        'throw new Error(`${binName}: ${String(failures.length)} ${noun} did not activate\\n${failures.join("\\n")}`);',
-        'console.warn(`[WARN] ${failures.length} plugin entries did not activate (gracefully skipped):\\n${failures.join("\\n")}`); return;'
-      );
-      fs.writeFileSync(bf, bCode, 'utf8');
-      console.log('[PATCH SUCCESS] dsh-app-boot patched to never abort on unactivated optional plugins!');
+function patchAppBoot(filePath) {
+  try {
+    let bCode = fs.readFileSync(filePath, 'utf8');
+    const targetRegex = /throw new Error\(`\$\{binName\}: \$\{String\(failures\.length\)\} \$\{noun\} did not activate\\n\$\{failures\.join\("\\n"\)\}`\);/;
+    if (targetRegex.test(bCode)) {
+      bCode = bCode.replace(targetRegex, 'console.warn(`[WARN] ${failures.length} plugin entries did not activate (gracefully skipped):\\n${failures.join("\\n")}`); return;');
+      fs.writeFileSync(filePath, bCode, 'utf8');
+      console.log(`[PATCH SUCCESS] Patched dsh-app-boot at ${filePath}!`);
     }
-  }
+  } catch (_) {}
 }
+
+function patchAllPluginLoaders(dir) {
+  if (!fs.existsSync(dir)) return;
+  try {
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const ent of entries) {
+      const full = path.join(dir, ent.name);
+      if (ent.isDirectory()) {
+        if (ent.name === 'cordis-plugin-loader') {
+          patchCordisLoader(path.join(full, 'lib/index.js'));
+        } else if (ent.name === 'dsh-app-boot') {
+          patchAppBoot(path.join(full, 'lib/index.js'));
+        } else {
+          patchAllPluginLoaders(full);
+        }
+      }
+    }
+  } catch (_) {}
+}
+patchAllPluginLoaders('/tmp/global_dsh');
+
 
