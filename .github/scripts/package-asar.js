@@ -11,10 +11,33 @@ async function main() {
     throw new Error(`DSH source dir does not exist: ${dshSourceDir}`);
   }
 
-  // Ensure output dir exists
-  const outDir = path.dirname(outputAsar);
-  if (!fs.existsSync(outDir)) {
-    fs.mkdirSync(outDir, { recursive: true });
+  // Merge any hoisted sibling modules from global prefix into dsh/node_modules
+  const globalNm = "/tmp/global_dsh/lib/node_modules";
+  const targetNm = path.join(dshSourceDir, "node_modules");
+  if (fs.existsSync(globalNm)) {
+    if (!fs.existsSync(targetNm)) fs.mkdirSync(targetNm, { recursive: true });
+    for (const item of fs.readdirSync(globalNm)) {
+      if (item === "@deepseek-ai") {
+        const deepseekDir = path.join(globalNm, item);
+        for (const sub of fs.readdirSync(deepseekDir)) {
+          if (sub !== "dsh") {
+            const src = path.join(deepseekDir, sub);
+            const dst = path.join(targetNm, "@deepseek-ai", sub);
+            if (!fs.existsSync(dst)) {
+              fs.mkdirSync(path.dirname(dst), { recursive: true });
+              try { fs.cpSync(src, dst, { recursive: true }); } catch (_) {}
+            }
+          }
+        }
+      } else {
+        const src = path.join(globalNm, item);
+        const dst = path.join(targetNm, item);
+        if (!fs.existsSync(dst)) {
+          fs.mkdirSync(path.dirname(dst), { recursive: true });
+          try { fs.cpSync(src, dst, { recursive: true }); } catch (_) {}
+        }
+      }
+    }
   }
 
   // Create asar archive
