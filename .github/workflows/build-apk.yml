@@ -176,10 +176,12 @@ jobs:
             find . -type f \( -name "*.map" -o -name "*.d.ts" -o -name "*.flow" -o -name "LICENSE*" -o -name "CHANGELOG*" \) -delete || true
             find . -type l -exec rm -f {} + || true
             find . -type d -name ".bin" -prune -exec rm -rf {} + || true
-            cd $GITHUB_WORKSPACE
-            echo "Packaging AtomicRouter into Single-File ASAR Image..."
-            node $GITHUB_WORKSPACE/.github/scripts/package-atomic-asar.js $GITHUB_WORKSPACE/app/src/main/assets/engine/atomic-router.asar
-            ls -lh $GITHUB_WORKSPACE/app/src/main/assets/engine/atomic-router.asar
+            cd /tmp/atomic_pack
+            echo "Packaging AtomicRouter into Compact Single-File Container (tar.xz)..."
+            tar -cf /tmp/atomic-router.tar atomic-router
+            xz -z -9 -T0 /tmp/atomic-router.tar
+            mv /tmp/atomic-router.tar.xz $GITHUB_WORKSPACE/app/src/main/assets/engine/atomic-router.tar.xz
+            ls -lh $GITHUB_WORKSPACE/app/src/main/assets/engine/atomic-router.tar.xz
           fi
           ls -lh $GITHUB_WORKSPACE/app/src/main/assets/engine/
 
