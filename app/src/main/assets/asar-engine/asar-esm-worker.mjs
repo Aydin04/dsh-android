@@ -170,7 +170,7 @@ export async function resolve(specifier, context, nextResolve) {
   if (specifier === "@earendil-works/pi-ai" || specifier.startsWith("@earendil-works/pi-ai")) {
     return {
       shortCircuit: true,
-      url: "data:text/javascript,export default {}; export const getModel = () => null;",
+      url: "data:text/javascript,export default {}; export const getModel = () => null; export const anthropicMessagesApi = {}; export const openAICompletionsApi = {}; export const openAIResponsesApi = {};",
       format: "module"
     };
   }
@@ -241,14 +241,26 @@ export async function load(url, context, nextLoad) {
         format: "module",
         source: `
 export class Win32Process { spawn() { throw new Error('Not supported on Android'); } }
+export class Win32Error extends Error {}
 export const ERROR_INSUFFICIENT_BUFFER = 122;
 export const ERROR_MORE_DATA = 234;
-export default { Win32Process, ERROR_INSUFFICIENT_BUFFER, ERROR_MORE_DATA };
+export default { Win32Process, Win32Error, ERROR_INSUFFICIENT_BUFFER, ERROR_MORE_DATA };
 `
       };
     }
 
     // Polyfill opentelemetry named exports for ESM
+    if (filePath.includes("@opentelemetry/exporter-logs-otlp-http") || filePath.includes("exporter-logs-otlp-http")) {
+      return {
+        shortCircuit: true,
+        format: "module",
+        source: `
+export class OTLPLogExporter { export() {} shutdown() { return Promise.resolve(); } }
+export default { OTLPLogExporter };
+`
+      };
+    }
+
     if (filePath.includes("@opentelemetry/sdk-logs") || filePath.includes("sdk-logs")) {
       return {
         shortCircuit: true,

@@ -10,7 +10,7 @@ android {
         applicationId "com.dsh.mobile"
         minSdk 24
         targetSdk 28
-        versionCode 82
+        versionCode 83
         versionName "3.9.3"
 
         ndk {
