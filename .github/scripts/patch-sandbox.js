@@ -229,6 +229,27 @@ if (fs.existsSync(sandboxLocalPath)) {
   console.log('[PATCH SUCCESS] dsh-sandbox-local patched cleanly!');
 }
 
+// 9b. Patch dsh-win32-process on disk: It is a Windows-only module that causes koffi layout mismatch on Android/Linux
+const win32ProcessPaths = [
+  `${dshRoot}/node_modules/@deepseek-ai/dsh-win32-process/lib/index.js`,
+  `/tmp/global_dsh/lib/node_modules/@deepseek-ai/dsh-win32-process/lib/index.js`
+];
+for (const wp of win32ProcessPaths) {
+  if (fs.existsSync(wp)) {
+    console.log(`[PATCH] Replacing ${wp} with safe Android stub...`);
+    const stubCode = `
+export class Win32Process { spawn() { throw new Error("Win32Process not supported on Android"); } }
+export class Win32Error extends Error {}
+export const ERROR_INSUFFICIENT_BUFFER = 122;
+export const ERROR_MORE_DATA = 234;
+export const allocPtrSlot = () => ({});
+export default { Win32Process, Win32Error, ERROR_INSUFFICIENT_BUFFER, ERROR_MORE_DATA, allocPtrSlot };
+`;
+    fs.writeFileSync(wp, stubCode, 'utf8');
+    console.log(`[PATCH SUCCESS] ${wp} replaced with safe Android stub!`);
+  }
+}
+
 // 10. Inject System Prompt Context
 const sandboxPolicyPath = `${dshRoot}/node_modules/@deepseek-ai/dsh-sandbox-policy/lib/index.js`;
 if (fs.existsSync(sandboxPolicyPath)) {
