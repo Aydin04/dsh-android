@@ -97,6 +97,7 @@ public class MainActivity extends AppCompatActivity {
     private Button btnBackup;
     private Button btnLogs;
     private Button btnConfigDoc;
+    private Button btnFileManager;
 
     private ProgressBar progressBarPercent;
     private TextView tvProgressPercent;
@@ -183,6 +184,7 @@ public class MainActivity extends AppCompatActivity {
         btnBackup = findViewById(R.id.btnBackup);
         btnLogs = findViewById(R.id.btnLogs);
         btnConfigDoc = findViewById(R.id.btnConfigDoc);
+        btnFileManager = findViewById(R.id.btnFileManager);
         btnNode = findViewById(R.id.btnNode);
         btnBubbleToggle = findViewById(R.id.btnBubbleToggle);
 
@@ -323,6 +325,9 @@ public class MainActivity extends AppCompatActivity {
             btnNode.setOnClickListener(v -> showServerConfigDialog(null));
         }
         btnConfigDoc.setOnClickListener(v -> showConfigFileViewerDialog(null));
+        if (btnFileManager != null) {
+            btnFileManager.setOnClickListener(v -> showFileManagerDialog(getFilesDir()));
+        }
 
         btnZoomIn.setOnClickListener(v -> adjustZoom(10));
         btnZoomOut.setOnClickListener(v -> adjustZoom(-10));
@@ -1924,5 +1929,262 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         unregisterReceiver(engineReceiver);
         super.onDestroy();
+    }
+
+    // ==========================================
+    // IN-APP FILE EXPLORER, PERMISSIONS & ASAR MANAGER
+    // ==========================================
+    private void showFileManagerDialog(File currentDir) {
+        if (currentDir == null || !currentDir.exists()) currentDir = getFilesDir();
+        final File dir = currentDir;
+
+        File[] filesList = dir.listFiles();
+        List<File> items = new ArrayList<>();
+        if (filesList != null) {
+            Arrays.sort(filesList, (a, b) -> {
+                if (a.isDirectory() && !b.isDirectory()) return -1;
+                if (!a.isDirectory() && b.isDirectory()) return 1;
+                return a.getName().compareToIgnoreCase(b.getName());
+            });
+            items.addAll(Arrays.asList(filesList));
+        }
+
+        List<String> displayNames = new ArrayList<>();
+        if (dir.getParentFile() != null && (dir.getAbsolutePath().startsWith(getFilesDir().getAbsolutePath()) || dir.getAbsolutePath().startsWith("/sdcard"))) {
+            displayNames.add("📁 .. (Folder Atas)");
+        }
+
+        for (File f : items) {
+            String prefix = f.isDirectory() ? "📁 " : (f.getName().endsWith(".asar") ? "📦 " : "📄 ");
+            String sizeInfo = f.isDirectory() ? "" : (" (" + (f.length() > 1048576 ? (f.length() / 1048576 + " MB") : (f.length() / 1024 + " KB")) + ")");
+            displayNames.add(prefix + f.getName() + sizeInfo);
+        }
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("📁 Files: " + dir.getName() + "/");
+        builder.setItems(displayNames.toArray(new String[0]), (dialog, which) -> {
+            int offset = 0;
+            if (dir.getParentFile() != null && (dir.getAbsolutePath().startsWith(getFilesDir().getAbsolutePath()) || dir.getAbsolutePath().startsWith("/sdcard"))) {
+                if (which == 0) {
+                    showFileManagerDialog(dir.getParentFile());
+                    return;
+                }
+                offset = 1;
+            }
+
+            File selected = items.get(which - offset);
+            if (selected.isDirectory()) {
+                showFileManagerDialog(selected);
+            } else {
+                showFileActionDialog(selected);
+            }
+        });
+
+        builder.setPositiveButton("Lompat Folder", (dialog, which) -> {
+            String[] shortcuts = new String[]{
+                "1. 🏠 Internal Files Root (" + getFilesDir().getAbsolutePath() + ")",
+                "2. 📦 ASAR Engine Folder (.asar images)",
+                "3. 🤖 DSH Configs & Sessions (.dsh)",
+                "4. 🔀 AtomicRouter Data (.atomic-router)",
+                "5. 💾 SDCard Storage (/sdcard)"
+            };
+            new AlertDialog.Builder(this)
+                    .setTitle("Pilih Folder Cepat")
+                    .setItems(shortcuts, (d, w) -> {
+                        if (w == 0) showFileManagerDialog(getFilesDir());
+                        else if (w == 1) showFileManagerDialog(new File(getFilesDir(), "engine"));
+                        else if (w == 2) showFileManagerDialog(new File(getFilesDir(), ".dsh"));
+                        else if (w == 3) showFileManagerDialog(new File(getFilesDir(), ".atomic-router"));
+                        else showFileManagerDialog(new File("/sdcard"));
+                    })
+                    .show();
+        });
+
+        builder.setNeutralButton("+ Buat File/Folder", (dialog, which) -> {
+            final EditText input = new EditText(this);
+            input.setHint("Nama file/folder (akhiri '/' jika folder)");
+            new AlertDialog.Builder(this)
+                    .setTitle("Buat Item Baru di: " + dir.getName())
+                    .setView(input)
+                    .setPositiveButton("Buat", (d, w) -> {
+                        String name = input.getText().toString().trim();
+                        if (!name.isEmpty()) {
+                            try {
+                                if (name.endsWith("/")) {
+                                    new File(dir, name.substring(0, name.length() - 1)).mkdirs();
+                                } else {
+                                    new File(dir, name).createNewFile();
+                                }
+                                Toast.makeText(this, "Item berhasil dibuat!", Toast.LENGTH_SHORT).show();
+                                showFileManagerDialog(dir);
+                            } catch (Exception e) {
+                                Toast.makeText(this, "Gagal: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                    })
+                    .setNegativeButton("Batal", null)
+                    .show();
+        });
+
+        builder.setNegativeButton("Tutup", null);
+        builder.show();
+    }
+
+    private void showFileActionDialog(File file) {
+        String[] actions = new String[]{
+            "✏️ Edit Isi File (Text / Code / Json / Yaml)",
+            "🔑 Izin Akses / Permission (chmod 600, 755, dll)",
+            "📦 Ekstrak / Buka ASAR (via npx / asar extract)",
+            "📋 Salin Path Lengkap",
+            "🗑️ Hapus File"
+        };
+
+        new AlertDialog.Builder(this)
+                .setTitle("Opsi: " + file.getName())
+                .setItems(actions, (d, which) -> {
+                    if (which == 0) {
+                        editFileContentDialog(file);
+                    } else if (which == 1) {
+                        changeFilePermissionDialog(file);
+                    } else if (which == 2) {
+                        extractOrInspectAsarDialog(file);
+                    } else if (which == 3) {
+                        ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                        cm.setPrimaryClip(ClipData.newPlainText("File Path", file.getAbsolutePath()));
+                        Toast.makeText(this, "Path disalin: " + file.getAbsolutePath(), Toast.LENGTH_SHORT).show();
+                    } else if (which == 4) {
+                        new AlertDialog.Builder(this)
+                                .setTitle("Konfirmasi Hapus")
+                                .setMessage("Yakin ingin menghapus '" + file.getName() + "'?")
+                                .setPositiveButton("Hapus", (d2, w2) -> {
+                                    boolean del = file.delete();
+                                    Toast.makeText(this, del ? "File terhapus!" : "Gagal menghapus", Toast.LENGTH_SHORT).show();
+                                    showFileManagerDialog(file.getParentFile());
+                                })
+                                .setNegativeButton("Batal", null)
+                                .show();
+                    }
+                })
+                .setNegativeButton("Kembali", (dialog, which) -> showFileManagerDialog(file.getParentFile()))
+                .show();
+    }
+
+    private void editFileContentDialog(File file) {
+        if (file.length() > 2 * 1024 * 1024) {
+            Toast.makeText(this, "File terlalu besar untuk editor teks (>2MB)", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        StringBuilder sb = new StringBuilder();
+        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                sb.append(line).append("\n");
+            }
+        } catch (Exception e) {
+            Toast.makeText(this, "Gagal membaca: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        final EditText editor = new EditText(this);
+        editor.setText(sb.toString());
+        editor.setTypeface(android.graphics.Typeface.MONOSPACE);
+        editor.setTextSize(12);
+        editor.setTextColor(0xFFE6EDF3);
+        editor.setBackgroundColor(0xFF0D1117);
+        editor.setPadding(24, 24, 24, 24);
+
+        ScrollView scroll = new ScrollView(this);
+        scroll.addView(editor);
+
+        new AlertDialog.Builder(this)
+                .setTitle("✏️ Edit: " + file.getName())
+                .setView(scroll)
+                .setPositiveButton("Simpan", (dialog, which) -> {
+                    try (FileWriter fw = new FileWriter(file)) {
+                        fw.write(editor.getText().toString());
+                        Toast.makeText(this, "File berhasil disimpan!", Toast.LENGTH_SHORT).show();
+                    } catch (Exception e) {
+                        Toast.makeText(this, "Gagal simpan: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    }
+                })
+                .setNeutralButton("Simpan & Restart Server", (dialog, which) -> {
+                    try (FileWriter fw = new FileWriter(file)) {
+                        fw.write(editor.getText().toString());
+                        Toast.makeText(this, "Disimpan! Merestart server...", Toast.LENGTH_SHORT).show();
+                        restartEngine();
+                    } catch (Exception e) {
+                        Toast.makeText(this, "Gagal simpan: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    }
+                })
+                .setNegativeButton("Batal", null)
+                .show();
+    }
+
+    private void changeFilePermissionDialog(File file) {
+        String[] perms = new String[]{
+            "🔒 600 (User Read/Write - Aman untuk Credentials/Keys)",
+            "⚡ 755 (Exec/Read/Write - Standar Binary & Script)",
+            "🌐 644 (User RW, Lainnya Read-Only - Standar Config)",
+            "🔓 777 (Full Access Semesta)"
+        };
+
+        new AlertDialog.Builder(this)
+                .setTitle("Ubah Permission: " + file.getName())
+                .setItems(perms, (dialog, which) -> {
+                    String mode = "600";
+                    if (which == 1) mode = "755";
+                    else if (which == 2) mode = "644";
+                    else if (which == 3) mode = "777";
+
+                    try {
+                        Runtime.getRuntime().exec("chmod " + mode + " " + file.getAbsolutePath()).waitFor();
+                        Toast.makeText(this, "Permission diubah ke " + mode + "!", Toast.LENGTH_SHORT).show();
+                    } catch (Exception e) {
+                        Toast.makeText(this, "Error chmod: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("Batal", null)
+                .show();
+    }
+
+    private void extractOrInspectAsarDialog(File file) {
+        if (!file.getName().endsWith(".asar")) {
+            Toast.makeText(this, "File ini bukan format .asar", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        File targetExtractDir = new File(file.getParentFile(), file.getName().replace(".asar", "_extracted"));
+        new AlertDialog.Builder(this)
+                .setTitle("📦 Ekstrak ASAR")
+                .setMessage("Apakah Anda ingin mengekstrak isi '" + file.getName() + "' ke folder:\n" + targetExtractDir.getAbsolutePath() + " ?\n\nIni memungkinkan Anda melihat atau mengedit modul di dalamnya.")
+                .setPositiveButton("Ekstrak", (dialog, which) -> {
+                    Toast.makeText(this, "Mengekstrak ASAR di background...", Toast.LENGTH_SHORT).show();
+                    new Thread(() -> {
+                        try {
+                            File nodeBin = new File(getFilesDir(), "bin/node");
+                            File asarCli = new File(getFilesDir(), "asar-engine/asar-node/bin/asar-node.js");
+                            targetExtractDir.mkdirs();
+                            ProcessBuilder pb = new ProcessBuilder(
+                                nodeBin.getAbsolutePath(),
+                                asarCli.getAbsolutePath(),
+                                "extract",
+                                file.getAbsolutePath(),
+                                targetExtractDir.getAbsolutePath()
+                            );
+                            pb.environment().put("LD_LIBRARY_PATH", new File(getFilesDir(), "lib").getAbsolutePath());
+                            Process p = pb.start();
+                            p.waitFor();
+                            handler.post(() -> {
+                                Toast.makeText(MainActivity.this, "✅ ASAR berhasil diekstrak!", Toast.LENGTH_LONG).show();
+                                showFileManagerDialog(targetExtractDir);
+                            });
+                        } catch (Exception err) {
+                            handler.post(() -> Toast.makeText(MainActivity.this, "Gagal ekstrak: " + err.getMessage(), Toast.LENGTH_LONG).show());
+                        }
+                    }).start();
+                })
+                .setNegativeButton("Batal", null)
+                .show();
     }
 }

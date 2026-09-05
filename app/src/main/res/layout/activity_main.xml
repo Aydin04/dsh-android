@@ -132,6 +132,18 @@
                     android:textColor="#58a6ff"
                     android:textSize="11sp" />
 
+                <!-- In-App File Manager & Editor -->
+                <Button
+                    android:id="@+id/btnFileManager"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:paddingHorizontal="8dp"
+                    android:background="?attr/selectableItemBackground"
+                    android:text="📁 Files"
+                    android:textColor="#26a69a"
+                    android:textStyle="bold"
+                    android:textSize="11sp" />
+
                 <!-- Config & Presets -->
                 <Button
                     android:id="@+id/btnConfigDoc"
