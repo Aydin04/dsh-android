@@ -211,6 +211,9 @@ public class MainActivity extends AppCompatActivity {
 
         setupButtons();
         setupDraggableFloatingBar();
+        if (floatingDraggableContainer != null) {
+            floatingDraggableContainer.setVisibility(View.VISIBLE);
+        }
         setupWebView();
 
         IntentFilter filter = new IntentFilter();

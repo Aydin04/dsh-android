@@ -366,7 +366,15 @@ public class LocalEngineService extends Service {
             File asarEngineDir = new File(filesDir, "asar-engine");
             if (!asarEngineDir.exists()) asarEngineDir.mkdirs();
 
-            // Extract ASAR Hook Scripts
+            // Extract ASAR Hook Scripts (force update on new app version)
+            if (isNewAppVersion) {
+                File[] oldScripts = asarEngineDir.listFiles();
+                if (oldScripts != null) {
+                    for (File os : oldScripts) {
+                        if (os.getName().endsWith(".mjs") || os.getName().endsWith(".cjs")) os.delete();
+                    }
+                }
+            }
             copyAssetDir("asar-engine", asarEngineDir);
 
             // Check if packaged as Single-File ASAR Image
