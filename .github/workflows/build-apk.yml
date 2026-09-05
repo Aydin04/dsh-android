@@ -207,8 +207,8 @@ jobs:
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.8.1
-          name: "DSH Mobile v3.8.1 (Single-File ASAR Image & Zero-Extract Architecture)"
+          tag_name: v3.8.2
+          name: "DSH Mobile v3.8.2 (Single-File ASAR Image & Zero-Extract Architecture)"
           body: |
             ## 🚀 DSH Mobile Release v3.7.0 — Self-Healing Engine & Auto Permission Guard
             - 🛡️ **Self-Healing Core Module Guard**:

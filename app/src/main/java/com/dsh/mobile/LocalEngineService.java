@@ -575,6 +575,10 @@ public class LocalEngineService extends Service {
                     atomicPb.environment().put("NODE_PATH", atomicNodePath);
                     atomicPb.environment().put("PATH", enrichedPath);
                     atomicPb.environment().put("OPENSSL_CONF", new File(filesDir, "openssl.cnf").getAbsolutePath());
+                    // Lightweight background mode: disable unnecessary background sync intervals when not actively in dashboard
+                    atomicPb.environment().put("PROVIDER_LIMITS_SYNC_INTERVAL", "0");
+                    atomicPb.environment().put("ARENA_ELO_SYNC", "false");
+                    atomicPb.environment().put("PRICING_SYNC_ENABLED", "false");
                     atomicPb.redirectErrorStream(true);
 
                     atomicProcess = atomicPb.start();
