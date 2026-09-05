@@ -637,6 +637,15 @@ public class LocalEngineService extends Service {
                 }
             }).start();
 
+            // Monitor nodeProcess exit
+            new Thread(() -> {
+                try {
+                    int exitCode = nodeProcess.waitFor();
+                    emitLog("[SERVER EXIT] DSH nodeProcess exited with code: " + exitCode);
+                } catch (Exception ignored) {}
+            }).start();
+
+
             // 6. Monitor port readiness for 3080
             int consecutiveSuccess = 0;
             for (int i = 1; i <= 60; i++) {
