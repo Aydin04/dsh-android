@@ -136,7 +136,7 @@ jobs:
           find /tmp/global_dsh -type d \( -name "test" -o -name "tests" -o -name "docs" -o -name "example" -o -name "examples" \) -prune -exec rm -rf {} + || true
 
           echo "4. Packaging DSH Engine into Single-File ASAR Image (Zero-Extract Virtual FS)..."
-          npm install -g @electron/asar --no-audit --no-fund
+          npm install --no-save @electron/asar --no-audit --no-fund
           mkdir -p $GITHUB_WORKSPACE/app/src/main/assets/engine
           node $GITHUB_WORKSPACE/.github/scripts/package-asar.js $GITHUB_WORKSPACE/app/src/main/assets/engine/dsh.asar
           ls -lh $GITHUB_WORKSPACE/app/src/main/assets/engine/dsh.asar
