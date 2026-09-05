@@ -510,6 +510,7 @@ public class LocalEngineService extends Service {
                     ":" + new File(filesDir, "node_modules").getAbsolutePath();
 
             File asarPreload = new File(filesDir, "asar-engine/asar-preload.mjs");
+            File asarRegister = new File(filesDir, "asar-engine/asar-register.cjs");
             boolean useAsar = dshAsar.exists() && asarPreload.exists();
 
             List<String> dshCmd = new ArrayList<>();
@@ -517,6 +518,10 @@ public class LocalEngineService extends Service {
             dshCmd.add("--max-old-space-size=512");
             if (useAsar) {
                 emitLog("[SERVER] Launching in ASAR Zero-Extract Mode via " + dshAsar.getAbsolutePath());
+                if (asarRegister.exists()) {
+                    dshCmd.add("-r");
+                    dshCmd.add(asarRegister.getAbsolutePath());
+                }
                 dshCmd.add("--import");
                 dshCmd.add(asarPreload.getAbsolutePath());
                 dshCmd.add(dshAsar.getAbsolutePath() + "/lib/bin.js");
@@ -556,6 +561,10 @@ public class LocalEngineService extends Service {
                     atomicCmd.add(nodeFile.getAbsolutePath());
                     atomicCmd.add("--max-old-space-size=512");
                     if (useAtomicAsar) {
+                        if (asarRegister.exists()) {
+                            atomicCmd.add("-r");
+                            atomicCmd.add(asarRegister.getAbsolutePath());
+                        }
                         atomicCmd.add("--import");
                         atomicCmd.add(asarPreload.getAbsolutePath());
                         atomicCmd.add(atomicAsar.getAbsolutePath() + "/server.js");
