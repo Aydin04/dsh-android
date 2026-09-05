@@ -829,31 +829,26 @@ public class LocalEngineService extends Service {
                 } catch (Exception ignored) {}
             }
 
-            // 2. Sanitize web profile package.json if broken bundles exist
-            File webPkg = new File(filesDir, ".dsh/profiles/web/package.json");
-            if (webPkg.exists()) {
-                String content = new String(java.nio.file.Files.readAllBytes(webPkg.toPath()), java.nio.charset.StandardCharsets.UTF_8);
-                if (content.contains("multivers") && !content.contains("@aydin0411/dsh-multivers")) {
-                    emitLog("[REPAIR] Detected outdated multivers bundle reference in web profile. Sanitizing...");
-                    org.json.JSONObject pkgJson = new org.json.JSONObject(content);
-                    org.json.JSONObject dshObj = pkgJson.optJSONObject("dsh");
-                    if (dshObj != null) {
-                        org.json.JSONObject profObj = dshObj.optJSONObject("profile");
-                        if (profObj != null) {
-                            org.json.JSONArray bundles = profObj.optJSONArray("bundles");
-                            if (bundles != null) {
-                                org.json.JSONArray newBundles = new org.json.JSONArray();
-                                for (int i = 0; i < bundles.length(); i++) {
-                                    String b = bundles.getString(i);
-                                    if (!b.contains("multivers")) {
-                                        newBundles.put(b);
-                                    }
+            // 3. Remove leftover dsh.asar and broken symlinks pointing to dsh.asar
+            File oldDshAsar = new File(filesDir, "engine/dsh.asar");
+            if (oldDshAsar.exists()) {
+                oldDshAsar.delete();
+            }
+
+            File profileDir = new File(filesDir, ".dsh/profiles/web");
+            if (profileDir.exists()) {
+                File[] pFiles = profileDir.listFiles();
+                if (pFiles != null) {
+                    for (File pf : pFiles) {
+                        try {
+                            if (java.nio.file.Files.isSymbolicLink(pf.toPath())) {
+                                java.nio.file.Path target = java.nio.file.Files.readSymbolicLink(pf.toPath());
+                                if (target.toString().contains("dsh.asar")) {
+                                    java.nio.file.Files.delete(pf.toPath());
+                                    emitLog("[REPAIR] Removed stale asar symlink: " + pf.getName());
                                 }
-                                profObj.put("bundles", newBundles);
-                                java.nio.file.Files.write(webPkg.toPath(), pkgJson.toString(2).getBytes(java.nio.charset.StandardCharsets.UTF_8));
-                                emitLog("[REPAIR SUCCESS] Web profile package.json sanitized successfully!");
                             }
-                        }
+                        } catch (Exception ignored) {}
                     }
                 }
             }
